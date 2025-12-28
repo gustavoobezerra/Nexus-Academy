@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling for dark mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+  border: 2px solid #1e293b;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Light mode scrollbar */
+.light *,
+:root:not(.dark) * {
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.light *::-webkit-scrollbar-track,
+:root:not(.dark) *::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light *::-webkit-scrollbar-thumb,
+:root:not(.dark) *::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-color: #f1f5f9;
+}
+
+.light *::-webkit-scrollbar-thumb:hover,
+:root:not(.dark) *::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
