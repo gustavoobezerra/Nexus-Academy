@@ -1,0 +1,25 @@
+import express from 'express';
+import {
+  getPayments,
+  createPayment,
+  updatePayment,
+  getFinancialStats
+} from '../controllers/paymentController.js';
+import { protect, requireCompletedOnboarding } from '../middleware/auth.js';
+
+const router = express.Router();
+
+router.use(protect);
+router.use(requireCompletedOnboarding);
+
+router.route('/')
+  .get(getPayments)
+  .post(createPayment);
+
+router.get('/stats', getFinancialStats);
+router.get('/stats/summary', getFinancialStats);
+
+router.route('/:id')
+  .put(updatePayment);
+
+export default router;

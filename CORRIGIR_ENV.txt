@@ -1,0 +1,94 @@
+================================================================================
+CORREÇÕES NECESSÁRIAS NOS ARQUIVOS .ENV
+================================================================================
+
+🔴 URGENTE: Problema de Segurança no Frontend
+🟡 IMPORTANTE: Espaço antes de DAILY_API_KEY no Backend
+
+================================================================================
+BACKEND (.env) - CORREÇÃO
+================================================================================
+
+PROBLEMA ENCONTRADO (linha ~52):
+---------------------------------
+ASSEMBLYAI_API_KEY=1c98705337ea464789bc99341fa17561
+ DAILY_API_KEY=0e2cdb329ff4848d7b80d887097b2cb77d2f3dc115719b240bdb23a795e53198
+↑ ESPAÇO antes de DAILY_API_KEY vai causar erro!
+
+CORREÇÃO:
+---------
+Substitua essas linhas por:
+
+ASSEMBLYAI_API_KEY=1c98705337ea464789bc99341fa17561
+
+# ======================================
+# DAILY.CO (Videoconferência)
+# ======================================
+DAILY_API_KEY=0e2cdb329ff4848d7b80d887097b2cb77d2f3dc115719b240bdb23a795e53198
+
+(Remover o espaço no início de DAILY_API_KEY)
+
+
+================================================================================
+BACKEND (.env) - ADICIONAR (Opcional mas Recomendado)
+================================================================================
+
+Se você quer usar Gemini AI, adicione NO BACKEND (não no frontend):
+
+# ======================================
+# GOOGLE GEMINI (Inteligência Artificial)
+# ======================================
+GEMINI_API_KEY=AIzaSyDWNGDxxW8kXMQhotzu_CmJIIzBP
+
+
+================================================================================
+FRONTEND (.env) - CORREÇÃO CRÍTICA DE SEGURANÇA
+================================================================================
+
+ARQUIVO ATUAL:
+--------------
+VITE_API_URL=http://localhost:5000/api
+VITE_AI_SERVICE_URL=http://localhost:5001
+VITE_GEMINI_API_KEY=AIzaSyDWNGDxxW8kXMQhotzu_CmJIIzBP
+
+🚨 PROBLEMA DE SEGURANÇA:
+-------------------------
+VITE_GEMINI_API_KEY está EXPOSTA no código do navegador!
+Qualquer pessoa pode ver e usar sua chave!
+Você pode ser cobrado por uso não autorizado!
+
+CORREÇÃO (Arquivo final):
+--------------------------
+VITE_API_URL=http://localhost:5000/api
+
+# Removido VITE_GEMINI_API_KEY (movido para backend/.env)
+# Removido VITE_AI_SERVICE_URL (não é usado no código)
+
+(Remover as 2 últimas linhas ou comentá-las)
+
+
+================================================================================
+RESUMO DAS MUDANÇAS
+================================================================================
+
+BACKEND (.env):
+  ✅ Remover espaço antes de DAILY_API_KEY
+  ✅ (Opcional) Adicionar GEMINI_API_KEY
+
+FRONTEND (.env):
+  🔴 REMOVER VITE_GEMINI_API_KEY (urgente - segurança!)
+  ⚠️ Remover VITE_AI_SERVICE_URL (não usado)
+  ✅ Manter apenas VITE_API_URL
+
+================================================================================
+APÓS CORREÇÕES
+================================================================================
+
+1. Salvar ambos os arquivos .env
+2. Reiniciar backend: Ctrl+C e npm run dev novamente
+3. Reiniciar frontend: Ctrl+C e npm run dev novamente
+4. Testar: Acesse http://localhost:5173
+5. Verificar logs: Não deve aparecer erros de variável não encontrada
+
+================================================================================
+

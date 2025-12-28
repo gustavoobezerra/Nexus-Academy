@@ -1,0 +1,118 @@
+#root {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+:root{
+  --nexus-indigo: #4F46E5;
+  --nexus-cyan: #06B6D4;
+  --nexus-emerald: #10B981;
+  --nexus-amber: #F59E0B;
+  --nexus-red: #EF4444;
+  --gray-dark: #1F2937;
+  --gray-medium: #6B7280;
+  --gray-light: #F3F4F6;
+  --white: #FFFFFF;
+  --chart-blue: #3B82F6;
+  --chart-violet: #8B5CF6;
+  --chart-pink: #EC4899;
+  --chart-green: #10B981;
+  --chart-orange: #F97316;
+
+  --bg: var(--white);
+  --text-main: var(--gray-dark);
+  --text-muted: var(--gray-medium);
+  --card-bg: var(--white);
+}
+
+.dark :root{
+  --bg: #0f172a; /* dark background */
+  --text-main: #FFFFFF;
+  --text-muted: #9CA3AF; /* lighter muted in dark */
+  --card-bg: #111827; /* dark card */
+}
+
+@layer base {
+  body{
+    background-color: var(--bg);
+    color: var(--text-main);
+  }
+  a{ color: var(--nexus-cyan); }
+  h1,h2,h3,h4,h5,h6{ color: var(--text-main); }
+}
+
+.btn-primary{
+  background-color: var(--nexus-indigo);
+  color: var(--white);
+  padding: .5rem .75rem;
+  border-radius: .5rem;
+}
+.btn-primary:hover{ background-color: #4338ca; }
+
+.card{
+  padding: 1rem;
+  background-color: var(--card-bg);
+  border-radius: .75rem;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.card--muted{ background-color: var(--gray-light); }
+
+.text-muted{ color: var(--text-muted); }
+
+.status-paid{ background-color: rgba(16,185,129,0.12); color: #065f46; padding: .25rem .5rem; border-radius: .5rem; }
+.status-pending{ background-color: rgba(245,158,11,0.12); color: #7c2d12; padding: .25rem .5rem; border-radius: .5rem; }
+.status-late{ background-color: rgba(239,68,68,0.12); color: #7f1d1d; padding: .25rem .5rem; border-radius: .5rem; }
+.status-new{ background-color: rgba(6,182,212,0.12); color: #064e63; padding: .25rem .5rem; border-radius: .5rem; }
+
+.chart-blue{ color: var(--chart-blue); }
+.chart-violet{ color: var(--chart-violet); }
+.chart-pink{ color: var(--chart-pink); }
+.chart-green{ color: var(--chart-green); }
+.chart-orange{ color: var(--chart-orange); }

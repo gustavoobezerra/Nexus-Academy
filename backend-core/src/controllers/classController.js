@@ -1,0 +1,143 @@
+import Class from '../models/Class.js';
+import axios from 'axios';
+
+export const getClasses = async (req, res) => {
+  try {
+    const classes = await Class.find({ teacher: req.user._id })
+      .populate('student', 'name grade')
+      .sort('-date');
+
+    res.json({
+      success: true,
+      count: classes.length,
+      classes
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar aulas', error: error.message });
+  }
+};
+
+export const getClass = async (req, res) => {
+  try {
+    const classData = await Class.findOne({
+      _id: req.params.id,
+      teacher: req.user._id
+    }).populate('student', 'name grade');
+
+    if (!classData) {
+      return res.status(404).json({ message: 'Aula não encontrada.' });
+    }
+
+    res.json({
+      success: true,
+      class: classData
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar aula', error: error.message });
+  }
+};
+
+export const createClass = async (req, res) => {
+  try {
+    const classData = {
+      ...req.body,
+      teacher: req.user._id
+    };
+
+    const newClass = await Class.create(classData);
+
+    res.status(201).json({
+      success: true,
+      class: newClass
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao criar aula', error: error.message });
+  }
+};
+
+export const updateClass = async (req, res) => {
+  try {
+    const classData = await Class.findOneAndUpdate(
+      { _id: req.params.id, teacher: req.user._id },
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!classData) {
+      return res.status(404).json({ message: 'Aula não encontrada.' });
+    }
+
+    res.json({
+      success: true,
+      class: classData
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao atualizar aula', error: error.message });
+  }
+};
+
+export const generateAISummary = async (req, res) => {
+  try {
+    const { transcript } = req.body;
+    const classId = req.params.id;
+
+    const classData = await Class.findOne({
+      _id: classId,
+      teacher: req.user._id
+    });
+
+    if (!classData) {
+      return res.status(404).json({ message: 'Aula não encontrada.' });
+    }
+
+    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5001';
+
+    const response = await axios.post(`${AI_SERVICE_URL}/api/generate-summary`, {
+      transcript: transcript || classData.transcript
+    });
+
+    classData.aiSummary = response.data.result;
+    classData.transcript = transcript || classData.transcript;
+    await classData.save();
+
+    res.json({
+      success: true,
+      aiSummary: response.data.result
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao gerar resumo com IA', error: error.message });
+  }
+};
+
+export const getClassStats = async (req, res) => {
+  try {
+    const teacherId = req.user._id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const totalClasses = await Class.countDocuments({
+      teacher: teacherId
+    });
+
+    const upcomingClasses = await Class.countDocuments({
+      teacher: teacherId,
+      date: { $gte: today }
+    });
+
+    const completedClasses = await Class.countDocuments({
+      teacher: teacherId,
+      status: 'completed'
+    });
+
+    res.json({
+      success: true,
+      stats: {
+        totalClasses,
+        upcomingClasses,
+        completedClasses
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+  }
+};

@@ -1,0 +1,71 @@
+# Render Blueprint para Nexus Academy
+# Este arquivo configura automaticamente o deploy no Render.com
+
+services:
+  # Backend API
+  - type: web
+    name: nexus-academy-backend
+    runtime: node
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend-core && npm install
+    startCommand: cd backend-core && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: API_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_PRICE_BASIC
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: DAILY_API_KEY
+        sync: false
+    healthCheckPath: /api/health
+
+  # Frontend (Static Site)
+  - type: web
+    name: nexus-academy-frontend
+    runtime: static
+    env: static
+    region: oregon
+    plan: starter
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+# Database (MongoDB Atlas é externo, não precisa configurar aqui)
+# Redis (se necessário, usar Upstash ou Redis Cloud externo)
