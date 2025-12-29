@@ -12,6 +12,9 @@ const router = express.Router();
 const getJWTSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
+    if (process.env.NODE_ENV === 'development') {
+      return 'DEV-ONLY-SECRET-CHANGE-IN-PRODUCTION';
+    }
     throw new Error('JWT_SECRET must be defined in environment variables');
   }
   return secret;
@@ -94,11 +97,30 @@ router.post('/auth/register', async (req, res) => {
   try {
     const { name, email, password, age, grade, parentName, parentPhone, parentEmail, teacherId } = req.body;
 
-    // Validação de campos obrigatórios
-    if (!name || !email || !password || !age || !grade || !parentName || !parentPhone || !parentEmail) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Todos os campos são obrigatórios' 
+    // Validar idade primeiro para determinar se dados do responsável são necessários
+    const ageNum = parseInt(age);
+    if (isNaN(ageNum) || ageNum < 3 || ageNum > 120) {
+      return res.status(400).json({
+        success: false,
+        message: 'Idade deve estar entre 3 e 120 anos'
+      });
+    }
+
+    const isMinor = ageNum < 18;
+
+    // Validação de campos obrigatórios (responsável apenas para menores de 18)
+    if (!name || !email || !password || !age || !grade) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nome, email, senha, idade e série são obrigatórios'
+      });
+    }
+
+    // Para menores de 18, exigir dados do responsável
+    if (isMinor && (!parentName || !parentPhone || !parentEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dados do responsável são obrigatórios para menores de 18 anos'
       });
     }
 
@@ -121,28 +143,21 @@ router.post('/auth/register', async (req, res) => {
 
     // Validar senha - mínimo 6 caracteres
     if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Senha deve ter entre 6 e 128 caracteres' 
+      return res.status(400).json({
+        success: false,
+        message: 'Senha deve ter entre 6 e 128 caracteres'
       });
     }
 
-    // Validar idade
-    const ageNum = parseInt(age);
-    if (isNaN(ageNum) || ageNum < 3 || ageNum > 120) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Idade inválida' 
-      });
-    }
-
-    // Validar telefone - apenas dígitos, 10-13 chars
-    const cleanPhone = parentPhone.replace(/\D/g, '');
-    if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Telefone inválido' 
-      });
+    // Validar telefone do responsável (apenas para menores de 18)
+    if (isMinor && parentPhone) {
+      const cleanPhone = parentPhone.replace(/\D/g, '');
+      if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+        return res.status(400).json({
+          success: false,
+          message: 'Telefone do responsável inválido'
+        });
+      }
     }
 
     // Verificar se email já existe
@@ -161,15 +176,12 @@ router.post('/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Criar novo aluno
-    const student = new Student({
+    const studentData = {
       name,
       email: email.toLowerCase(),
-      age: parseInt(age),
+      age: ageNum,
       grade,
       subject: 'Geral',
-      parentName,
-      parentPhone,
-      parentEmail: parentEmail.toLowerCase(),
       monthlyFee: 0,
       paymentStatus: 'pending',
       portalAccess: {
@@ -186,7 +198,14 @@ router.post('/auth/register', async (req, res) => {
       level: 1,
       active: true,
       teacher: teacherId || null
-    });
+    };
+
+    // Adicionar dados do responsável apenas se fornecidos (obrigatório apenas para menores de 18)
+    if (parentName) studentData.parentName = parentName;
+    if (parentPhone) studentData.parentPhone = parentPhone;
+    if (parentEmail) studentData.parentEmail = parentEmail.toLowerCase();
+
+    const student = new Student(studentData);
 
     await student.save();
 

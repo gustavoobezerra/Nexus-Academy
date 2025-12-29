@@ -17,8 +17,9 @@ export const OnboardingSuccess: React.FC = () => {
   useEffect(() => {
     const completeOnboarding = async () => {
       try {
-        const response = await onboardingAPI.complete();
-        setUserData(response.data.user);
+        const response = await onboardingAPI.complete() as any;
+        // apiService já retorna response.data diretamente
+        setUserData(response.user);
         toast.success('Onboarding completo!');
 
         // Marcar no localStorage

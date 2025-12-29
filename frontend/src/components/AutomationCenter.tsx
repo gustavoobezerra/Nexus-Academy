@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Send, Clock, CheckCircle, AlertCircle, Plus, Trash2 } from 'lucide-react';
-import api from '../lib/api';
+import apiService from '../services/api.service';
 import type { Notification, NotificationTemplate } from '../types';
 import toast from 'react-hot-toast';
 
@@ -30,11 +30,12 @@ const AutomationCenter: React.FC = () => {
     try {
       setLoading(true);
       const [notifRes, templateRes] = await Promise.all([
-        api.get('/notifications'),
-        api.get('/notifications/templates')
-      ]);
-      setNotifications(notifRes.data || []);
-      setTemplates(templateRes.data || []);
+        apiService.get('/notifications'),
+        apiService.get('/notifications/templates')
+      ]) as any[];
+      // apiService já retorna response.data diretamente
+      setNotifications(notifRes?.notifications || notifRes || []);
+      setTemplates(templateRes?.templates || templateRes || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -49,8 +50,8 @@ const AutomationCenter: React.FC = () => {
     }
 
     try {
-      const response = await api.post('/notifications/templates', newTemplate);
-      setTemplates(prev => [...prev, response.data]);
+      const response = await apiService.post('/notifications/templates', newTemplate) as any;
+      setTemplates(prev => [...prev, response.template || response]);
       setNewTemplate({ name: '', type: 'reminder', subject: '', body: '' });
       setShowTemplateForm(false);
       toast.success('Template criado com sucesso!');
@@ -66,8 +67,8 @@ const AutomationCenter: React.FC = () => {
     }
 
     try {
-      const response = await api.post('/notifications/send', newNotification);
-      setNotifications(prev => [response.data, ...prev]);
+      const response = await apiService.post('/notifications/send', newNotification) as any;
+      setNotifications(prev => [response.notification || response, ...prev]);
       setNewNotification({
         type: 'reminder',
         channel: 'email',
@@ -85,7 +86,7 @@ const AutomationCenter: React.FC = () => {
 
   const handleDeleteTemplate = async (templateId: string) => {
     try {
-      await api.delete(`/notifications/templates/${templateId}`);
+      await apiService.delete(`/notifications/templates/${templateId}`);
       setTemplates(templates.filter(t => t.id !== templateId));
       toast.success('Template removido');
     } catch (error) {

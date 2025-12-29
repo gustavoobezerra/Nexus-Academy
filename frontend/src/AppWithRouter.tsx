@@ -32,6 +32,7 @@ import { LoginPage } from './components/LoginPage';
 import { TeacherLogin } from './components/TeacherLogin';
 import { OnboardingWizardMultiTenant } from './components/OnboardingWizardMultiTenant';
 import { OnboardingSuccess } from './components/OnboardingSuccess';
+import { PaymentTutorials } from './components/PaymentTutorials';
 
 // Portal do Aluno
 import { StudentPortalLogin } from './components/StudentPortal/StudentPortalLogin';
@@ -40,6 +41,7 @@ import { SmartOnboarding } from './components/StudentPortal/SmartOnboarding';
 import { StudentProfilePage } from './components/StudentPortal/StudentProfile';
 import { StudentRegister } from './components/StudentPortal/StudentRegister';
 import AIHub from './components/AIHub';
+import TeacherSettings from './components/TeacherSettings';
 
 // NOVOS COMPONENTES DE AUTOMAÇÃO COM IA
 import { HourBankManagement } from './components/HourBankManagement';
@@ -65,12 +67,14 @@ function AppWithRouter() {
   const [selectedStudentForPoints] = useState<string | null>('1');
   const [liveClassData, setLiveClassData] = useState<{ id: string; title: string } | null>(null);
   const [useDaily] = useState(true); // Usar Daily.co como padrão (true) ou Jitsi (false)
+  const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
 
   // Verificar rotas
   const isLoginPage = location.pathname === '/' || location.pathname === '/login';
   const isTeacherLogin = location.pathname === '/professor/login';
   const isOnboarding = location.pathname === '/onboarding';
   const isOnboardingSuccess = location.pathname === '/onboarding/success';
+  const isTutorialPage = location.pathname.startsWith('/tutoriais/');
   const isStudentPortal = location.pathname.startsWith('/portal');
   const isTeacherSlugPage = location.pathname.startsWith('/professor/') &&
                            location.pathname !== '/professor/login';
@@ -78,7 +82,7 @@ function AppWithRouter() {
   const teacherToken = localStorage.getItem('token');
 
   // Verificar se é uma rota pública (login)
-  const isPublicRoute = isLoginPage || isTeacherLogin || location.pathname === '/portal/login' || isTeacherSlugPage;
+  const isPublicRoute = isLoginPage || isTeacherLogin || location.pathname === '/portal/login' || isTeacherSlugPage || isTutorialPage;
 
   useEffect(() => {
     // Se está no portal e não tem token, redirecionar para login
@@ -166,6 +170,11 @@ function AppWithRouter() {
   // Renderizar página de sucesso do onboarding
   if (isOnboardingSuccess && teacherToken) {
     return <OnboardingSuccess />;
+  }
+
+  // Renderizar página de tutoriais de pagamento
+  if (isTutorialPage) {
+    return <PaymentTutorials />;
   }
 
   // Renderizar Portal do Aluno
@@ -382,13 +391,18 @@ function AppWithRouter() {
                   />
                 )}
 
-                <div className="text-right hidden sm:block">
-                  <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{user?.name}</p>
-                  <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{user?.email}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                  <UserCircle className="text-white" size={24} />
-                </div>
+                <button
+                  onClick={() => setMostrarConfiguracoes(true)}
+                  className="flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl p-2 transition-colors cursor-pointer"
+                >
+                  <div className="text-right hidden sm:block">
+                    <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{user?.name}</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{user?.email}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <UserCircle className="text-white" size={24} />
+                  </div>
+                </button>
               </div>
             </div>
           </header>
@@ -468,6 +482,9 @@ function AppWithRouter() {
             localStorage.setItem('onboarding_concluido', 'true');
           }}
         />
+      )}
+      {mostrarConfiguracoes && (
+        <TeacherSettings onClose={() => setMostrarConfiguracoes(false)} />
       )}
     </>
   );

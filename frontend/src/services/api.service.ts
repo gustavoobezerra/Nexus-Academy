@@ -44,7 +44,23 @@ const RETRY_CONFIG: RetryConfig = {
 // INSTÂNCIA AXIOS COM CONFIGURAÇÃO BASE
 // ============================================================================
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Configuração de URL da API com validação de HTTPS em produção
+const getApiUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+
+  if (envUrl) {
+    // Em produção, garantir que a URL usa HTTPS
+    if (import.meta.env.PROD && !envUrl.startsWith('https://')) {
+      console.warn('[SECURITY] API URL should use HTTPS in production');
+    }
+    return envUrl;
+  }
+
+  // Fallback para desenvolvimento
+  return 'http://localhost:5000/api';
+};
+
+const API_URL = getApiUrl();
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -61,15 +77,24 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Adicionar token de autenticação (suporta múltiplos tipos de token)
-    const token = localStorage.getItem('token') || localStorage.getItem('studentToken');
+    // Priorizar studentToken se estiver no portal do aluno ou em rotas de student-onboarding
+    const isStudentRoute = window.location.pathname.startsWith('/portal') ||
+                           config.url?.includes('student-onboarding') ||
+                           config.url?.includes('/portal/');
+
+    const token = isStudentRoute
+      ? (localStorage.getItem('studentToken') || localStorage.getItem('token'))
+      : (localStorage.getItem('token') || localStorage.getItem('studentToken'));
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Log para desenvolvimento (remover em produção)
+    // Log apenas em desenvolvimento
     if (import.meta.env.DEV) {
-      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+      // Não logar dados sensíveis
+      const safeUrl = config.url?.replace(/token=([^&]+)/, 'token=***');
+      console.log(`[API] ${config.method?.toUpperCase()} ${safeUrl}`);
     }
 
     return config;
@@ -85,9 +110,10 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Log de sucesso em desenvolvimento
+    // Log de sucesso apenas em desenvolvimento (sem dados sensíveis)
     if (import.meta.env.DEV) {
-      console.log(`[API] ✓ ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
+      const safeUrl = response.config.url?.replace(/token=([^&]+)/, 'token=***');
+      console.log(`[API] ✓ ${response.config.method?.toUpperCase()} ${safeUrl}`);
     }
     return response;
   },

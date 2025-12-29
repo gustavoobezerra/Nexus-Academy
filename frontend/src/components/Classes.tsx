@@ -28,8 +28,9 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
         classesAPI.getAll(),
         studentsAPI.getAll(),
       ]);
-      setAulas(aulasRes.data.classes || []);
-      setAlunos(alunosRes.data.students || []);
+      // apiService já retorna response.data diretamente
+      setAulas((aulasRes as any).classes || []);
+      setAlunos((alunosRes as any).students || []);
     } catch (error) {
       setAulas([]);
       setAlunos([]);
@@ -58,8 +59,9 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
     const dados = { title, studentId, subject, scheduledAt, duration, notes };
 
     try {
-      const response = await classesAPI.create(dados);
-      const newId = response.data?.id || 'new';
+      const response = await classesAPI.create(dados) as any;
+      // apiService já retorna response.data diretamente
+      const newId = response?.id || response?._id || 'new';
       automationEngine.fireTrigger('class_scheduled', 'class', newId, title, {
         subject,
         studentId,

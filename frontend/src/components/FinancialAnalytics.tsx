@@ -24,8 +24,9 @@ const FinancialAnalytics = () => {
   const buscar = async () => {
     setCarregando(true);
     try {
-      const res = await paymentsAPI.getAll();
-      setPagamentos(res.data.payments || []);
+      const res = await paymentsAPI.getAll() as any;
+      // apiService já retorna response.data diretamente
+      setPagamentos(res.payments || []);
     } catch (error) {
       console.error('Erro ao buscar pagamentos:', error);
       toast.error('Erro ao buscar dados');

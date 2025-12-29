@@ -37,18 +37,22 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
   useEffect(() => {
     if (!slug || slug.length < 3) {
       setSlugAvailable(null);
+      console.log('[ONBOARDING] Slug muito curto ou vazio');
       return;
     }
 
     const timeoutId = setTimeout(async () => {
       setCheckingSlug(true);
+      console.log('[ONBOARDING] Verificando slug:', slug);
       try {
-        const response = await onboardingAPI.checkSlug(slug);
-        setSlugAvailable(response.data.available);
+        const response = await onboardingAPI.checkSlug(slug) as any;
+        console.log('[ONBOARDING] Resposta da API:', response);
+        // apiService já retorna response.data, então acessamos diretamente
+        setSlugAvailable(response.available);
+        console.log('[ONBOARDING] Slug disponível:', response.available);
       } catch (error: any) {
-        if (error.response?.data?.available === false) {
-          setSlugAvailable(false);
-        }
+        console.error('[ONBOARDING] Erro ao verificar slug:', error);
+        setSlugAvailable(false);
       } finally {
         setCheckingSlug(false);
       }
@@ -148,8 +152,15 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
       setLoading(true);
       try {
         // Criar sessão Stripe
-        const response = await onboardingAPI.createSubscriptionSession(selectedPlan);
-        const checkoutUrl = response.data.checkoutUrl;
+        const response = await onboardingAPI.createSubscriptionSession(selectedPlan) as any;
+        // apiService já retorna response.data, então acessamos diretamente
+        const checkoutUrl = response.checkoutUrl;
+
+        if (!checkoutUrl) {
+          toast.error('Erro ao obter link de pagamento');
+          setLoading(false);
+          return;
+        }
 
         // Redirecionar para Stripe Checkout
         window.location.href = checkoutUrl;
@@ -206,7 +217,13 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         <label className="block text-sm font-medium mb-2 dark:text-white">
           Seu Link Será:
         </label>
-        <div className="flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-lg border-2 border-slate-200 dark:border-slate-700">
+        <div className={`flex items-center gap-2 p-3 bg-white dark:bg-slate-900 rounded-lg border-2 transition-all ${
+          slugAvailable === true
+            ? 'border-green-500 ring-2 ring-green-500/20'
+            : slugAvailable === false
+            ? 'border-red-500 ring-2 ring-red-500/20'
+            : 'border-slate-200 dark:border-slate-700'
+        }`}>
           <span className="text-slate-500 dark:text-slate-400 text-sm">nexusacademy.com/professor/</span>
           <input
             type="text"
@@ -240,6 +257,14 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
           <li>• Exemplos: silva, prof-carlos, joao-matematica</li>
         </ul>
       </div>
+
+      {/* Debug info - apenas em desenvolvimento */}
+      {import.meta.env.DEV && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-xs font-mono">
+          <strong>DEBUG:</strong> available={String(slugAvailable)} | checking={String(checkingSlug)} |
+          slug="{slug}" | botão={!slugAvailable ? 'DESABILITADO' : 'HABILITADO'}
+        </div>
+      )}
     </div>
   );
 
@@ -397,40 +422,40 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         name: 'Mercado Pago',
         recommended: true,
         fee: '2,99% PIX | 4,99% Cartão',
-        period: '14 dias',
+        period: 'Prazo de recebimento: 14 dias corridos',
         fields: [{ key: 'accessToken', label: 'Access Token', placeholder: 'APP_USR_...' }],
-        tutorial: 'https://mercadopago.com.br/hub/registration',
+        tutorial: '/tutoriais/mercadopago',
       },
       {
         id: 'asaas' as const,
         name: 'Asaas',
         fee: '1,49% PIX | 3,49% Cartão',
-        period: '1 dia útil',
+        period: 'Prazo de recebimento: 1 dia útil',
         badge: 'Mais Barato',
         fields: [{ key: 'apiKey', label: 'API Key', placeholder: 'asaas_api_...' }],
-        tutorial: 'https://asaas.com/cadastro',
+        tutorial: '/tutoriais/asaas',
       },
       {
         id: 'pagseguro' as const,
         name: 'PagSeguro',
         fee: '3,49% PIX | 4,99% Cartão',
-        period: '30 dias',
+        period: 'Prazo de recebimento: 30 dias corridos',
         fields: [
           { key: 'email', label: 'Email', placeholder: 'seu@email.com' },
           { key: 'token', label: 'Token', placeholder: 'pagseguro_token...' },
         ],
-        tutorial: 'https://pagseguro.uol.com.br',
+        tutorial: '/tutoriais/pagseguro',
       },
       {
         id: 'efi' as const,
         name: 'Efi Pay',
         fee: '3,49% PIX | 5,49% Cartão',
-        period: '1 dia útil',
+        period: 'Prazo de recebimento: 1 dia útil',
         fields: [
           { key: 'clientId', label: 'Client ID', placeholder: 'client_id...' },
           { key: 'clientSecret', label: 'Client Secret', placeholder: 'client_secret...' },
         ],
-        tutorial: 'https://sejaefi.com.br',
+        tutorial: '/tutoriais/efi',
       },
     ];
 
@@ -463,8 +488,11 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
                 {selectedGateway === gateway.id && <CheckCircle2 className="text-purple-500" />}
               </div>
               <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                <p>💰 Taxa: {gateway.fee}</p>
-                <p>⏱️ Prazo: {gateway.period}</p>
+                <p>💰 Taxa cobrada: {gateway.fee}</p>
+                <p>⏱️ {gateway.period}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500">
+                  (Tempo até o dinheiro cair na sua conta após o pagamento do aluno)
+                </p>
               </div>
             </div>
 
@@ -472,13 +500,18 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
               <div className="space-y-3 mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
                 <a
                   href={gateway.tutorial}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400 hover:underline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open(gateway.tutorial, '_blank');
+                  }}
+                  className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
                 >
                   <ExternalLink size={14} />
-                  Ver Tutorial de Cadastro
+                  📚 Ver Tutorial Completo Passo-a-Passo
                 </a>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Abrirá em nova aba com instruções detalhadas de como configurar
+                </p>
                 {gateway.fields.map((field) => (
                   <div key={field.key}>
                     <label className="block text-sm font-medium mb-2 dark:text-white">{field.label}:</label>

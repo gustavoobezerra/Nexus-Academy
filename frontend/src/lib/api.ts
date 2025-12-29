@@ -43,12 +43,15 @@ export const authAPI = {
 // ============================================================================
 
 export const studentsAPI = {
-  getAll: () => apiService.get<Aluno[]>('/students') as Promise<{ data: { students: Aluno[] } }>,
+  // apiService já retorna response.data diretamente
+  getAll: () => apiService.get<{ students: Aluno[] }>('/students'),
   getOne: (id: string) => apiService.get<Aluno>(`/students/${id}`),
   create: (data: Partial<Aluno>) => apiService.post<Aluno>('/students', data),
   update: (id: string, data: Partial<Aluno>) => apiService.put<Aluno>(`/students/${id}`, data),
   delete: (id: string) => apiService.delete(`/students/${id}`),
   getStats: () => apiService.get('/students/stats/summary'),
+  addPoints: (id: string, points: number, reason: string, description: string) =>
+    apiService.post(`/students/${id}/points`, { points, reason, description }),
 };
 
 // ============================================================================
@@ -56,7 +59,8 @@ export const studentsAPI = {
 // ============================================================================
 
 export const paymentsAPI = {
-  getAll: () => apiService.get<Pagamento[]>('/payments'),
+  // apiService já retorna response.data diretamente
+  getAll: () => apiService.get<{ payments: Pagamento[] }>('/payments'),
   create: (data: Partial<Pagamento>) => apiService.post<Pagamento>('/payments', data),
   update: (id: string, data: Partial<Pagamento>) => apiService.put(`/payments/${id}`, data),
   getStats: () => apiService.get('/payments/stats/summary'),
@@ -67,7 +71,8 @@ export const paymentsAPI = {
 // ============================================================================
 
 export const classesAPI = {
-  getAll: () => apiService.get<Aula[]>('/classes') as Promise<{ data: { classes: Aula[] } }>,
+  // apiService já retorna response.data diretamente
+  getAll: () => apiService.get<{ classes: Aula[] }>('/classes'),
   getOne: (id: string) => apiService.get<Aula>(`/classes/${id}`),
   create: (data: Partial<Aula>) => apiService.post<Aula>('/classes', data),
   update: (id: string, data: Partial<Aula>) => apiService.put<Aula>(`/classes/${id}`, data),
@@ -76,7 +81,7 @@ export const classesAPI = {
   end: (id: string) => apiService.post(`/classes/${id}/end`),
   getStats: () => apiService.get('/classes/stats/summary'),
   generateSummary: (id: string, transcript: string) =>
-    apiService.post(`/classes/${id}/generate-summary`, { transcript }),
+    apiService.post<{ success: boolean; summary: string }>(`/classes/${id}/generate-summary`, { transcript }),
   generateExercises: (id: string, data: ApiPayload) =>
     apiService.post(`/classes/${id}/generate-exercises`, data),
 };

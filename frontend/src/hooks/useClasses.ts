@@ -4,8 +4,9 @@ import type { Aula } from '../types';
 export default function useClasses() {
   const getAll = async (): Promise<Aula[]> => {
     try {
-      const res = await classesAPI.getAll();
-      return res.data.classes || [];
+      const res = await classesAPI.getAll() as any;
+      // apiService já retorna response.data diretamente
+      return res.classes || [];
     } catch {
       return [];
     }

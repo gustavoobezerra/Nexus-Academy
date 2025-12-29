@@ -10,8 +10,9 @@ export const OnlineStudents = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await studentsAPI.getAll();
-        const studentList = res.data.students || [];
+        const res = await studentsAPI.getAll() as any;
+        // apiService já retorna response.data diretamente
+        const studentList = res.students || [];
         setStudents(studentList);
         // random online statuses
         const map: Record<string, boolean> = {};

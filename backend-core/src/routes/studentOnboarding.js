@@ -29,43 +29,52 @@ const getJWTSecret = () => {
 function authenticateStudent(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-    
+
+    console.log('[StudentOnboarding Auth] Header:', authHeader ? 'Present' : 'Missing');
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token não fornecido' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token não fornecido'
       });
     }
 
     const token = authHeader.substring(7);
-    
+
     if (!token || token.length < 10) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token inválido' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido'
       });
     }
 
     let decoded;
     try {
       decoded = jwt.verify(token, getJWTSecret());
+      console.log('[StudentOnboarding Auth] Decoded token:', {
+        type: decoded.type,
+        studentId: decoded.studentId ? 'present' : 'missing',
+        teacherId: decoded.teacherId || 'none'
+      });
     } catch (jwtError) {
+      console.error('[StudentOnboarding Auth] JWT Error:', jwtError.name, jwtError.message);
       if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Sessão expirada. Faça login novamente.' 
+        return res.status(401).json({
+          success: false,
+          message: 'Sessão expirada. Faça login novamente.'
         });
       }
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token inválido' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido'
       });
     }
 
     if (decoded.type !== 'student') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Acesso negado' 
+      console.log('[StudentOnboarding Auth] Access denied - type:', decoded.type, 'expected: student');
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado. Tipo de token inválido.'
       });
     }
 
@@ -73,10 +82,10 @@ function authenticateStudent(req, res, next) {
     req.teacherId = decoded.teacherId;
     next();
   } catch (error) {
-    console.error('Student auth error:', error.message);
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Erro de autenticação' 
+    console.error('[StudentOnboarding Auth] Error:', error.message);
+    return res.status(401).json({
+      success: false,
+      message: 'Erro de autenticação'
     });
   }
 }

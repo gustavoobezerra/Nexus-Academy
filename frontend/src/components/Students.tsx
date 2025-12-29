@@ -1,70 +1,48 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, User, Search, Trash2 } from 'lucide-react';
+import { User, Search, Trash2, Link2, Copy, Check, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { studentsAPI } from '../lib/api';
 import { Skeleton, ModalConfirmacao } from './Common';
+import { useAuthStore } from '../store/authStore';
 import type { Aluno } from '../types';
 
 const StudentsPage = () => {
+  const { user } = useAuthStore();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [query, setQuery] = useState('');
   const [excluirAluno, setExcluirAluno] = useState<Aluno | null>(null);
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
-  const [validarForm, setValidarForm] = useState<{ [key: string]: string }>({});
+  const [copied, setCopied] = useState(false);
+
+  // Link de convite do professor
+  const inviteLink = user?.slug ? `${window.location.origin}/professor/${user.slug}` : '';
 
   useEffect(() => { buscar(); }, []);
 
   const buscar = async () => {
     setCarregando(true);
     try {
-      const res = await studentsAPI.getAll();
-      setAlunos(res.data?.students || []);
+      const res = await studentsAPI.getAll() as any;
+      // apiService já retorna response.data diretamente
+      setAlunos(res.students || []);
     } catch (err) {
       console.error('Erro ao buscar alunos:', err);
       toast.error('Erro ao carregar lista de alunos');
       setAlunos([]);
-    } finally { 
-      setCarregando(false); 
+    } finally {
+      setCarregando(false);
     }
   };
 
-  const validarCampos = (): boolean => {
-    const erros: { [key: string]: string } = {};
-    if (!formData.name.trim()) erros.name = 'Nome é obrigatório';
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) erros.email = 'Email inválido';
-    if (formData.phone && !/^\d{10,11}$/.test(formData.phone.replace(/\D/g, ''))) erros.phone = 'Telefone inválido (mínimo 10 dígitos)';
-    setValidarForm(erros);
-    return Object.keys(erros).length === 0;
-  };
-
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!validarCampos()) return;
-
-    const novo: Partial<Aluno> = {
-      ...formData,
-      status: 'active',
-      age: 12,
-      grade: '7º',
-      monthlyFee: 200,
-      paymentStatus: 'paid',
-      parentName: '',
-      parentEmail: '',
-      parentPhone: ''
-    };
-
-    try {
-      await studentsAPI.create(novo);
-      toast.success('Aluno criado com sucesso');
-      buscar();
-      setFormData({ name: '', email: '', phone: '' });
-      setMostrarForm(false);
-    } catch (err) {
-      console.error('Erro ao criar aluno:', err);
-      toast.error('Erro ao criar aluno');
+  const copyInviteLink = () => {
+    if (!inviteLink) {
+      toast.error('Configure seu link nas configurações do perfil');
+      return;
     }
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    toast.success('Link de convite copiado!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDelete = async () => {
@@ -120,62 +98,48 @@ const StudentsPage = () => {
           <h3 className="text-3xl font-bold text-slate-900 dark:text-white">Alunos</h3>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Gerencie os alunos da sua escola</p>
         </div>
-        <button
-          onClick={() => {
-            setMostrarForm(!mostrarForm);
-            setValidarForm({});
-          }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
-        >
-          <Plus size={18} /> Novo Aluno
-        </button>
       </div>
 
-      {mostrarForm && (
-        <form onSubmit={handleAdd} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <h4 className="font-bold text-slate-800 dark:text-white mb-2">Dados do Novo Aluno</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Nome Completo *</label>
-              <input
-                type="text"
-                autoFocus
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: João Silva"
-                className={`w-full px-4 py-2.5 rounded-lg border ${validarForm.name ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : 'border-slate-300 dark:border-slate-600'} bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
-              />
-              {validarForm.name && <p className="text-red-500 text-xs mt-1 font-medium">{validarForm.name}</p>}
+      {/* Card de Link de Convite */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-white/20 rounded-xl">
+              <Link2 className="w-6 h-6" />
             </div>
-            <div className="space-y-1">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">E-mail</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                placeholder="email@escola.com"
-                className={`w-full px-4 py-2.5 rounded-lg border ${validarForm.email ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : 'border-slate-300 dark:border-slate-600'} bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
-              />
-              {validarForm.email && <p className="text-red-500 text-xs mt-1 font-medium">{validarForm.email}</p>}
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Telefone</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="(11) 98765-4321"
-                className={`w-full px-4 py-2.5 rounded-lg border ${validarForm.phone ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : 'border-slate-300 dark:border-slate-600'} bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all`}
-              />
-              {validarForm.phone && <p className="text-red-500 text-xs mt-1 font-medium">{validarForm.phone}</p>}
+            <div>
+              <h4 className="text-lg font-bold">Convide seus alunos</h4>
+              <p className="text-white/80 text-sm mt-1">
+                Compartilhe seu link exclusivo para que os alunos se cadastrem diretamente na sua sala
+              </p>
             </div>
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <button type="button" onClick={() => setMostrarForm(false)} className="px-6 py-2.5 rounded-lg font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
-            <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2.5 rounded-lg font-bold transition-all shadow-md">Cadastrar</button>
+          <div className="flex gap-2">
+            {inviteLink ? (
+              <>
+                <button
+                  onClick={copyInviteLink}
+                  className="px-5 py-2.5 bg-white text-indigo-600 rounded-xl font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors"
+                >
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
+                  {copied ? 'Copiado!' : 'Copiar Link'}
+                </button>
+                <button
+                  onClick={() => window.open(inviteLink, '_blank')}
+                  className="px-4 py-2.5 bg-white/20 rounded-xl hover:bg-white/30 transition-colors"
+                  title="Visualizar página"
+                >
+                  <ExternalLink size={18} />
+                </button>
+              </>
+            ) : (
+              <p className="text-white/80 text-sm italic">
+                Configure seu link nas configurações do perfil
+              </p>
+            )}
           </div>
-        </form>
-      )}
+        </div>
+      </div>
 
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="relative flex-1">

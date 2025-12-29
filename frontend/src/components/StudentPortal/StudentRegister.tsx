@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, User, Phone, Calendar, BookOpen, ArrowRight, Loader } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { GraduationCap, Lock, User, ArrowRight, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
 
 export function StudentRegister() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: paramSlug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [teacher, setTeacher] = useState<any>(null);
+
+  // Extrair slug da URL manualmente se useParams não funcionar
+  // A URL é /professor/nome-do-professor
+  const extractSlugFromPath = (): string | null => {
+    const path = location.pathname;
+    const match = path.match(/\/professor\/([^\/]+)/);
+    return match ? match[1] : null;
+  };
+
+  const slug = paramSlug || extractSlugFromPath();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -23,27 +34,37 @@ export function StudentRegister() {
     parentPhone: ''
   });
 
+  // Verifica se é menor de idade para mostrar campos do responsável
+  const isMinor = formData.age ? parseInt(formData.age) < 18 : true;
+
   useEffect(() => {
     const fetchTeacher = async () => {
+      if (!slug) {
+        toast.error('Link do professor inválido');
+        setLoading(false);
+        navigate('/');
+        return;
+      }
+
       try {
-        const response = await apiService.get(`/auth/teacher/${slug}`);
-        if (response.data.success) {
-          setTeacher(response.data.teacher);
+        const response = await apiService.get(`/auth/teacher/${slug}`) as any;
+        // apiService já retorna response.data diretamente
+        if (response.success) {
+          setTeacher(response.teacher);
         } else {
           toast.error('Professor não encontrado');
           navigate('/');
         }
       } catch (error: any) {
-        toast.error(error.response?.data?.message || 'Erro ao buscar professor');
+        console.error('Erro ao buscar professor:', error);
+        toast.error(error.message || 'Erro ao buscar professor');
         navigate('/');
       } finally {
         setLoading(false);
       }
     };
 
-    if (slug) {
-      fetchTeacher();
-    }
+    fetchTeacher();
   }, [slug, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -69,33 +90,57 @@ export function StudentRegister() {
 
     const age = parseInt(formData.age);
     if (isNaN(age) || age < 3 || age > 120) {
-      toast.error('Por favor, informe uma idade válida');
+      toast.error('A idade deve estar entre 3 e 120 anos');
       return;
+    }
+
+    // Validar dados do responsável apenas para menores de 18
+    if (age < 18) {
+      if (!formData.parentName.trim()) {
+        toast.error('Nome do responsável é obrigatório para menores de 18 anos');
+        return;
+      }
+      if (!formData.parentEmail.trim()) {
+        toast.error('Email do responsável é obrigatório para menores de 18 anos');
+        return;
+      }
+      if (!formData.parentPhone.trim()) {
+        toast.error('Telefone do responsável é obrigatório para menores de 18 anos');
+        return;
+      }
     }
 
     setSubmitting(true);
 
     try {
-      const response = await apiService.post('/portal/auth/register', {
+      // Preparar dados - incluir responsável apenas se menor de 18
+      const registerData: any = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
         age: formData.age,
         grade: formData.grade,
-        parentName: formData.parentName,
-        parentEmail: formData.parentEmail,
-        parentPhone: formData.parentPhone,
         teacherId: teacher.id
-      });
+      };
 
-      if (response.data.success) {
-        localStorage.setItem('studentToken', response.data.token);
-        localStorage.setItem('studentData', JSON.stringify(response.data.student));
+      // Adicionar dados do responsável apenas para menores de 18
+      if (age < 18) {
+        registerData.parentName = formData.parentName;
+        registerData.parentEmail = formData.parentEmail;
+        registerData.parentPhone = formData.parentPhone;
+      }
+
+      const response = await apiService.post('/portal/auth/register', registerData) as any;
+
+      // apiService já retorna response.data diretamente
+      if (response.success) {
+        localStorage.setItem('studentToken', response.token);
+        localStorage.setItem('studentData', JSON.stringify(response.student));
         toast.success('Conta criada com sucesso!');
         navigate('/portal/onboarding');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erro ao criar conta');
+      toast.error(error.message || 'Erro ao criar conta');
     } finally {
       setSubmitting(false);
     }
@@ -238,57 +283,60 @@ export function StudentRegister() {
               </div>
             </div>
 
-            {/* Dados do Responsável */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-600" />
-                Dados do Responsável
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome do Responsável *
-                  </label>
-                  <input
-                    type="text"
-                    name="parentName"
-                    value={formData.parentName}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Maria Silva"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email do Responsável *
-                  </label>
-                  <input
-                    type="email"
-                    name="parentEmail"
-                    value={formData.parentEmail}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="maria@email.com"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Telefone do Responsável *
-                  </label>
-                  <input
-                    type="tel"
-                    name="parentPhone"
-                    value={formData.parentPhone}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="(11) 99999-9999"
-                  />
+            {/* Dados do Responsável - apenas para menores de 18 */}
+            {isMinor && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-indigo-600" />
+                  Dados do Responsável
+                  <span className="text-xs font-normal text-gray-500">(obrigatório para menores de 18 anos)</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nome do Responsável *
+                    </label>
+                    <input
+                      type="text"
+                      name="parentName"
+                      value={formData.parentName}
+                      onChange={handleChange}
+                      required={isMinor}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="Maria Silva"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email do Responsável *
+                    </label>
+                    <input
+                      type="email"
+                      name="parentEmail"
+                      value={formData.parentEmail}
+                      onChange={handleChange}
+                      required={isMinor}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="maria@email.com"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Telefone do Responsável *
+                    </label>
+                    <input
+                      type="tel"
+                      name="parentPhone"
+                      value={formData.parentPhone}
+                      onChange={handleChange}
+                      required={isMinor}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Botão Submit */}
             <button
