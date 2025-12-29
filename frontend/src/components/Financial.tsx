@@ -19,11 +19,11 @@ const FinancialPage = () => {
     try {
       const res = await paymentsAPI.getAll();
       setPagamentos(res.data.payments || []);
-    } catch {
+    } catch (error) {
+      console.error('Erro ao buscar pagamentos:', error);
       setPagamentos([]);
-      toast.error('Erro ao carregar pagamentos');
-    } finally {
-      setCarregando(false);
+    } finally { 
+      setCarregando(false); 
     }
   };
 
@@ -37,7 +37,8 @@ const FinancialPage = () => {
       await paymentsAPI.update(p._id || p.id || '', { status: 'paid' });
       toast.success('Pagamento registrado com sucesso');
       buscar();
-    } catch {
+    } catch (error) {
+      console.error('Erro ao atualizar pagamento:', error);
       toast.error('Erro ao registrar pagamento');
     }
   };

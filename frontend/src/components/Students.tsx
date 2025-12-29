@@ -23,10 +23,10 @@ const StudentsPage = () => {
       setAlunos(res.data?.students || []);
     } catch (err) {
       console.error('Erro ao buscar alunos:', err);
+      toast.error('Erro ao carregar lista de alunos');
       setAlunos([]);
-      toast.error('Erro ao buscar alunos');
-    } finally {
-      setCarregando(false);
+    } finally { 
+      setCarregando(false); 
     }
   };
 
@@ -78,7 +78,6 @@ const StudentsPage = () => {
     } catch (err) {
       console.error('Erro ao remover aluno:', err);
       toast.error('Erro ao remover aluno');
-      setExcluirAluno(null);
     }
   };
 

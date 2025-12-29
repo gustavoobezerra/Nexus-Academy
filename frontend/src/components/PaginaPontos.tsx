@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import {
-  Star, Trophy, Gift, Zap, Award, Lock, Unlock,
+import { 
+  Star, Trophy, Gift, Zap, Award, Lock, Unlock, 
   Target, Flame, BookOpen, Activity
 } from 'lucide-react';
 
@@ -97,8 +97,8 @@ const ProgressBar = ({ current, total, label }: { current: number; total: number
   );
 };
 
-export const PaginaPontos = ({ studentPoints, activities, rewards }: {
-  studentPoints: StudentPoints | null;
+export const PaginaPontos = ({ studentPoints, activities, rewards }: { 
+  studentPoints: StudentPoints | null; 
   activities: Activity[];
   rewards: Reward[];
 }) => {
@@ -149,8 +149,8 @@ export const PaginaPontos = ({ studentPoints, activities, rewards }: {
 
         {/* Progress Bar para próximo nível */}
         <div className="mt-6 pt-6 border-t border-white/20">
-          <ProgressBar
-            current={studentPoints.totalPoints}
+          <ProgressBar 
+            current={studentPoints.totalPoints} 
             total={proximoLevelPontos}
             label={`Nível ${studentPoints.level} → Nível ${studentPoints.level + 1}`}
           />
@@ -270,9 +270,9 @@ export const PaginaPontos = ({ studentPoints, activities, rewards }: {
               <h3 className="text-xl font-bold text-slate-800">Conquistas Desbloqueadas</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {studentPoints.achievements.map(achievement => (
-                  <AchievementBadge
-                    key={achievement}
-                    name={achievement}
+                  <AchievementBadge 
+                    key={achievement} 
+                    name={achievement} 
                     icon="trophy"
                   />
                 ))}
@@ -309,8 +309,8 @@ export const PaginaPontos = ({ studentPoints, activities, rewards }: {
               <div key={activity.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-md transition-all">
                 <div className="flex items-start gap-4">
                   <div className={`p-3 rounded-lg flex-shrink-0 ${
-                    activity.points > 0
-                      ? 'bg-green-100'
+                    activity.points > 0 
+                      ? 'bg-green-100' 
                       : 'bg-orange-100'
                   }`}>
                     {getIconComponent(activity.icon, 20, activity.points > 0 ? '#16a34a' : '#ea580c')}
@@ -318,11 +318,11 @@ export const PaginaPontos = ({ studentPoints, activities, rewards }: {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-800">{activity.description}</p>
                     <p className="text-xs text-slate-500 mt-1">
-                      {new Date(activity.date).toLocaleDateString('pt-BR', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                      {new Date(activity.date).toLocaleDateString('pt-BR', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
                       })}
                     </p>
                   </div>
@@ -360,7 +360,7 @@ export const PaginaPontos = ({ studentPoints, activities, rewards }: {
               <h3 className="text-xl font-bold text-slate-800">Recompensas Disponíveis</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {rewardsDisponiveis.map(reward => (
-                  <div
+                  <div 
                     key={reward.id}
                     className="bg-white dark:bg-slate-800 rounded-2xl p-6 border-2 border-green-200 dark:border-green-700 hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg transition-all"
                   >
@@ -398,7 +398,7 @@ export const PaginaPontos = ({ studentPoints, activities, rewards }: {
             <h3 className="text-lg font-bold text-slate-800 mb-4">Próximas Recompensas</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {rewards.filter(r => r.points > studentPoints.totalPoints).slice(0, 2).map(reward => (
-                <div
+                <div 
                   key={reward.id}
                   className="bg-slate-50 rounded-2xl p-6 border-2 border-slate-300 opacity-60"
                 >
