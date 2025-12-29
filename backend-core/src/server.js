@@ -16,6 +16,7 @@ import cacheService from './services/cacheService.js';
 import automationEngine from './services/automationEngine.js';
 import monitoringService from './services/monitoringService.js';
 import logger from './utils/logger.js';
+import { tenantContextMiddleware } from './middleware/tenantAware.js';
 
 // Routes
 import authRoutes from './routes/auth.js';
@@ -116,6 +117,9 @@ app.use('/api/portal/auth/register', authLimiter);
 // Body parsing (DEPOIS do webhook do Stripe)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Tenant context middleware (DEPOIS do body parsing, ANTES das rotas)
+app.use(tenantContextMiddleware);
 
 // Static files (certificates / reports)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

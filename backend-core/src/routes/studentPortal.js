@@ -3,6 +3,7 @@ import Student from '../models/Student.js';
 import Class from '../models/Class.js';
 import Payment from '../models/Payment.js';
 import Course from '../models/Course.js';
+import Activity from '../models/Activity.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -941,6 +942,236 @@ function authenticateStudent(req, res, next) {
     });
   }
 }
+
+// ===== NOVAS ROTAS DO DASHBOARD DO ALUNO =====
+
+// GET /api/portal/me - Obter dados completos do aluno logado
+router.get('/me', authenticateStudent, async (req, res) => {
+  try {
+    const student = await Student.findById(req.studentId)
+      .populate('teacher', 'name email avatar')
+      .select('-portalAccess.password')
+      .lean();
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aluno não encontrado'
+      });
+    }
+
+    // Calcular métricas de performance
+    const classes = await Class.find({ student: req.studentId });
+    const completedClasses = classes.filter(c => c.status === 'completed').length;
+    const totalClasses = classes.length;
+    const performance = totalClasses > 0 ? Math.round((completedClasses / totalClasses) * 100) : 0;
+
+    // Próxima aula agendada
+    const nextClass = await Class.findOne({
+      student: req.studentId,
+      status: 'scheduled',
+      date: { $gte: new Date() }
+    }).sort({ date: 1 });
+
+    res.json({
+      success: true,
+      _id: student._id,
+      name: student.name,
+      email: student.email,
+      grade: student.grade,
+      subject: student.subject,
+      performance: {
+        overall: performance,
+        trend: 'stable'
+      },
+      points: student.points || 0,
+      level: student.level || 1,
+      nextClass: nextClass ? new Date(nextClass.date).toLocaleDateString('pt-BR') : null,
+      teacher: student.teacher || null
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error fetching student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar dados do aluno'
+    });
+  }
+});
+
+// GET /api/portal/activities - Listar atividades do aluno
+router.get('/activities', authenticateStudent, async (req, res) => {
+  try {
+    const activities = await Activity.find({
+      student: req.studentId
+    })
+      .sort({ dueDate: -1 })
+      .limit(20)
+      .lean();
+
+    res.json({
+      success: true,
+      activities: activities.map(a => ({
+        _id: a._id,
+        title: a.title || 'Atividade',
+        type: a.type || 'exercise',
+        dueDate: a.dueDate,
+        status: a.status || 'pending'
+      }))
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error fetching activities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar atividades'
+    });
+  }
+});
+
+// GET /api/portal/classes - Listar aulas do aluno
+router.get('/classes', authenticateStudent, async (req, res) => {
+  try {
+    const classes = await Class.find({
+      student: req.studentId
+    })
+      .sort({ date: -1 })
+      .limit(20)
+      .lean();
+
+    res.json({
+      success: true,
+      classes: classes.map(c => ({
+        _id: c._id,
+        title: c.title || 'Aula',
+        date: c.date,
+        duration: c.duration || 60,
+        status: c.status || 'scheduled'
+      }))
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error fetching classes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar aulas'
+    });
+  }
+});
+
+// ===== ROTAS DE CHAT ALUNO-PROFESSOR =====
+
+// GET /api/portal/chat/messages - Obter mensagens com o professor
+router.get('/chat/messages', authenticateStudent, async (req, res) => {
+  try {
+    const { teacherId } = req.query;
+
+    if (!teacherId) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacherId é obrigatório'
+      });
+    }
+
+    const Chat = (await import('../models/Chat.js')).default;
+    const messages = await Chat.find({
+      $or: [
+        { sender: req.studentId, recipient: teacherId },
+        { sender: teacherId, recipient: req.studentId }
+      ]
+    })
+      .sort({ timestamp: 1 })
+      .limit(100)
+      .lean();
+
+    res.json({
+      success: true,
+      messages: messages.map(m => ({
+        _id: m._id,
+        sender: m.sender.toString() === req.studentId.toString() ? 'student' : 'teacher',
+        senderName: m.senderName || 'Usuário',
+        content: m.content,
+        timestamp: m.timestamp,
+        read: m.read || false,
+        type: m.type || 'text',
+        fileUrl: m.fileUrl,
+        fileName: m.fileName
+      }))
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error fetching messages:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao carregar mensagens'
+    });
+  }
+});
+
+// POST /api/portal/chat/send - Enviar mensagem para o professor
+router.post('/chat/send', authenticateStudent, async (req, res) => {
+  try {
+    const { teacherId, content, type = 'text' } = req.body;
+
+    if (!teacherId || !content) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacherId e content são obrigatórios'
+      });
+    }
+
+    const student = await Student.findById(req.studentId);
+    const Chat = (await import('../models/Chat.js')).default;
+
+    const message = new Chat({
+      sender: req.studentId,
+      senderName: student.name,
+      recipient: teacherId,
+      content,
+      type,
+      timestamp: new Date(),
+      read: false
+    });
+
+    await message.save();
+
+    res.json({
+      success: true,
+      message: {
+        _id: message._id,
+        sender: 'student',
+        senderName: student.name,
+        content: message.content,
+        timestamp: message.timestamp,
+        read: false,
+        type: message.type
+      }
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error sending message:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao enviar mensagem'
+    });
+  }
+});
+
+// POST /api/portal/chat/mark-read/:messageId - Marcar mensagem como lida
+router.post('/chat/mark-read/:messageId', authenticateStudent, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const Chat = (await import('../models/Chat.js')).default;
+
+    await Chat.findByIdAndUpdate(messageId, { read: true });
+
+    res.json({
+      success: true,
+      message: 'Mensagem marcada como lida'
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error marking message as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao marcar mensagem como lida'
+    });
+  }
+});
 
 export default router;
 

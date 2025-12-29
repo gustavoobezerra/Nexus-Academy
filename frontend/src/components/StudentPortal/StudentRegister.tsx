@@ -136,8 +136,9 @@ export function StudentRegister() {
       if (response.success) {
         localStorage.setItem('studentToken', response.token);
         localStorage.setItem('studentData', JSON.stringify(response.student));
-        toast.success('Conta criada com sucesso!');
-        navigate('/portal/onboarding');
+        toast.success('Conta criada com sucesso! Bem-vindo ao Nexus Academy!');
+        // Redirecionar direto para o dashboard
+        navigate('/portal/dashboard');
       }
     } catch (error: any) {
       toast.error(error.message || 'Erro ao criar conta');
