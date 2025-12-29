@@ -1,0 +1,81 @@
+# Nexus Academy - Cursor AI Rules
+
+You are an expert in TypeScript, Node.js, Express, React, Vite, MongoDB, Mongoose, JWT, Tailwind CSS, shadcn/ui, and Radix UI.
+
+## Project Context
+
+Nexus Academy is a SaaS platform designed for teachers to manage students, classes, and payments efficiently. The platform features multi-tenancy architecture, AI-powered automation, payment processing via Stripe, a dedicated student portal, and real-time chat functionality using Socket.IO. The frontend is built with React, TypeScript, Vite, Tailwind CSS, shadcn/ui, and Radix UI, while the backend leverages Node.js, Express, MongoDB, Mongoose, and JWT for authentication.
+
+## Key Principles
+
+Write concise, technical responses with accurate TypeScript examples. Use functional and declarative programming patterns, avoiding classes whenever possible. Prioritize iteration and modularization over code duplication. Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`). Organize directories using lowercase with dashes (e.g., `components/auth-wizard`). Favor named exports for components and follow the Receive an Object, Return an Object (RORO) pattern for functions.
+
+## Code Style and Structure
+
+### Frontend
+- Structure components modularly in directories like `src/components/feature/Component.tsx`.
+- Place API calls in the `src/services` directory.
+- Store reusable logic in custom hooks within `src/hooks`.
+- Keep helper functions in `src/utils`.
+- Use functional components exclusively with React hooks.
+- Manage component-level state with `useState` and global state with `useContext` or Zustand.
+- Apply `useEffect` for side effects and `useCallback`/`useMemo` for performance optimization.
+
+### Backend
+- Follow a standard MVC structure with `models`, `controllers`, and `routes` directories.
+- Centralize business logic in the `services` directory.
+- Implement authentication and error handling through middleware.
+- Use `async/await` for all asynchronous operations.
+- Interact with the database exclusively through Mongoose.
+- Secure authentication with JWT tokens.
+
+## TypeScript Usage
+
+Use TypeScript for all code. Prefer `interface` over `type` for data structures. Avoid `any` and use `unknown` when the type is truly unknown. Define function signatures with `type`. Structure files with exported components first, followed by subcomponents, helpers, static content, and types at the end.
+
+## Naming Conventions
+
+Use camelCase for variables and functions (e.g., `myVariable`, `myFunction`). Use PascalCase for classes and React components (e.g., `MyClass`, `MyComponent`). Use UPPER_CASE_SNAKE_CASE for constants (e.g., `MY_CONSTANT`). Use kebab-case for file names (e.g., `my-file.tsx`). Name API endpoints and database collections with plural nouns (e.g., `/api/students`, `students` collection).
+
+## Error Handling and Validation
+
+Prioritize error handling and edge cases at the beginning of functions. Use early returns for error conditions to avoid deeply nested if statements. Place the happy path last in the function for improved readability. Avoid unnecessary else statements and use the if-return pattern instead. Implement guard clauses to handle preconditions and invalid states early. Log errors to a logging service like Sentry or LogRocket. Provide meaningful, user-friendly error messages. Use `try...catch` for synchronous code and `.catch()` for asynchronous code.
+
+## Multi-Tenancy
+
+All database queries must be scoped to the current teacher's `teacherId` to ensure data isolation. Use the `tenantAware` Mongoose plugin to automate this process. The plugin automatically injects `{ teacher: teacherId }` into all queries, preventing data leakage between tenants. Ensure the `tenantContextMiddleware` is applied before all routes to capture the `teacherId` from the JWT token.
+
+## AI Features
+
+Centralize all AI-related logic in the `backend-core/src/services/ai` directory. Use the OpenAI API for all AI-powered features. Ensure API keys are stored securely in environment variables. Handle AI errors gracefully and provide fallback mechanisms when the AI service is unavailable.
+
+## Security
+
+Sanitize all user inputs to prevent XSS and SQL injection attacks. Store sensitive information like API keys, database credentials, and JWT secrets in environment variables. Never hardcode secrets in the codebase. Keep all dependencies up to date to mitigate security vulnerabilities. Use `helmet` for setting secure HTTP headers. Implement rate limiting to prevent abuse. Use HTTPS in production environments.
+
+## Performance Optimization
+
+Optimize images by using WebP format, specifying size data, and enabling lazy loading. Use dynamic loading for non-critical components to reduce initial bundle size. Minimize the use of `use client` in Next.js and favor React Server Components (RSC) where possible. Wrap client components in `Suspense` with a fallback UI. Use code splitting to load only the necessary code for each route.
+
+## Testing
+
+Write unit tests for all new features using Jest or Vitest. Write integration tests for complex workflows using Cypress or Playwright. Ensure all tests are passing before merging code. Use the React Testing Library for testing React components. Mock external dependencies like API calls and third-party services in tests.
+
+## Version Control
+
+Use Git for version control. Write clear and concise commit messages following the Conventional Commits specification (e.g., `feat:`, `fix:`, `docs:`, `refactor:`). Use a branching strategy like GitFlow. Create a new branch for each feature or bug fix. Merge branches via pull requests after code review.
+
+## Key Conventions
+
+Follow the official documentation for all libraries and frameworks. Write clear and concise documentation for all new features. Keep the user experience in mind at all times. Prioritize Web Vitals (LCP, CLS, FID) for frontend performance. Minimize the use of `use client`, `useEffect`, and `setState` in React. Favor server-side rendering and static generation where possible.
+
+## References
+
+Refer to the following documentation for best practices:
+- React: https://react.dev
+- TypeScript: https://www.typescriptlang.org/docs
+- Tailwind CSS: https://tailwindcss.com/docs
+- MongoDB: https://www.mongodb.com/docs
+- Mongoose: https://mongoosejs.com/docs
+- Express: https://expressjs.com
+- shadcn/ui: https://ui.shadcn.com
