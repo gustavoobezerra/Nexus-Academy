@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, User, Phone, Calendar, BookOpen, ArrowRight, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { apiService } from '../../services/api.service';
+import apiService from '../../services/api.service';
 
 export function StudentRegister() {
   const { slug } = useParams<{ slug: string }>();

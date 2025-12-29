@@ -19,9 +19,22 @@ type ApiPayload = Record<string, unknown>;
 // API PARA AUTENTICAÇÃO
 // ============================================================================
 
+// Types para respostas de autenticação
+interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    status?: string;
+    onboardingCompletedAt?: string;
+  };
+}
+
 export const authAPI = {
-  register: (data: ApiPayload) => apiService.post('/auth/register', data),
-  login: (credentials: { email: string; password: string }) => apiService.post('/auth/login', credentials),
+  register: (data: ApiPayload) => apiService.post('/auth/register', data) as Promise<AuthResponse>,
+  login: (credentials: { email: string; password: string }) => apiService.post('/auth/login', credentials) as Promise<AuthResponse>,
   getMe: () => apiService.get('/auth/me'),
 };
 
@@ -30,7 +43,7 @@ export const authAPI = {
 // ============================================================================
 
 export const studentsAPI = {
-  getAll: () => apiService.get<Aluno[]>('/students'),
+  getAll: () => apiService.get<Aluno[]>('/students') as Promise<{ data: { students: Aluno[] } }>,
   getOne: (id: string) => apiService.get<Aluno>(`/students/${id}`),
   create: (data: Partial<Aluno>) => apiService.post<Aluno>('/students', data),
   update: (id: string, data: Partial<Aluno>) => apiService.put<Aluno>(`/students/${id}`, data),
@@ -54,7 +67,7 @@ export const paymentsAPI = {
 // ============================================================================
 
 export const classesAPI = {
-  getAll: () => apiService.get<Aula[]>('/classes'),
+  getAll: () => apiService.get<Aula[]>('/classes') as Promise<{ data: { classes: Aula[] } }>,
   getOne: (id: string) => apiService.get<Aula>(`/classes/${id}`),
   create: (data: Partial<Aula>) => apiService.post<Aula>('/classes', data),
   update: (id: string, data: Partial<Aula>) => apiService.put<Aula>(`/classes/${id}`, data),
@@ -139,31 +152,46 @@ export const liveClassAPI = {
 // API PARA PORTAL DO ALUNO
 // ============================================================================
 
+// Types para respostas do portal
+interface PortalAuthResponse {
+  token: string;
+  student: {
+    id: string;
+    name: string;
+    email: string;
+    grade: string;
+    onboardingCompleted: boolean;
+    profile?: {
+      avatar?: string;
+    };
+  };
+}
+
 export const portalAPI = {
   // Autenticação
   login: (email: string, password: string) =>
-    apiService.post('/portal/auth/login', { email, password }),
+    apiService.post('/portal/auth/login', { email, password }) as Promise<PortalAuthResponse>,
   register: (data: ApiPayload) =>
-    apiService.post('/portal/auth/register', data),
+    apiService.post('/portal/auth/register', data) as Promise<PortalAuthResponse>,
 
   // Perfil
-  getProfile: () => apiService.get('/portal/profile'),
-  updateProfile: (data: ApiPayload) => apiService.put('/portal/profile', data),
+  getProfile: () => apiService.get('/portal/profile') as Promise<{ student: any }>,
+  updateProfile: (data: ApiPayload) => apiService.put('/portal/profile', data) as Promise<{ student: any }>,
 
   // Aulas
   getClasses: (params?: { limit?: number }) =>
-    apiService.get<Aula[]>('/portal/classes', { params }),
+    apiService.get<Aula[]>('/portal/classes', { params }) as Promise<{ classes: Aula[] }>,
   getClass: (classId: string) => apiService.get<Aula>(`/portal/classes/${classId}`),
 
   // Pagamentos
-  getPayments: () => apiService.get<Pagamento[]>('/portal/payments'),
+  getPayments: () => apiService.get<Pagamento[]>('/portal/payments') as Promise<{ payments: Pagamento[] }>,
   getPayment: (paymentId: string) => apiService.get<Pagamento>(`/portal/payments/${paymentId}`),
 
   // Metas
   getGoals: () => apiService.get('/portal/goals'),
-  createGoal: (data: ApiPayload) => apiService.post('/portal/goals', data),
+  createGoal: (data: ApiPayload) => apiService.post('/portal/goals', data) as Promise<{ goal: any }>,
   updateGoal: (goalId: string, data: ApiPayload) =>
-    apiService.put(`/portal/goals/${goalId}`, data),
+    apiService.put(`/portal/goals/${goalId}`, data) as Promise<{ goal: any }>,
   deleteGoal: (goalId: string) => apiService.delete(`/portal/goals/${goalId}`),
 
   // Onboarding

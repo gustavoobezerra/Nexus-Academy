@@ -144,12 +144,13 @@ export const StudentOnboarding = () => {
 
   const handleSubmit = async () => {
     setLoading(true);
-    try {
-      const finalData = {
-        ...data,
-        learningPurpose: data.learningPurpose === 'Outro' ? customPurpose : data.learningPurpose
-      };
 
+    const finalData = {
+      ...data,
+      learningPurpose: data.learningPurpose === 'Outro' ? customPurpose : data.learningPurpose
+    };
+
+    try {
       console.log('[Onboarding] Enviando dados:', finalData);
 
       // Usar a nova API centralizada com tratamento de erros automático
