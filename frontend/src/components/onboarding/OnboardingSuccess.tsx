@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { Step4_Success } from './Step4_Success';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
+import apiService from '../../services/api.service';
 
 /**
  * Página de callback após Stripe Checkout
@@ -23,7 +24,6 @@ export const OnboardingSuccess = () => {
   const [error, setError] = useState('');
   const [attempts, setAttempts] = useState(0);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const token = localStorage.getItem('token');
   const sessionId = searchParams.get('session_id');
 
@@ -38,13 +38,7 @@ export const OnboardingSuccess = () => {
     // Como o webhook pode demorar, tentamos algumas vezes
     const checkOnboardingStatus = async () => {
       try {
-        const response = await fetch(`${API_URL}/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        const data = await response.json();
+        const data = await apiService.get<{ success: boolean; user: any }>('/auth/me');
 
         if (data.success && data.user) {
           // Atualizar store com dados mais recentes
@@ -78,19 +72,13 @@ export const OnboardingSuccess = () => {
     };
 
     checkOnboardingStatus();
-  }, [sessionId, API_URL, token, attempts]);
+  }, [sessionId, token, attempts]);
 
   const completeOnboardingManually = async () => {
     try {
-      const response = await fetch(`${API_URL}/onboarding/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
+      const data = await apiService.post<{ success: boolean; user: any; message?: string }>(
+        '/onboarding/complete'
+      );
 
       if (data.success) {
         // Atualizar user no store

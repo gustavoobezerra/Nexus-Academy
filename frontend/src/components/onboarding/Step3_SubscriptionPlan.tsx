@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Crown, Check, Sparkles, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import apiService from '../../services/api.service';
 
 interface Step3Props {
   onNext: () => void;
@@ -11,9 +12,6 @@ type Plan = 'basic' | 'pro';
 export const Step3_SubscriptionPlan = ({ onNext }: Step3Props) => {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const token = localStorage.getItem('token');
 
   const plans = [
     {
@@ -60,16 +58,10 @@ export const Step3_SubscriptionPlan = ({ onNext }: Step3Props) => {
 
     try {
       // Criar sessão de checkout do Stripe
-      const response = await fetch(`${API_URL}/onboarding/create-subscription-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ plan: selectedPlan })
-      });
-
-      const data = await response.json();
+      const data = await apiService.post<{ success: boolean; checkoutUrl: string; message?: string }>(
+        '/onboarding/create-subscription-session',
+        { plan: selectedPlan }
+      );
 
       if (data.success && data.checkoutUrl) {
         // Redirecionar para Stripe Checkout

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import apiService from '../../services/api.service';
 
 interface Step1Props {
   onNext: (slug: string) => void;
@@ -14,9 +15,6 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
   const [available, setAvailable] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
-
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const token = localStorage.getItem('token');
 
   // Gerar sugestões baseadas no nome
   useEffect(() => {
@@ -77,16 +75,10 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
       setErrorMessage('');
 
       try {
-        const response = await fetch(`${API_URL}/onboarding/check-slug`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ slug: trimmed })
-        });
-
-        const data = await response.json();
+        const data = await apiService.post<{ success: boolean; available: boolean; message: string }>(
+          '/onboarding/check-slug',
+          { slug: trimmed }
+        );
 
         if (data.success) {
           setAvailable(data.available);
@@ -107,7 +99,7 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [slug, API_URL, token]);
+  }, [slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,16 +117,10 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
     }
 
     try {
-      const response = await fetch(`${API_URL}/onboarding/set-slug`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ slug: trimmed })
-      });
-
-      const data = await response.json();
+      const data = await apiService.post<{ success: boolean; message: string; slug: string }>(
+        '/onboarding/set-slug',
+        { slug: trimmed }
+      );
 
       if (data.success) {
         toast.success('Slug configurado!');
