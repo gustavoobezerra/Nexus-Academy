@@ -40,6 +40,7 @@ import StudentDashboardComplete from './components/StudentPortal/StudentDashboar
 import { SmartOnboarding } from './components/StudentPortal/SmartOnboarding';
 import { StudentProfilePage } from './components/StudentPortal/StudentProfile';
 import { StudentRegister } from './components/StudentPortal/StudentRegister';
+import { PronunciationTest } from './components/StudentPortal/PronunciationTest';
 import AIHub from './components/AIHub';
 import TeacherSettings from './components/TeacherSettings';
 
@@ -187,6 +188,9 @@ function AppWithRouter() {
     }
     if (location.pathname === '/portal/profile') {
       return <StudentProfilePage />;
+    }
+    if (location.pathname === '/portal/pronunciation') {
+      return <PronunciationTest />;
     }
     if (location.pathname === '/portal/live-class' && liveClassData) {
       return useDaily ? (

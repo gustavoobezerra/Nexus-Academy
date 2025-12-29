@@ -6,7 +6,8 @@ import ProgressCard from './ProgressCard';
 import ActivitiesCard from './ActivitiesCard';
 import { AIAssistant } from '../AIAssistant';
 import { ChatSystem } from '../ChatSystem';
-import { Bot, MessageSquare, X, Trophy, Sparkles } from 'lucide-react';
+import { Bot, MessageSquare, X, Trophy, Sparkles, Mic } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 interface StudentDashboardCompleteProps {
@@ -14,6 +15,7 @@ interface StudentDashboardCompleteProps {
 }
 
 export const StudentDashboardComplete = ({ onJoinClass }: StudentDashboardCompleteProps) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<any>(null);
   const [nextClass, setNextClass] = useState<any>(null);
@@ -188,7 +190,7 @@ export const StudentDashboardComplete = ({ onJoinClass }: StudentDashboardComple
         </div>
 
         {/* Seção de Features Avançadas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card Chat */}
           <button
             onClick={() => setShowChat(true)}
@@ -242,6 +244,25 @@ export const StudentDashboardComplete = ({ onJoinClass }: StudentDashboardComple
             </p>
             <div className="flex items-center gap-2 text-sm font-medium group-hover:gap-3 transition-all">
               <span>Ver Progresso</span>
+              <Sparkles className="w-4 h-4" />
+            </div>
+          </button>
+
+          {/* Card Teste de Pronúncia */}
+          <button
+            onClick={() => navigate('/portal/pronunciation')}
+            className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <Mic className="w-8 h-8" />
+              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-bold">NOVO</span>
+            </div>
+            <h3 className="text-2xl font-bold mb-2">Pronúncia</h3>
+            <p className="text-emerald-100 text-sm mb-4">
+              Pratique sua pronúncia com IA
+            </p>
+            <div className="flex items-center gap-2 text-sm font-medium group-hover:gap-3 transition-all">
+              <span>Iniciar Teste</span>
               <Sparkles className="w-4 h-4" />
             </div>
           </button>

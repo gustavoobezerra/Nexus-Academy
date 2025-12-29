@@ -1,11 +1,19 @@
 import CryptoJS from 'crypto-js';
 
-// IMPORTANTE: Em produção, SEMPRE usar variável de ambiente
-const KEY = process.env.ENCRYPTION_KEY || 'fallback-dev-key-change-in-production';
+const isProduction = process.env.NODE_ENV === 'production';
+const keyFromEnv = process.env.ENCRYPTION_KEY;
 
-if (!process.env.ENCRYPTION_KEY) {
-  console.warn('⚠️ AVISO: ENCRYPTION_KEY não definida. Usando chave padrão (NÃO fazer em produção!)');
+if (!keyFromEnv) {
+  const message = 'ENCRYPTION_KEY não definida. Configure uma chave segura no ambiente.';
+  if (isProduction) {
+    throw new Error(message);
+  }
+  console.warn(`⚠️ ${message} Usando chave padrão apenas para desenvolvimento.`);
 }
+
+// Em desenvolvimento, ainda fornecemos fallback para não quebrar o fluxo,
+// mas em produção o código acima já encerra o processo se a chave não existir.
+const KEY = keyFromEnv || 'fallback-dev-key-change-in-production';
 
 /**
  * Encripta um texto usando AES-256

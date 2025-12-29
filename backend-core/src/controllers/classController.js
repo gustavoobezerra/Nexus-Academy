@@ -3,13 +3,35 @@ import axios from 'axios';
 
 export const getClasses = async (req, res) => {
   try {
-    const classes = await Class.find({ teacher: req.user._id })
-      .populate('student', 'name grade')
-      .sort('-date');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const query = { teacher: req.user._id };
+
+    // Aplicar filtros opcionais
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+    if (req.query.studentId) {
+      query.student = req.query.studentId;
+    }
+
+    const [classes, total] = await Promise.all([
+      Class.find(query)
+        .populate('student', 'name grade')
+        .sort('-date')
+        .skip(skip)
+        .limit(limit),
+      Class.countDocuments(query)
+    ]);
 
     res.json({
       success: true,
       count: classes.length,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
       classes
     });
   } catch (error) {

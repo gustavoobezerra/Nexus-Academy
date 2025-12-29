@@ -1,12 +1,38 @@
 import express from 'express';
 import { register, login, getMe } from '../controllers/authController.js';
-import { protect } from '../middleware/auth.js';
+import { protect, loginRateLimiter, recordLoginAttempt } from '../middleware/auth.js';
 import User from '../models/User.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', login);
+// Rate limiting para registro
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // máximo 5 tentativas por IP
+  message: {
+    success: false,
+    message: 'Muitas tentativas de registro. Tente novamente em 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting para login (mais restritivo)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // máximo 5 tentativas por IP
+  message: {
+    success: false,
+    message: 'Muitas tentativas de login. Tente novamente em 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Não contar requisições bem-sucedidas
+});
+
+router.post('/register', registerLimiter, register);
+router.post('/login', loginLimiter, login);
 router.get('/me', protect, getMe);
 
 // Atualizar perfil do professor

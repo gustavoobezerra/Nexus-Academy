@@ -7,6 +7,21 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 dotenv.config();
+const isProduction = process.env.NODE_ENV === 'production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  const message = 'JWT_SECRET deve estar definido nas variáveis de ambiente';
+  if (isProduction) {
+    throw new Error(message);
+  }
+  console.warn(`⚠️ ${message}. Usando valor inseguro apenas para desenvolvimento.`);
+}
+
+if (isProduction) {
+  throw new Error('server-simple não deve ser usado em produção. Utilize server.js com MongoDB.');
+}
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -384,17 +399,9 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Nao autorizado' });
     }
 
-    // Token demo para desenvolvimento - sempre autoriza usuario demo
-    if (token === 'demo-token-bypass') {
-      req.user = users.find(u => u.id === 'user_demo');
-      if (req.user) {
-        return next();
-      }
-    }
-
     // Verificacao JWT normal
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'nexus-secret-key-2025');
+      const decoded = jwt.verify(token, JWT_SECRET || 'insecure-dev-secret');
       req.user = users.find(u => u.id === decoded.id);
 
       if (!req.user) {

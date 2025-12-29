@@ -16,20 +16,29 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
   const [carregando, setCarregando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [aulaParaExcluir, setAulaParaExcluir] = useState<Aula | null>(null);
+  
+  // Paginação
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalAulas, setTotalAulas] = useState(0);
+  const limitePorPagina = 20;
 
   useEffect(() => {
     buscarDados();
-  }, []);
+  }, [paginaAtual]);
 
   const buscarDados = async () => {
     setCarregando(true);
     try {
       const [aulasRes, alunosRes] = await Promise.all([
-        classesAPI.getAll(),
+        classesAPI.getAll({ page: paginaAtual, limit: limitePorPagina }),
         studentsAPI.getAll(),
       ]);
       // apiService já retorna response.data diretamente
-      setAulas((aulasRes as any).classes || []);
+      const aulasData = aulasRes as any;
+      setAulas(aulasData.classes || []);
+      setTotalPaginas(aulasData.totalPages || 1);
+      setTotalAulas(aulasData.total || 0);
       setAlunos((alunosRes as any).students || []);
     } catch (error) {
       setAulas([]);
@@ -268,7 +277,8 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
             <p className="text-slate-500 text-lg mb-2">Nenhuma aula agendada</p>
           </div>
         ) : (
-          aulas.map((aula: any) => {
+          <>
+            {aulas.map((aula: any) => {
             const { hora } = formatarDataHora(aula.scheduledAt);
             return (
               <div
@@ -361,7 +371,36 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                 </div>
               </div>
             );
-          })
+          })}
+
+          {/* Controles de paginação */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {((paginaAtual - 1) * limitePorPagina) + 1} a {Math.min(paginaAtual * limitePorPagina, totalAulas)} de {totalAulas} aulas
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+                  disabled={paginaAtual === 1}
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Anterior
+                </button>
+                <span className="px-4 py-2 text-slate-700 dark:text-slate-300 font-medium">
+                  Página {paginaAtual} de {totalPaginas}
+                </span>
+                <button
+                  onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+                  disabled={paginaAtual === totalPaginas}
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

@@ -95,10 +95,18 @@ studentSchema.index({ teacher: 1 });
 studentSchema.index({ active: 1 });
 studentSchema.index({ paymentStatus: 1 });
 studentSchema.index({ 'portalAccess.email': 1 });
+studentSchema.index({ grade: 1 });
+studentSchema.index({ 'performance.overall': 1 });
+studentSchema.index({ name: 'text', email: 'text', phone: 'text' }); // Índice de texto para busca
 
 // ÍNDICE COMPOSTO CRÍTICO PARA MULTI-TENANT
 // Permite mesmo email em professores diferentes (isolamento total)
 studentSchema.index({ teacher: 1, email: 1 }, { unique: true, sparse: true });
+
+// Índices compostos para queries frequentes
+studentSchema.index({ teacher: 1, grade: 1, active: 1 });
+studentSchema.index({ teacher: 1, paymentStatus: 1, active: 1 });
+studentSchema.index({ teacher: 1, 'performance.overall': 1, active: 1 });
 
 studentSchema.virtual('totalClasses', {
   ref: 'Class',

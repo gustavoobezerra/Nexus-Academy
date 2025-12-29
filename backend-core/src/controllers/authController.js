@@ -10,9 +10,43 @@ const signToken = (id) => {
   });
 };
 
+// Validação de senha forte
+const validateStrongPassword = (password) => {
+  if (!password || password.length < 8) {
+    return { valid: false, message: 'Senha deve ter no mínimo 8 caracteres' };
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos uma letra maiúscula' };
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos uma letra minúscula' };
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos um número' };
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, message: 'Senha deve conter pelo menos um símbolo (!@#$%^&*...)' };
+  }
+  
+  return { valid: true };
+};
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
+
+    // Validar senha forte
+    const passwordValidation = validateStrongPassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: passwordValidation.message
+      });
+    }
 
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -74,10 +108,21 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (!user || !(await user.comparePassword(password))) {
+      // Registrar tentativa falha de login
+      const ip = req.ip || req.connection.remoteAddress;
+      if (typeof recordLoginAttempt === 'function') {
+        recordLoginAttempt(ip, false);
+      }
       return res.status(401).json({ 
         success: false,
         message: 'Email ou senha incorretos.' 
       });
+    }
+
+    // Registrar tentativa bem-sucedida
+    const ip = req.ip || req.connection.remoteAddress;
+    if (typeof recordLoginAttempt === 'function') {
+      recordLoginAttempt(ip, true);
     }
 
     const token = signToken(user._id);
