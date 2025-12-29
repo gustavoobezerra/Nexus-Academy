@@ -44,9 +44,12 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
   useEffect(() => {
     const trimmed = slug.trim();
 
+    console.log('[SLUG DEBUG] Valor digitado:', slug, '| Trimmed:', trimmed);
+
     if (!trimmed) {
       setAvailable(null);
       setErrorMessage('');
+      console.log('[SLUG DEBUG] Campo vazio, resetando estado');
       return;
     }
 
@@ -54,25 +57,31 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
     if (!/^[a-z0-9-]+$/.test(trimmed)) {
       setAvailable(false);
       setErrorMessage('Use apenas letras minúsculas, números e hífen');
+      console.log('[SLUG DEBUG] Formato inválido');
       return;
     }
 
     if (trimmed.length < 3) {
       setAvailable(false);
       setErrorMessage('Mínimo de 3 caracteres');
+      console.log('[SLUG DEBUG] Muito curto');
       return;
     }
 
     if (trimmed.length > 30) {
       setAvailable(false);
       setErrorMessage('Máximo de 30 caracteres');
+      console.log('[SLUG DEBUG] Muito longo');
       return;
     }
+
+    console.log('[SLUG DEBUG] Validações locais OK, chamando API em 500ms...');
 
     // Debounce para verificação no backend
     const timer = setTimeout(async () => {
       setChecking(true);
       setErrorMessage('');
+      console.log('[SLUG DEBUG] Chamando API /onboarding/check-slug com:', trimmed);
 
       try {
         const data = await apiService.post<{ success: boolean; available: boolean; message: string }>(
@@ -80,18 +89,24 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
           { slug: trimmed }
         );
 
+        console.log('[SLUG DEBUG] Resposta da API:', data);
+
         if (data.success) {
           setAvailable(data.available);
           if (!data.available) {
             setErrorMessage(data.message || 'Slug indisponível');
+          } else {
+            setErrorMessage('');
           }
+          console.log('[SLUG DEBUG] Slug disponível:', data.available);
         } else {
           setAvailable(false);
           setErrorMessage(data.message || 'Erro ao verificar slug');
+          console.error('[SLUG DEBUG] API retornou success=false:', data);
         }
       } catch (error) {
-        console.error('Erro ao verificar slug:', error);
-        setAvailable(null);
+        console.error('[SLUG DEBUG] ERRO na chamada da API:', error);
+        setAvailable(false);
         setErrorMessage('Erro ao verificar. Tente novamente.');
       } finally {
         setChecking(false);
@@ -164,7 +179,13 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                className="flex-1 px-4 py-3 rounded-r-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className={`flex-1 px-4 py-3 rounded-r-xl border-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 outline-none transition-all ${
+                  available === true
+                    ? 'border-green-500 focus:border-green-500 focus:ring-green-500'
+                    : available === false
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : 'border-slate-300 dark:border-slate-700 focus:ring-indigo-500 focus:border-indigo-500'
+                }`}
                 placeholder="seu-nome"
                 required
                 minLength={3}
@@ -224,6 +245,16 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
         >
           {checking ? 'Verificando...' : 'Continuar'}
         </button>
+
+        {/* Debug info - remover depois */}
+        {import.meta.env.DEV && (
+          <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-xs">
+            <p className="font-mono">
+              <strong>DEBUG:</strong> available={String(available)} | checking={String(checking)} |
+              slug="{slug}" | botão={!available || checking ? 'DESABILITADO' : 'HABILITADO'}
+            </p>
+          </div>
+        )}
       </form>
     </div>
   );
