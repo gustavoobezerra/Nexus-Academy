@@ -37,6 +37,7 @@ import { PaymentTutorials } from './components/PaymentTutorials';
 // Portal do Aluno
 import { StudentPortalLogin } from './components/StudentPortal/StudentPortalLogin';
 import StudentDashboardComplete from './components/StudentPortal/StudentDashboardComplete';
+import { StudentDashboard } from './components/StudentPortal/StudentDashboard';
 import { SmartOnboarding } from './components/StudentPortal/SmartOnboarding';
 import { StudentProfilePage } from './components/StudentPortal/StudentProfile';
 import { StudentRegister } from './components/StudentPortal/StudentRegister';
@@ -220,15 +221,9 @@ function AppWithRouter() {
       );
     }
     if (location.pathname === '/portal/dashboard' || location.pathname === '/portal') {
-      return <StudentDashboardComplete onJoinClass={(classId) => {
-        setLiveClassData({ id: classId, title: 'Aula ao Vivo' });
-        navigate('/portal/live-class');
-      }} />;
+      return <StudentDashboard />;
     }
-    return <StudentDashboardComplete onJoinClass={(classId) => {
-      setLiveClassData({ id: classId, title: 'Aula ao Vivo' });
-      navigate('/portal/live-class');
-    }} />;
+    return <StudentDashboard />;
   }
 
   // Se não tem token e não está em rota pública, redirecionar para login

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const studentSchema = new mongoose.Schema({
   name: { type: String, required: [true, 'Nome do aluno é obrigatório'], trim: true },
@@ -114,5 +115,8 @@ studentSchema.virtual('totalClasses', {
   foreignField: 'student',
   count: true
 });
+
+// Aplicar plugin de isolamento automático multi-tenant
+studentSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('Student', studentSchema);
