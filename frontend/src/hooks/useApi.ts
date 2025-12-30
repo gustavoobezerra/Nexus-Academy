@@ -40,7 +40,7 @@ interface UseApiMutationReturn<T, P> {
  *   onSuccess: (student) => console.log('Perfil carregado:', student)
  * });
  */
-export function useApi<T = any>(
+export function useApi<T = unknown>(
   url: string | null,
   options: UseApiOptions<T> = {}
 ): UseApiReturn<T> {
@@ -140,7 +140,7 @@ export function useApi<T = any>(
  * // Usar:
  * mutate({ description: 'Nova descrição' });
  */
-export function useApiMutation<T = any, P = any>(
+export function useApiMutation<T = unknown, P = unknown>(
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   options: UseApiOptions<T> = {}
@@ -219,7 +219,7 @@ export function useApiMutation<T = any, P = any>(
  *   { immediate: true }
  * );
  */
-export function useApiWithFallback<T = any>(
+export function useApiWithFallback<T = unknown>(
   url: string | null,
   fallbackData: T,
   options: Omit<UseApiOptions<T>, 'fallbackData'> = {}
@@ -258,7 +258,7 @@ export function useApiWithFallback<T = any>(
  *   5000 // polling a cada 5 segundos
  * );
  */
-export function useApiPolling<T = any>(
+export function useApiPolling<T = unknown>(
   url: string | null,
   intervalMs: number = 5000,
   options: UseApiOptions<T> = {}
@@ -331,7 +331,7 @@ export function useApiPolling<T = any>(
  *   upload(formData);
  * };
  */
-export function useApiUpload<T = any>(
+export function useApiUpload<T = unknown>(
   url: string,
   options: UseApiOptions<T> = {}
 ) {

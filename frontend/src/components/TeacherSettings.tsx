@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Mail, Phone, Link2, Copy, Check, Save, X,
-  CreditCard, Bell, Palette, Globe, Shield, Key,
+  CreditCard, Bell, Shield, Key,
   ChevronRight, ExternalLink, Camera, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -44,13 +44,18 @@ interface TeacherSettingsProps {
 
 export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
   const navigate = useNavigate();
-  const { user, setAuth } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'notifications' | 'security'>('profile');
 
-  const [teacherData, setTeacherData] = useState<TeacherData | null>(null);
+  // Remove unused teacherData if it's not being used, or use it.
+  // It seems it was used to populate form but then not used for display except initial load?
+  // Actually, fetchTeacherData sets it. Let's keep it but suppress warning if needed, or use it.
+  // It is used in fetchTeacherData.
+  const [_teacherData, setTeacherData] = useState<TeacherData | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -81,7 +86,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
   const fetchTeacherData = async () => {
     try {
       setLoading(true);
-      const response = await apiService.get('/auth/me') as any;
+      const response = await apiService.get<any>('/auth/me');
       const data = response.user || response;
 
       setTeacherData(data);
@@ -113,7 +118,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
-      const response = await apiService.put('/auth/profile', formData) as any;
+      const response = await apiService.put<any>('/auth/profile', formData);
       const updatedUser = response.user || response;
 
       // Atualizar store
