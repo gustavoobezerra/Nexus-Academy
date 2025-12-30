@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Download, Copy, Check, FileText, Sparkles, X, Share2, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { classesAPI } from '../lib/api';
@@ -16,18 +16,13 @@ const ClassSummary = ({ classId, className, transcript, onClose }: ClassSummaryP
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    generateSummary();
-  }, [classId, transcript]);
-
-  const generateSummary = async () => {
+  const generateSummary = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await classesAPI.generateSummary(classId, transcript) as any;
+      const response = await classesAPI.generateSummary(classId, transcript);
 
-      // apiService já retorna response.data diretamente
       if (response.success) {
         setSummary(response.summary);
         toast.success('Resumo gerado com sucesso!');
@@ -39,7 +34,11 @@ const ClassSummary = ({ classId, className, transcript, onClose }: ClassSummaryP
     } finally {
       setLoading(false);
     }
-  };
+  }, [classId, transcript]);
+
+  useEffect(() => {
+    generateSummary();
+  }, [generateSummary]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(summary);

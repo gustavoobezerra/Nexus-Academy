@@ -50,10 +50,6 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'notifications' | 'security'>('profile');
 
-  // Remove unused teacherData if it's not being used, or use it.
-  // It seems it was used to populate form but then not used for display except initial load?
-  // Actually, fetchTeacherData sets it. Let's keep it but suppress warning if needed, or use it.
-  // It is used in fetchTeacherData.
   const [_teacherData, setTeacherData] = useState<TeacherData | null>(null);
 
   const [formData, setFormData] = useState({

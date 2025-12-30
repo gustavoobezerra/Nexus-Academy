@@ -36,7 +36,6 @@ import { PaymentTutorials } from './components/PaymentTutorials';
 
 // Portal do Aluno
 import { StudentPortalLogin } from './components/StudentPortal/StudentPortalLogin';
-import StudentDashboardComplete from './components/StudentPortal/StudentDashboardComplete';
 import { StudentDashboard } from './components/StudentPortal/StudentDashboard';
 import { SmartOnboarding } from './components/StudentPortal/SmartOnboarding';
 import { StudentProfilePage } from './components/StudentPortal/StudentProfile';
@@ -66,7 +65,6 @@ function AppWithRouter() {
   const [mostrarAlertas, setMostrarAlertas] = useState(false);
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
-  const [selectedStudentForPoints] = useState<string | null>('1');
   const [liveClassData, setLiveClassData] = useState<{ id: string; title: string } | null>(null);
   const [useDaily] = useState(true); // Usar Daily.co como padrão (true) ou Jitsi (false)
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);

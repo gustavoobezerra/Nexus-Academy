@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Bot, User, Sparkles, Trash2, Lightbulb } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -24,16 +24,7 @@ export const AIAssistant = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  useEffect(() => {
-    loadHistory();
-    loadSuggestions();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/ai-assistant/history`, {
@@ -46,9 +37,9 @@ export const AIAssistant = () => {
     } catch (error) {
       console.error('Error loading history:', error);
     }
-  };
+  }, [API_URL]);
 
-  const loadSuggestions = async () => {
+  const loadSuggestions = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/ai-assistant/suggestions`, {
@@ -61,7 +52,16 @@ export const AIAssistant = () => {
     } catch (error) {
       console.error('Error loading suggestions:', error);
     }
-  };
+  }, [API_URL]);
+
+  useEffect(() => {
+    loadHistory();
+    loadSuggestions();
+  }, [loadHistory, loadSuggestions]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const sendMessage = async (messageText?: string) => {
     const text = messageText || input.trim();

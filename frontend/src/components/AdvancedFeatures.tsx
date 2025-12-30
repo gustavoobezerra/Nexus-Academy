@@ -52,7 +52,7 @@ const AdvancedFeatures: React.FC = () => {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'ai' | 'similarity' | 'contract' | 'payment' | 'marketplace')}
             className={`px-3 py-2 rounded-lg font-medium transition text-xs ${
               activeTab === tab.id
                 ? 'bg-indigo-600 text-white'

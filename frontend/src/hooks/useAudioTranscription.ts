@@ -17,23 +17,9 @@ export const useAudioTranscription = () => {
   const onTranscriptCallback = useRef<((result: TranscriptionResult) => void) | null>(null);
 
   useEffect(() => {
-    // Check support on mount but do not setState directly if possible?
-    // Actually, setting state on mount is fine usually, but React warns about "cascading renders".
-    // It's mostly a performance warning.
-    // However, since it is inside useEffect[], it runs once.
-    // The warning says: "Calling setState synchronously within an effect can trigger cascading renders".
-    // This happens because we call setIsSupported(false) immediately.
-    // We can wrap it in a setTimeout or just ignore if we accept the re-render.
-    // But to fix, we can check support outside useEffect or use a ref for support and only state if needed?
-    // Better: Check support in initial state or a separate effect that is not sync?
-    // Or just initialize state based on window presence.
-
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      // We'll handle this by initial state if possible, or just accept the update.
-      // But to fix the lint error specifically:
-      // We can use a ref for the recognition instance.
       return;
     }
 

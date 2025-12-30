@@ -11,12 +11,16 @@ export const paymentsAPI = {
 };
 
 export const classesAPI = {
-  getAll: () => apiService.get<{ classes: Aula[] }>('/classes'),
+  getAll: (params?: { page?: number; limit?: number }) => apiService.get<{ classes: Aula[]; total: number; totalPages: number }>('/classes', { params }),
   create: (data: Partial<Aula>) => apiService.post<Aula>('/classes', data),
+  start: (id: string) => apiService.post<void>(`/classes/${id}/start`),
+  end: (id: string) => apiService.post<void>(`/classes/${id}/end`),
+  delete: (id: string) => apiService.delete<void>(`/classes/${id}`),
+  generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; summary: string }>('/classes/summary', { classId, transcript }),
 };
 
 export const studentsAPI = {
-  getAll: () => apiService.get<Aluno[]>('/students'),
+  getAll: () => apiService.get<{ students: Aluno[] }>('/students'),
   create: (data: Partial<Aluno>) => apiService.post<Aluno>('/students', data),
   delete: (id: string) => apiService.delete<void>(`/students/${id}`),
 };

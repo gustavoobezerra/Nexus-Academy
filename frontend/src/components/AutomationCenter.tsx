@@ -30,12 +30,11 @@ const AutomationCenter: React.FC = () => {
     try {
       setLoading(true);
       const [notifRes, templateRes] = await Promise.all([
-        apiService.get('/notifications'),
-        apiService.get('/notifications/templates')
-      ]) as any[];
-      // apiService já retorna response.data diretamente
-      setNotifications(notifRes?.notifications || notifRes || []);
-      setTemplates(templateRes?.templates || templateRes || []);
+        apiService.get<{ notifications: Notification[] }>('/notifications'),
+        apiService.get<{ templates: NotificationTemplate[] }>('/notifications/templates')
+      ]);
+      setNotifications(notifRes.notifications || []);
+      setTemplates(templateRes.templates || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -50,12 +49,12 @@ const AutomationCenter: React.FC = () => {
     }
 
     try {
-      const response = await apiService.post('/notifications/templates', newTemplate) as any;
-      setTemplates(prev => [...prev, response.template || response]);
+      const response = await apiService.post<{ template: NotificationTemplate }>('/notifications/templates', newTemplate);
+      setTemplates(prev => [...prev, response.template]);
       setNewTemplate({ name: '', type: 'reminder', subject: '', body: '' });
       setShowTemplateForm(false);
       toast.success('Template criado com sucesso!');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Erro ao criar template');
     }
   };
@@ -67,8 +66,8 @@ const AutomationCenter: React.FC = () => {
     }
 
     try {
-      const response = await apiService.post('/notifications/send', newNotification) as any;
-      setNotifications(prev => [response.notification || response, ...prev]);
+      const response = await apiService.post<{ notification: Notification }>('/notifications/send', newNotification);
+      setNotifications(prev => [response.notification, ...prev]);
       setNewNotification({
         type: 'reminder',
         channel: 'email',
@@ -79,7 +78,7 @@ const AutomationCenter: React.FC = () => {
       });
       setShowNotificationForm(false);
       toast.success('Notificação agendada!');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Erro ao agendar notificação');
     }
   };
@@ -89,7 +88,7 @@ const AutomationCenter: React.FC = () => {
       await apiService.delete(`/notifications/templates/${templateId}`);
       setTemplates(templates.filter(t => t.id !== templateId));
       toast.success('Template removido');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Erro ao remover template');
     }
   };
@@ -109,10 +108,10 @@ const AutomationCenter: React.FC = () => {
       </div>
 
       <div className="flex gap-2 mb-8 flex-wrap">
-        {['notifications', 'templates', 'schedule'].map((tab) => (
+        {(['notifications', 'templates', 'schedule'] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
               activeTab === tab
                 ? 'bg-indigo-600 text-white'
