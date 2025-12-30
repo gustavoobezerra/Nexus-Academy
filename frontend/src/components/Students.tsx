@@ -1,10 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { User, Search, Trash2, Link2, Copy, Check, ExternalLink, Filter, X } from 'lucide-react';
+import { User, Search, Trash2, Link2, Copy, Check, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { studentsAPI } from '../lib/api';
 import { Skeleton, ModalConfirmacao } from './Common';
 import { useAuthStore } from '../store/authStore';
-import { useDebounce } from '../hooks/useDebounce';
 import type { Aluno } from '../types';
 
 const StudentsPage = () => {
@@ -14,31 +13,16 @@ const StudentsPage = () => {
   const [query, setQuery] = useState('');
   const [excluirAluno, setExcluirAluno] = useState<Aluno | null>(null);
   const [copied, setCopied] = useState(false);
-  
-  // Filtros
-  const [filtroGrade, setFiltroGrade] = useState<string>('');
-  const [filtroPaymentStatus, setFiltroPaymentStatus] = useState<string>('');
-  const [filtroPerformance, setFiltroPerformance] = useState<string>('');
-  const [mostrarFiltros, setMostrarFiltros] = useState(false);
-
-  // Debounce da busca
-  const debouncedQuery = useDebounce(query, 300);
 
   // Link de convite do professor
   const inviteLink = user?.slug ? `${window.location.origin}/professor/${user.slug}` : '';
 
-  useEffect(() => { buscar(); }, [debouncedQuery, filtroGrade, filtroPaymentStatus, filtroPerformance]);
+  useEffect(() => { buscar(); }, []);
 
   const buscar = async () => {
     setCarregando(true);
     try {
-      const params: any = {};
-      if (debouncedQuery) params.search = debouncedQuery;
-      if (filtroGrade) params.grade = filtroGrade;
-      if (filtroPaymentStatus) params.paymentStatus = filtroPaymentStatus;
-      if (filtroPerformance) params.performance = filtroPerformance;
-
-      const res = await studentsAPI.getAll(params) as any;
+      const res = await studentsAPI.getAll() as any;
       // apiService já retorna response.data diretamente
       setAlunos(res.students || []);
     } catch (err) {
@@ -75,23 +59,15 @@ const StudentsPage = () => {
     }
   };
 
-  const limparFiltros = () => {
-    setFiltroGrade('');
-    setFiltroPaymentStatus('');
-    setFiltroPerformance('');
-    setQuery('');
-  };
-
-  const temFiltrosAtivos = filtroGrade || filtroPaymentStatus || filtroPerformance || query;
-
-  // Obter séries únicas dos alunos
-  const seriesUnicas = useMemo(() => {
-    const series = new Set<string>();
-    alunos.forEach(a => {
-      if (a.grade) series.add(a.grade);
-    });
-    return Array.from(series).sort();
-  }, [alunos]);
+  const filtrados = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return alunos;
+    return alunos.filter((a) =>
+      a.name.toLowerCase().includes(q) ||
+      (a.email || '').toLowerCase().includes(q) ||
+      (a.phone || '').includes(q)
+    );
+  }, [alunos, query]);
 
   if (carregando) return (
     <div className="p-4 md:p-6 space-y-6">
@@ -165,126 +141,33 @@ const StudentsPage = () => {
         </div>
       </div>
 
-      {/* Barra de busca e filtros */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-            <input
-              placeholder="Pesquise por nome, email ou telefone..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-            />
-          </div>
-          <button
-            onClick={() => setMostrarFiltros(!mostrarFiltros)}
-            className={`px-6 py-2.5 rounded-xl font-bold transition-colors flex items-center gap-2 ${
-              mostrarFiltros || temFiltrosAtivos
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200'
-            }`}
-          >
-            <Filter size={18} />
-            Filtros
-            {temFiltrosAtivos && (
-              <span className="ml-1 px-2 py-0.5 bg-white/20 dark:bg-slate-800/50 rounded-full text-xs">
-                {[filtroGrade, filtroPaymentStatus, filtroPerformance].filter(Boolean).length}
-              </span>
-            )}
-          </button>
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+          <input
+            placeholder="Pesquise por nome, email ou telefone..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+          />
         </div>
-
-        {/* Painel de filtros */}
-        {mostrarFiltros && (
-          <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-bold text-slate-900 dark:text-white">Filtros</h4>
-              <div className="flex items-center gap-2">
-                {temFiltrosAtivos && (
-                  <button
-                    onClick={limparFiltros}
-                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                  >
-                    <X size={14} />
-                    Limpar
-                  </button>
-                )}
-                <button
-                  onClick={() => setMostrarFiltros(false)}
-                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Filtro por Série */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Série
-                </label>
-                <select
-                  value={filtroGrade}
-                  onChange={e => setFiltroGrade(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="">Todas as séries</option>
-                  {seriesUnicas.map(serie => (
-                    <option key={serie} value={serie}>{serie}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtro por Status de Pagamento */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Status de Pagamento
-                </label>
-                <select
-                  value={filtroPaymentStatus}
-                  onChange={e => setFiltroPaymentStatus(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="">Todos os status</option>
-                  <option value="paid">Pago</option>
-                  <option value="pending">Pendente</option>
-                  <option value="late">Atrasado</option>
-                  <option value="overdue">Vencido</option>
-                </select>
-              </div>
-
-              {/* Filtro por Performance */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Performance
-                </label>
-                <select
-                  value={filtroPerformance}
-                  onChange={e => setFiltroPerformance(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="">Todas as performances</option>
-                  <option value="80">Alta (≥80%)</option>
-                  <option value="60">Média (60-79%)</option>
-                  <option value="40">Baixa (40-59%)</option>
-                  <option value="0">Muito Baixa (&lt;40%)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
+        <button
+          onClick={buscar}
+          className="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl font-bold transition-colors text-slate-700 dark:text-slate-200"
+        >
+          Atualizar Lista
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {alunos.length === 0 ? (
+        {filtrados.length === 0 ? (
           <div className="col-span-full text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
             <User size={64} className="mx-auto mb-4 text-slate-300 dark:text-slate-600"/>
             <p className="text-slate-500 dark:text-slate-400 text-lg font-medium">Nenhum aluno encontrado</p>
             <p className="text-slate-400 dark:text-slate-500 text-sm">Tente ajustar sua busca ou cadastrar um novo aluno</p>
           </div>
         ) : (
-          alunos.map(a => (
+          filtrados.map(a => (
             <div
               key={a._id || a.id}
               className="group bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-900 transition-all duration-300"
