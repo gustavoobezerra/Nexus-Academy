@@ -2077,44 +2077,34 @@ const iniciar = async () => {
   await inicializarDadosDemo();
 
   httpServer.listen(PORT, () => {
-    // DEBUG: console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║          🚀 NEXUS CORE - BACKEND SIMPLIFICADO 🚀             ║
-║                                                              ║
-║              Rodando SEM MongoDB (Memória RAM)               ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-
-✅ Servidor rodando na porta: ${PORT}
-✅ Modo: In-Memory Database (dados em memória)
-✅ Socket.IO: Ativo
-✅ API Routes configuradas
-
-👤 USUARIO DEMO:
-   Email: demo@nexus.com
-   Senha: 123456
-
-📡 Rotas disponíveis:
-   - POST   /api/auth/register
-   - POST   /api/auth/login
-   - GET    /api/students
-   - POST   /api/students
-   - PUT    /api/students/:id
-   - DELETE /api/students/:id
-   - GET    /api/students/stats/summary
-   - GET    /api/payments
-   - GET    /api/payments/stats/summary
-   - PUT    /api/payments/:id
-   - GET    /api/classes
-   - POST   /api/classes
-   - GET    /api/health
-
-⚠️  ATENÇÃO: Dados são perdidos ao reiniciar o servidor!
-💡 Para persistência, instale MongoDB ou use MongoDB Atlas
-
-🎉 Backend pronto para uso!
-    `);
+    console.log('\n' + '='.repeat(60));
+    console.log('🚀 NEXUS CORE - BACKEND SIMPLIFICADO');
+    console.log('Rodando SEM MongoDB (Memória RAM)');
+    console.log('='.repeat(60));
+    console.log(`✅ Servidor rodando na porta: ${PORT}`);
+    console.log('✅ Modo: In-Memory Database (dados em memória)');
+    console.log('✅ Socket.IO: Ativo');
+    console.log('✅ API Routes configuradas');
+    console.log('\n👤 USUARIO DEMO:');
+    console.log('   Email: demo@nexus.com');
+    console.log('   Senha: 123456');
+    console.log('\n📡 Rotas disponíveis:');
+    console.log('   - POST   /api/auth/register');
+    console.log('   - POST   /api/auth/login');
+    console.log('   - GET    /api/students');
+    console.log('   - POST   /api/students');
+    console.log('   - PUT    /api/students/:id');
+    console.log('   - DELETE /api/students/:id');
+    console.log('   - GET    /api/students/stats/summary');
+    console.log('   - GET    /api/payments');
+    console.log('   - GET    /api/payments/stats/summary');
+    console.log('   - PUT    /api/payments/:id');
+    console.log('   - GET    /api/classes');
+    console.log('   - POST   /api/classes');
+    console.log('   - GET    /api/health');
+    console.log('\n⚠️  ATENÇÃO: Dados são perdidos ao reiniciar o servidor!');
+    console.log('💡 Para persistência, instale MongoDB ou use MongoDB Atlas');
+    console.log('\n🎉 Backend pronto para uso!\n');
   });
 };
 
