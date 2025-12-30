@@ -14,13 +14,13 @@ const headers = {
  */
 export async function uploadAudio(audioData) {
   try {
-    console.log('📤 Fazendo upload de áudio para Assembly AI...');
+    // DEBUG: console.log('📤 Fazendo upload de áudio para Assembly AI...');
 
     const uploadResponse = await axios.post(`${baseUrl}/v2/upload`, audioData, {
       headers
     });
 
-    console.log('✅ Upload concluído:', uploadResponse.data.upload_url);
+    // DEBUG: console.log('✅ Upload concluído:', uploadResponse.data.upload_url);
 
     return {
       success: true,
@@ -42,7 +42,7 @@ export async function uploadAudio(audioData) {
  */
 export async function requestTranscription(audioUrl) {
   try {
-    console.log('🎙️  Solicitando transcrição...');
+    // DEBUG: console.log('🎙️  Solicitando transcrição...');
 
     const data = {
       audio_url: audioUrl,
@@ -54,7 +54,7 @@ export async function requestTranscription(audioUrl) {
       headers: headers
     });
 
-    console.log('✅ Transcrição solicitada:', response.data.id);
+    // DEBUG: console.log('✅ Transcrição solicitada:', response.data.id);
 
     return {
       success: true,
@@ -83,7 +83,7 @@ export async function getTranscription(transcriptId) {
       const result = pollingResponse.data;
 
       if (result.status === 'completed') {
-        console.log('✅ Transcrição completa');
+        // DEBUG: console.log('✅ Transcrição completa');
         return {
           success: true,
           text: result.text,
@@ -93,7 +93,7 @@ export async function getTranscription(transcriptId) {
       } else if (result.status === 'error') {
         throw new Error(`Transcrição falhou: ${result.error}`);
       } else {
-        console.log('⏳ Transcrição em andamento...');
+        // DEBUG: console.log('⏳ Transcrição em andamento...');
         await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }

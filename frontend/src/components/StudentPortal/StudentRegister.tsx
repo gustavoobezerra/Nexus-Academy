@@ -41,6 +41,7 @@ export function StudentRegister() {
     const fetchTeacher = async () => {
       if (!slug) {
         toast.error('Link do professor inválido');
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setLoading(false);
         navigate('/');
         return;
@@ -55,7 +56,7 @@ export function StudentRegister() {
           toast.error('Professor não encontrado');
           navigate('/');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Erro ao buscar professor:', error);
         toast.error(error.message || 'Erro ao buscar professor');
         navigate('/');
@@ -140,7 +141,7 @@ export function StudentRegister() {
         // Redirecionar direto para o dashboard
         navigate('/portal/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Erro ao criar conta');
     } finally {
       setSubmitting(false);

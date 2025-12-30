@@ -66,7 +66,7 @@ const cloudinaryService = {
         ...options
       });
 
-      console.log(`✅ File uploaded to Cloudinary: ${result.public_id}`);
+      // DEBUG: console.log(`✅ File uploaded to Cloudinary: ${result.public_id}`);
 
       return {
         success: true,
@@ -88,7 +88,7 @@ const cloudinaryService = {
     */
 
     // Mock for now
-    console.log(`☁️ [Cloudinary Mock] File would be uploaded: ${filePath}`);
+    // DEBUG: console.log(`☁️ [Cloudinary Mock] File would be uploaded: ${filePath}`);
     return {
       success: true,
       url: `https://res.cloudinary.com/demo/image/upload/mock_${Date.now()}.jpg`,
@@ -158,7 +158,7 @@ const cloudinaryService = {
     };
     */
 
-    console.log(`☁️ [Cloudinary Mock] Class recording would be uploaded`);
+    // DEBUG: console.log(`☁️ [Cloudinary Mock] Class recording would be uploaded`);
     return {
       success: true,
       url: `https://res.cloudinary.com/demo/video/upload/recording_${classId}.mp4`,
@@ -194,7 +194,7 @@ const cloudinaryService = {
         resource_type: resourceType
       });
 
-      console.log(`✅ File deleted from Cloudinary: ${publicId}`);
+      // DEBUG: console.log(`✅ File deleted from Cloudinary: ${publicId}`);
       return { success: true, result: result.result };
     } catch (error) {
       console.error('❌ Cloudinary delete error:', error);
@@ -202,7 +202,7 @@ const cloudinaryService = {
     }
     */
 
-    console.log(`☁️ [Cloudinary Mock] File would be deleted: ${publicId}`);
+    // DEBUG: console.log(`☁️ [Cloudinary Mock] File would be deleted: ${publicId}`);
     return { success: true, result: 'ok', mock: true };
   },
 
@@ -230,7 +230,7 @@ const cloudinaryService = {
     };
     */
 
-    console.log(`☁️ [Cloudinary Mock] Would fetch files for student ${studentId}`);
+    // DEBUG: console.log(`☁️ [Cloudinary Mock] Would fetch files for student ${studentId}`);
     return {
       success: true,
       files: [],
@@ -263,7 +263,7 @@ const cloudinaryService = {
     };
     */
 
-    console.log(`☁️ [Cloudinary Mock] Would fetch materials for class ${classId}`);
+    // DEBUG: console.log(`☁️ [Cloudinary Mock] Would fetch materials for class ${classId}`);
     return {
       success: true,
       materials: [],
@@ -293,7 +293,7 @@ const cloudinaryService = {
     return { success: true, url, expiresAt: new Date(timestamp * 1000) };
     */
 
-    console.log(`☁️ [Cloudinary Mock] Would generate signed URL for ${publicId}`);
+    // DEBUG: console.log(`☁️ [Cloudinary Mock] Would generate signed URL for ${publicId}`);
     return {
       success: true,
       url: `https://res.cloudinary.com/demo/image/authenticated/s--signature--/${publicId}`,
@@ -331,7 +331,7 @@ const cloudinaryService = {
     };
     */
 
-    console.log('☁️ [Cloudinary Mock] Would fetch usage stats');
+    // DEBUG: console.log('☁️ [Cloudinary Mock] Would fetch usage stats');
     return {
       success: true,
       plan: 'Free',

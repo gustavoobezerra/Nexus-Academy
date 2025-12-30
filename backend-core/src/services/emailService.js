@@ -18,7 +18,7 @@ export const emailService = {
 
   async sendEmail(options) {
     if (!this.isConfigured()) {
-      console.log(`[Email Mock] To: ${options.to}, Subject: ${options.subject}`);
+      // DEBUG: console.log(`[Email Mock] To: ${options.to}, Subject: ${options.subject}`);
       return { success: true, mock: true, messageId: `mock_${Date.now()}` };
     }
 

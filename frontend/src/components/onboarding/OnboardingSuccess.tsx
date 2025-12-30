@@ -29,6 +29,7 @@ export const OnboardingSuccess = () => {
 
   useEffect(() => {
     if (!sessionId) {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setError('Session ID não encontrado');
       setLoading(false);
       return;

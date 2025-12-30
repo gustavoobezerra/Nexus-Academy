@@ -22,7 +22,7 @@ cloudinary.config({
  */
 export async function uploadFile(filePath, options = {}) {
   try {
-    console.log('📤 Fazendo upload para Cloudinary...');
+    // DEBUG: console.log('📤 Fazendo upload para Cloudinary...');
 
     const defaultOptions = {
       folder: 'nexus-academy',
@@ -32,7 +32,7 @@ export async function uploadFile(filePath, options = {}) {
 
     const result = await cloudinary.uploader.upload(filePath, defaultOptions);
 
-    console.log('✅ Upload concluído:', result.secure_url);
+    // DEBUG: console.log('✅ Upload concluído:', result.secure_url);
 
     return {
       success: true,
@@ -60,7 +60,7 @@ export async function uploadFile(filePath, options = {}) {
 export async function deleteFile(publicId) {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
-    console.log('🗑️  Arquivo deletado:', publicId);
+    // DEBUG: console.log('🗑️  Arquivo deletado:', publicId);
     return { success: true, result };
   } catch (error) {
     console.error('❌ Erro ao deletar:', error.message);

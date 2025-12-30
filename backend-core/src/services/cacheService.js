@@ -13,8 +13,8 @@ export const cacheService = {
       try {
         redisClient = createClient({ url: process.env.REDIS_URL });
         redisClient.on('error', (err) => console.error('Redis Client Error:', err));
-        redisClient.on('connect', () => { isConnected = true; console.log('✅ Redis connected'); });
-        redisClient.on('disconnect', () => { isConnected = false; console.log('Redis disconnected'); });
+        redisClient.on('connect', () => { isConnected = true; console.info('✅ Redis connected'); });
+        redisClient.on('disconnect', () => { isConnected = false; console.info('Redis disconnected'); });
         await redisClient.connect();
         return true;
       } catch (error) {
@@ -22,7 +22,7 @@ export const cacheService = {
         return false;
       }
     }
-    console.log('Redis not configured, using memory cache');
+    // DEBUG: console.log('Redis not configured, using memory cache');
     return false;
   },
 

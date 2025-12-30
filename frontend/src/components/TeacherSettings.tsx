@@ -123,7 +123,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
 
       toast.success('Perfil atualizado com sucesso!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Erro ao salvar perfil');
     } finally {
       setSaving(false);
@@ -144,7 +144,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
 
       await apiService.put('/auth/payment-settings', paymentData);
       toast.success('Configurações de pagamento atualizadas!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Erro ao salvar configurações de pagamento');
     } finally {
       setSaving(false);
@@ -156,7 +156,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       setSaving(true);
       await apiService.put('/auth/notification-settings', { notifications: notificationSettings });
       toast.success('Preferências de notificação atualizadas!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(error.message || 'Erro ao salvar preferências');
     } finally {
       setSaving(false);

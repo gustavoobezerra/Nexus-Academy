@@ -26,7 +26,7 @@ const connectDB = async () => {
   try {
     // Evitar múltiplas conexões
     if (mongoose.connection.readyState === 1) {
-      console.log('✅ MongoDB already connected');
+      console.info('✅ MongoDB already connected');
       return mongoose.connection;
     }
 
@@ -37,9 +37,9 @@ const connectDB = async () => {
     isConnected = true;
     reconnectAttempts = 0;
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`   Database: ${conn.connection.name}`);
-    console.log(`   Ready State: ${conn.connection.readyState}`);
+    console.info(`✅ MongoDB Connected: ${conn.connection.host}`);
+    // DEBUG: console.log(`   Database: ${conn.connection.name}`);
+    // DEBUG: console.log(`   Ready State: ${conn.connection.readyState}`);
 
     // Event listeners melhorados
     mongoose.connection.on('error', (err) => {
@@ -54,7 +54,7 @@ const connectDB = async () => {
       // Tentar reconectar automaticamente
       if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts++;
-        console.log(`🔄 Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        // DEBUG: console.log(`🔄 Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
         setTimeout(() => {
           connectDB().catch(err => {
             console.error('Reconnection failed:', err.message);
@@ -66,24 +66,24 @@ const connectDB = async () => {
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected successfully');
+      console.info('✅ MongoDB reconnected successfully');
       isConnected = true;
       reconnectAttempts = 0;
     });
 
     mongoose.connection.on('connecting', () => {
-      console.log('🔄 Connecting to MongoDB...');
+      // DEBUG: console.log('🔄 Connecting to MongoDB...');
     });
 
     mongoose.connection.on('connected', () => {
-      console.log('✅ MongoDB connection established');
+      // DEBUG: console.log('✅ MongoDB connection established');
       isConnected = true;
     });
 
     // Monitorar performance
     if (process.env.NODE_ENV === 'development') {
       mongoose.set('debug', (collectionName, method, query, doc) => {
-        console.log(`[Mongoose] ${collectionName}.${method}`, query);
+        // DEBUG: console.log(`[Mongoose] ${collectionName}.${method}`, query);
       });
     }
 
@@ -113,7 +113,7 @@ export const disconnectDB = async () => {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.connection.close();
       isConnected = false;
-      console.log('✅ MongoDB connection closed gracefully');
+      // DEBUG: console.log('✅ MongoDB connection closed gracefully');
     }
   } catch (error) {
     console.error('❌ Error closing MongoDB connection:', error.message);

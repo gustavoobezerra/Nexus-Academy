@@ -117,7 +117,7 @@ const EngagementDashboard = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props: any) => `${props.name}: ${props.value}`}
+                  label={(props: unknown) => `${props.name}: ${props.value}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="mentions"

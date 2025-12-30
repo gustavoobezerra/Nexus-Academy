@@ -39,7 +39,7 @@ const telegramService = {
     // Uncomment when ready:
     /*
     if (!bot) {
-      console.log('⚠️ Telegram Bot not configured');
+      // DEBUG: console.log('⚠️ Telegram Bot not configured');
       return;
     }
 
@@ -93,10 +93,10 @@ Use /help para mais comandos.
       `, { parse_mode: 'Markdown' });
     });
 
-    console.log('✅ Telegram Bot initialized and listening...');
+    console.info('✅ Telegram Bot initialized and listening...');
     */
 
-    console.log('ℹ️ Telegram Bot not configured - add TELEGRAM_BOT_TOKEN to .env');
+    // DEBUG: console.log('ℹ️ Telegram Bot not configured - add TELEGRAM_BOT_TOKEN to .env');
   },
 
   /**
@@ -106,7 +106,7 @@ Use /help para mais comandos.
     // Uncomment when ready:
     /*
     if (!bot) {
-      console.log(`[Telegram Mock] Reminder to ${chatId}`);
+      // DEBUG: console.log(`[Telegram Mock] Reminder to ${chatId}`);
       return { success: true, mock: true };
     }
 
@@ -133,7 +133,7 @@ Esteja preparado e pontual!
         } : undefined
       });
 
-      console.log(`✅ Telegram reminder sent to ${chatId}`);
+      // DEBUG: console.log(`✅ Telegram reminder sent to ${chatId}`);
       return { success: true };
     } catch (error) {
       console.error('❌ Telegram error:', error);
@@ -141,8 +141,8 @@ Esteja preparado e pontual!
     }
     */
 
-    console.log(`📱 [Telegram Mock] Class reminder would be sent to ${chatId}`);
-    console.log(`   Student: ${data.studentName}, Class: ${data.className}`);
+    // DEBUG: console.log(`📱 [Telegram Mock] Class reminder would be sent to ${chatId}`);
+    // DEBUG: console.log(`   Student: ${data.studentName}, Class: ${data.className}`);
     return { success: true, mock: true };
   },
 
@@ -179,7 +179,7 @@ Para pagar, acesse a plataforma ou use o PIX acima.
     return { success: true };
     */
 
-    console.log(`📱 [Telegram Mock] Payment reminder to ${chatId}: R$ ${data.amount}`);
+    // DEBUG: console.log(`📱 [Telegram Mock] Payment reminder to ${chatId}: R$ ${data.amount}`);
     return { success: true, mock: true };
   },
 
@@ -204,7 +204,7 @@ Obrigado! 🎉
     return { success: true };
     */
 
-    console.log(`📱 [Telegram Mock] Payment confirmation to ${chatId}`);
+    // DEBUG: console.log(`📱 [Telegram Mock] Payment confirmation to ${chatId}`);
     return { success: true, mock: true };
   },
 
@@ -240,7 +240,7 @@ Continue estudando! 📖
     return { success: true };
     */
 
-    console.log(`📱 [Telegram Mock] Class summary to ${chatId}`);
+    // DEBUG: console.log(`📱 [Telegram Mock] Class summary to ${chatId}`);
     return { success: true, mock: true };
   },
 
@@ -270,7 +270,7 @@ Continue estudando! 📖
     return { success: true };
     */
 
-    console.log(`📱 [Telegram Mock] Material ${data.title} would be sent to ${chatId}`);
+    // DEBUG: console.log(`📱 [Telegram Mock] Material ${data.title} would be sent to ${chatId}`);
     return { success: true, mock: true };
   },
 
@@ -297,7 +297,7 @@ Continue estudando! 📖
     };
     */
 
-    console.log(`📱 [Telegram Mock] Bulk message to ${chatIds.length} students`);
+    // DEBUG: console.log(`📱 [Telegram Mock] Bulk message to ${chatIds.length} students`);
     return {
       success: true,
       total: chatIds.length,
@@ -312,7 +312,7 @@ Continue estudando! 📖
    */
   registerStudent(studentId, chatId) {
     studentChatIds.set(studentId, chatId);
-    console.log(`✅ Student ${studentId} registered with Telegram chat ID ${chatId}`);
+    // DEBUG: console.log(`✅ Student ${studentId} registered with Telegram chat ID ${chatId}`);
     return { success: true };
   },
 

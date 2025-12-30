@@ -8,7 +8,7 @@ let resend = null;
 
 if (process.env.RESEND_API_KEY) {
   resend = new Resend(process.env.RESEND_API_KEY);
-  console.log('✅ Resend configurado para envio de emails');
+  // DEBUG: console.log('✅ Resend configurado para envio de emails');
 } else {
   console.warn('⚠️ RESEND_API_KEY não configurada. Emails desabilitados.');
 }
@@ -47,11 +47,11 @@ export async function sendEmail({ to, subject, html, from, replyTo }) {
       replyTo: replyTo || EMAIL_CONFIG.replyTo
     };
 
-    console.log('📧 Enviando email via Resend para:', to);
+    // DEBUG: console.log('📧 Enviando email via Resend para:', to);
 
     const result = await resend.emails.send(emailData);
 
-    console.log('✅ Email enviado:', result.data?.id);
+    // DEBUG: console.log('✅ Email enviado:', result.data?.id);
 
     return {
       success: true,

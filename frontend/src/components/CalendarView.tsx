@@ -11,6 +11,7 @@ export const CalendarView = () => {
   const [classes, setClasses] = useState<any[]>([]);
 
   useEffect(() => {
+    // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
     setClasses([]);
   }, []);
 

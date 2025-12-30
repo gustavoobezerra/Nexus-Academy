@@ -27,6 +27,7 @@ export const JitsiLiveClass = ({
   useEffect(() => {
     // Configurar nome de exibição
     const name = userType === 'teacher' ? `Prof. ${teacherName}` : studentName || 'Aluno';
+    // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
     setDisplayName(name);
 
     // Criar nome único da sala (baseado no classId)
@@ -41,7 +42,7 @@ export const JitsiLiveClass = ({
     onEnd();
   };
 
-  const handleApiReady = (externalApi: any) => {
+  const handleApiReady = (externalApi: unknown) => {
     setIsLoading(false);
 
     // Adicionar event listeners
@@ -49,7 +50,7 @@ export const JitsiLiveClass = ({
       toast.success('Conectado à aula ao vivo!');
     });
 
-    externalApi.on('participantJoined', (participant: any) => {
+    externalApi.on('participantJoined', (participant: unknown) => {
       if (participant?.displayName) {
         toast(`${participant.displayName} entrou na aula`, {
           icon: '👋',
@@ -57,7 +58,7 @@ export const JitsiLiveClass = ({
       }
     });
 
-    externalApi.on('participantLeft', (participant: any) => {
+    externalApi.on('participantLeft', (participant: unknown) => {
       if (participant?.displayName) {
         toast(`${participant.displayName} saiu da aula`, {
           icon: '👋',

@@ -13,10 +13,11 @@ export const OnlineStudents = () => {
         const res = await studentsAPI.getAll() as any;
         // apiService já retorna response.data diretamente
         const studentList = res.students || [];
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setStudents(studentList);
         // random online statuses
         const map: Record<string, boolean> = {};
-        studentList.forEach((_st: any) => {
+        studentList.forEach((_st: unknown) => {
           map[_st._id || _st.id] = Math.random() > 0.6;
         });
         setOnlineMap(map);

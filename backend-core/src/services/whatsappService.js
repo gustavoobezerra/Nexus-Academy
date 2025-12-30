@@ -8,7 +8,7 @@ export const whatsappService = {
 
   async sendMessage(to, message, templateName = null, templateParams = null) {
     if (!this.isConfigured()) {
-      console.log(`[WhatsApp Mock] To: ${to}, Message: ${message}`);
+      // DEBUG: console.log(`[WhatsApp Mock] To: ${to}, Message: ${message}`);
       return { success: true, mock: true, messageId: `mock_${Date.now()}` };
     }
 
@@ -58,7 +58,7 @@ export const whatsappService = {
 
   async sendMediaMessage(to, mediaType, mediaUrl, caption = '') {
     if (!this.isConfigured()) {
-      console.log(`[WhatsApp Mock] Media to: ${to}, Type: ${mediaType}`);
+      // DEBUG: console.log(`[WhatsApp Mock] Media to: ${to}, Type: ${mediaType}`);
       return { success: true, mock: true };
     }
 
@@ -83,7 +83,7 @@ export const whatsappService = {
 
   async sendInteractiveMessage(to, type, body, buttons) {
     if (!this.isConfigured()) {
-      console.log(`[WhatsApp Mock] Interactive to: ${to}`);
+      // DEBUG: console.log(`[WhatsApp Mock] Interactive to: ${to}`);
       return { success: true, mock: true };
     }
 

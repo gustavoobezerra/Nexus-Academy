@@ -62,7 +62,7 @@ async function transcribeAudio(audioUrl, options = {}) {
   */
 
   // Mock response for now (until API key is configured)
-  console.log('⚠️ Assembly AI not configured. Using mock transcription.');
+  // DEBUG: console.log('⚠️ Assembly AI not configured. Using mock transcription.');
   return {
     success: true,
     text: '[Mock transcription] Olá, esta é uma transcrição de exemplo. Configure Assembly AI para transcrição real.',

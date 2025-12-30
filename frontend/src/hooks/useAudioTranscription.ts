@@ -1,5 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+// Extensão da interface Window para APIs específicas do navegador
+declare global {
+  interface Window {
+    webkitSpeechRecognition?: any;
+    SpeechRecognition?: any;
+  }
+}
+
+
 interface TranscriptionResult {
   text: string;
   isFinal: boolean;
@@ -33,7 +42,7 @@ export const useAudioTranscription = () => {
       setError(null);
     };
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: unknown) => {
       let interimTrans = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -65,7 +74,7 @@ export const useAudioTranscription = () => {
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: unknown) => {
       setError(`Erro: ${event.error}`);
       console.error('Speech recognition error:', event.error);
     };

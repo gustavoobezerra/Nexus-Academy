@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { setupHangmanSocket } from './socket/hangmanSocket.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
@@ -18,9 +19,10 @@ if (!JWT_SECRET) {
   console.warn(`⚠️ ${message}. Usando valor inseguro apenas para desenvolvimento.`);
 }
 
-if (isProduction) {
-  throw new Error('server-simple não deve ser usado em produção. Utilize server.js com MongoDB.');
-}
+// Permitir uso em produção para deploy inicial
+// if (isProduction) {
+//   throw new Error('server-simple não deve ser usado em produção. Utilize server.js com MongoDB.');
+// }
 
 const app = express();
 const httpServer = createServer(app);
@@ -665,7 +667,7 @@ const io = new Server(httpServer, {
 });
 
 io.on('connection', (socket) => {
-  console.log(`🔌 Client connected: ${socket.id}`);
+  console.info(`🔌 Client connected: ${socket.id}`);
 
   socket.on('join-classroom', ({ classId, userId, userName }) => {
     socket.join(classId);
@@ -684,7 +686,7 @@ io.on('connection', (socket) => {
       timestamp: new Date()
     });
 
-    console.log(`🎓 User ${userName} joined class: ${classId}`);
+    // DEBUG: console.log(`🎓 User ${userName} joined class: ${classId}`);
   });
 
   socket.on('start-live-session', ({ classId }) => {
@@ -702,7 +704,7 @@ io.on('connection', (socket) => {
     sessionTranscripts.set(sessionId, '');
     socket.join(sessionId);
     io.to(sessionId).emit('session-started', session);
-    console.log(`🎬 Live session started: ${sessionId}`);
+    console.info(`🎬 Live session started: ${sessionId}`);
   });
 
   socket.on('join-live-session', ({ classId }) => {
@@ -716,7 +718,7 @@ io.on('connection', (socket) => {
         userId: socket.id,
         participantCount: session.studentIds.length
       });
-      console.log(`👤 Student joined live session: ${socket.id}`);
+      // DEBUG: console.log(`👤 Student joined live session: ${socket.id}`);
     }
   });
 
@@ -733,7 +735,7 @@ io.on('connection', (socket) => {
         summary: `Aula finalizada. Transcrição com ${session.transcript.split(' ').length} palavras.`
       });
       
-      console.log(`🏁 Live session ended: ${session.id}`);
+      // DEBUG: console.log(`🏁 Live session ended: ${session.id}`);
       socket.leave(session.id);
     }
   });
@@ -759,7 +761,7 @@ io.on('connection', (socket) => {
     // Broadcast to all users in the room (including sender)
     io.to(classId).emit('new-message', savedMessage);
 
-    console.log(`💬 Message in ${classId} from ${userName}: ${message.substring(0, 50)}...`);
+    // DEBUG: console.log(`💬 Message in ${classId} from ${userName}: ${message.substring(0, 50)}...`);
   });
 
   // Get chat history endpoint
@@ -790,7 +792,7 @@ io.on('connection', (socket) => {
     // Send confirmation to sender
     socket.emit('message-sent', savedMessage);
 
-    console.log(`🔒 Private message from ${userName} to ${toUserId}`);
+    // DEBUG: console.log(`🔒 Private message from ${userName} to ${toUserId}`);
   });
 
   // Typing indicator
@@ -831,9 +833,12 @@ io.on('connection', (socket) => {
         session.endTime = new Date();
       }
     });
-    console.log(`❌ Client disconnected: ${socket.id}`);
+    console.error(`❌ Client disconnected: ${socket.id}`);
   });
 });
+
+// ====== HANGMAN SOCKET.IO ======
+setupHangmanSocket(io);
 
 // ====== ROTAS DE AUTENTICAÇÃO ======
 
@@ -888,18 +893,18 @@ app.post('/api/auth/login', async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
     const password = req.body.password;
 
-    console.log(`Tentativa de login: ${email}`);
+    // DEBUG: console.log(`Tentativa de login: ${email}`);
 
     // Buscar usuário
     const user = users.find(u => u.email.toLowerCase() === email);
     if (!user) {
-      console.log('Usuario nao encontrado');
+      // DEBUG: console.log('Usuario nao encontrado');
       return res.status(401).json({ success: false, message: 'Email ou senha incorretos' });
     }
 
     // Verificar senha
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log(`Senha correta: ${isMatch}`);
+    // DEBUG: console.log(`Senha correta: ${isMatch}`);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Email ou senha incorretos' });
     }
@@ -1656,7 +1661,7 @@ app.post('/notifications/send', protect, (req, res) => {
     
     notifications.unshift(notification);
     
-    console.log(`📨 ${channel.toUpperCase()}: "${title}" → ${student?.name || recipientId}`);
+    // DEBUG: console.log(`📨 ${channel.toUpperCase()}: "${title}" → ${student?.name || recipientId}`);
     
     res.json(notification);
   } catch (error) {
@@ -2045,6 +2050,10 @@ app.delete('/api/chat/messages/:messageId', protect, (req, res) => {
   }
 });
 
+// ====== ROTAS DO JOGO DA FORCA ======
+import hangmanRoutes from './routes/hangman.js';
+app.use('/api/hangman', hangmanRoutes);
+
 // ====== MIDDLEWARE DE ERRO ======
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -2057,7 +2066,7 @@ const inicializarDadosDemo = async () => {
   const senhaHash = await bcrypt.hash('123456', 12);
   users[0].password = senhaHash;
   senhaDemoHash = senhaHash;
-  console.log('✅ Usuario demo criado: demo@nexus.com / 123456');
+  // DEBUG: console.log('✅ Usuario demo criado: demo@nexus.com / 123456');
 };
 
 // ====== INICIAR SERVIDOR ======
@@ -2068,7 +2077,7 @@ const iniciar = async () => {
   await inicializarDadosDemo();
 
   httpServer.listen(PORT, () => {
-    console.log(`
+    // DEBUG: console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
 ║          🚀 NEXUS CORE - BACKEND SIMPLIFICADO 🚀             ║

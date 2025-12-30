@@ -27,7 +27,7 @@ class MonitoringService {
    */
   async initialize() {
     if (this.isInitialized) {
-      console.log('⚠️ Monitoring already initialized');
+      // DEBUG: console.log('⚠️ Monitoring already initialized');
       return;
     }
 
@@ -46,7 +46,7 @@ class MonitoringService {
       this.initializeCustomLogging();
 
       this.isInitialized = true;
-      console.log('✅ Monitoring service initialized');
+      // DEBUG: console.log('✅ Monitoring service initialized');
     } catch (error) {
       console.error('❌ Failed to initialize monitoring:', error);
       // Não falhar a aplicação se monitoring falhar
@@ -87,7 +87,7 @@ class MonitoringService {
       });
 
       this.providers.sentry = Sentry;
-      console.log('✅ Sentry initialized');
+      // DEBUG: console.log('✅ Sentry initialized');
     } catch (error) {
       console.error('❌ Failed to initialize Sentry:', error);
     }
@@ -100,7 +100,7 @@ class MonitoringService {
     try {
       // LogRocket é tipicamente inicializado no frontend
       // Aqui apenas registramos que está configurado
-      console.log('✅ LogRocket configured (initialize in frontend)');
+      // DEBUG: console.log('✅ LogRocket configured (initialize in frontend)');
       this.providers.logrocket = { configured: true };
     } catch (error) {
       console.error('❌ Failed to initialize LogRocket:', error);
@@ -117,7 +117,7 @@ class MonitoringService {
       performance: [],
       maxLogs: 1000
     };
-    console.log('✅ Custom logging initialized');
+    // DEBUG: console.log('✅ Custom logging initialized');
   }
 
   /**

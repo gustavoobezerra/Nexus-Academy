@@ -73,7 +73,7 @@ export const StudentDashboard = () => {
       setStudent(studentRes as any);
       setActivities(activitiesRes as any);
       setClasses(classesRes as any);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados do painel');
     } finally {
@@ -259,7 +259,7 @@ export const StudentDashboard = () => {
 };
 
 // Dashboard Content Component
-const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: any) => (
+const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: unknown) => (
   <div className="space-y-6">
     {/* Stats Cards */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -380,14 +380,14 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
 );
 
 // Chat Content Component
-const ChatContent = ({ student, teacher, isDark }: any) => (
+const ChatContent = ({ student, teacher, isDark }: unknown) => (
   <div className="h-[calc(100vh-12rem)]">
     <StudentChat student={student} teacher={teacher} isDark={isDark} />
   </div>
 );
 
 // Stat Card Component
-const StatCard = ({ icon, label, value, isDark, small = false }: any) => (
+const StatCard = ({ icon, label, value, isDark, small = false }: unknown) => (
   <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
     <div className="flex items-center gap-4">
       <div className={`w-12 h-12 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-100'} flex items-center justify-center`}>

@@ -225,7 +225,7 @@ router.post('/whatsapp/verify', protect, async (req, res) => {
     
     // TODO: Em produção, enviar código via WhatsApp API
     // whatsappService.sendVerificationCode(cleanPhone, verificationCode);
-    console.log(`[DEV] Código de verificação WhatsApp para ${cleanPhone}: ${verificationCode}`);
+    // DEBUG: console.log(`[DEV] Código de verificação WhatsApp para ${cleanPhone}: ${verificationCode}`);
     
     res.json({ 
       success: true, 

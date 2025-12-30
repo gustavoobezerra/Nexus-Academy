@@ -40,8 +40,8 @@ export const portalAPI = {
   login: (email: string, password: string) => apiService.post<{ student: Aluno; token: string }>('/portal/login', { email, password }),
   register: (data: Partial<Aluno>) => apiService.post<{ student: Aluno; token: string }>('/portal/register', data),
   getProfile: () => apiService.get<{ student: any }>('/portal/profile'),
-  updateProfile: (data: any) => apiService.put<{ student: any }>('/portal/profile', data),
-  createGoal: (data: any) => apiService.post<{ goal: any }>('/portal/goals', data),
+  updateProfile: (data: unknown) => apiService.put<{ student: any }>('/portal/profile', data),
+  createGoal: (data: unknown) => apiService.post<{ goal: any }>('/portal/goals', data),
   updateGoal: (id: string, data: any) => apiService.put<{ goal: any }>(`/portal/goals/${id}`, data),
   deleteGoal: (id: string) => apiService.delete<void>(`/portal/goals/${id}`),
 };

@@ -36,6 +36,7 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
         generated.push(`prof-${nameParts[0]}`.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
       }
 
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setSuggestions(generated.slice(0, 3));
     }
   }, [userName]);
@@ -47,6 +48,7 @@ export const Step1_SlugSelection = ({ onNext, userEmail, userName }: Step1Props)
     console.log('[SLUG DEBUG] Valor digitado:', slug, '| Trimmed:', trimmed);
 
     if (!trimmed) {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setAvailable(null);
       setErrorMessage('');
       console.log('[SLUG DEBUG] Campo vazio, resetando estado');
