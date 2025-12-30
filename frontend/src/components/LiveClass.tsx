@@ -35,13 +35,13 @@ const FinalRemarksModal = ({
     return () => {
       stopListening();
     };
-  }, [isOpen]);
+  }, [isOpen, isSupported, startListening, stopListening]);
 
   useEffect(() => {
     if (transcript && !manualEdit) {
       setRemarks(initialTranscript + ' ' + transcript);
     }
-  }, [transcript]);
+  }, [transcript, manualEdit, initialTranscript]);
 
   if (!isOpen) return null;
 
@@ -187,7 +187,7 @@ const LiveClassComponent = ({ classId, classTitle, onEnd }: LiveClassProps) => {
       endSession();
       if (isListening) stopListening();
     };
-  }, [classId]);
+  }, [classId, classTitle, startSession, endSession, isListening, stopListening]);
 
   useEffect(() => {
     onTranscript((result) => {
@@ -195,7 +195,7 @@ const LiveClassComponent = ({ classId, classTitle, onEnd }: LiveClassProps) => {
         sendMessage(result.text);
       }
     });
-  }, [session?.id]);
+  }, [session?.id, onTranscript, sendMessage]);
 
   useEffect(() => {
     if (localStream && localVideoRef.current) {

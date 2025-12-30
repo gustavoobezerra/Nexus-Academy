@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Target, Edit3, Save, Plus, Trash2, CheckCircle,
@@ -77,10 +77,10 @@ export const StudentProfilePage = () => {
 
   const token = localStorage.getItem('studentToken');
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await portalAPI.getProfile();
+      const data = await portalAPI.getProfile() as any;
       setStudent(data.student);
       setDescription(data.student.profile?.description || '');
     } catch (error) {
@@ -113,7 +113,7 @@ export const StudentProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -121,8 +121,8 @@ export const StudentProfilePage = () => {
       return;
     }
     loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, navigate]);
+
+  }, [token, navigate, loadProfile]);
 
   const saveDescription = async () => {
     try {
@@ -156,7 +156,7 @@ export const StudentProfilePage = () => {
     }
 
     try {
-      const data = await portalAPI.createGoal(newGoal);
+      const data = await portalAPI.createGoal(newGoal) as any;
       toast.success('Meta criada!');
       setShowAddGoal(false);
       setNewGoal({ title: '', description: '', targetDate: '' });

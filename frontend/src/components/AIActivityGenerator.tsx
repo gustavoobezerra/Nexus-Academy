@@ -290,26 +290,25 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-slate-700">
-        {[
-          { id: 'generate', label: 'Gerar Nova', icon: Sparkles },
-          { id: 'review', label: 'Revisar & Enviar', icon: Eye, disabled: !generatedActivity },
-          { id: 'history', label: 'Histórico', icon: FileText }
-        ].map(tab => {
-          const Icon = tab.icon;
+        {(['generate', 'review', 'history'] as const).map(tab => {
+          const Icon = tab === 'generate' ? Sparkles : tab === 'review' ? Eye : FileText;
+          const label = tab === 'generate' ? 'Gerar Nova' : tab === 'review' ? 'Revisar & Enviar' : 'Histórico';
+          const disabled = tab === 'review' && !generatedActivity;
+
           return (
             <button
-              key={tab.id}
-              onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
-              disabled={tab.disabled}
+              key={tab}
+              onClick={() => !disabled && setActiveTab(tab)}
+              disabled={disabled}
               className={`px-4 py-3 font-medium border-b-2 transition-all ${
-                activeTab === tab.id
+                activeTab === tab
                   ? 'border-indigo-600 text-indigo-400'
                   : 'border-transparent text-gray-400 dark:text-gray-400 hover:text-gray-200 dark:hover:text-gray-200'
-              } ${tab.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center gap-2">
                 <Icon size={18} />
-                {tab.label}
+                {label}
               </div>
             </button>
           );

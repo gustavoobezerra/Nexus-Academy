@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, X, Trash2, Clock, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { automationEngine } from '../services/automationEngine';
@@ -23,18 +23,13 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
   const [totalAulas, setTotalAulas] = useState(0);
   const limitePorPagina = 20;
 
-  useEffect(() => {
-    buscarDados();
-  }, [paginaAtual]);
-
-  const buscarDados = async () => {
+  const buscarDados = useCallback(async () => {
     setCarregando(true);
     try {
       const [aulasRes, alunosRes] = await Promise.all([
         classesAPI.getAll({ page: paginaAtual, limit: limitePorPagina }),
         studentsAPI.getAll(),
       ]);
-      // apiService já retorna response.data diretamente
       const aulasData = aulasRes as any;
       setAulas(aulasData.classes || []);
       setTotalPaginas(aulasData.totalPages || 1);
@@ -47,7 +42,11 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
     } finally {
       setCarregando(false);
     }
-  };
+  }, [paginaAtual]);
+
+  useEffect(() => {
+    buscarDados();
+  }, [buscarDados]);
 
   const handleCriarAula = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,7 +68,6 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
 
     try {
       const response = await classesAPI.create(dados) as any;
-      // apiService já retorna response.data diretamente
       const newId = response?.id || response?._id || 'new';
       automationEngine.fireTrigger('class_scheduled', 'class', newId, title, {
         subject,

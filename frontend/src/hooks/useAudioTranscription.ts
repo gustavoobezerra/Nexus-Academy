@@ -20,8 +20,6 @@ export const useAudioTranscription = () => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      setIsSupported(false);
-      setError('Reconhecimento de fala não suportado neste navegador');
       return;
     }
 
@@ -83,6 +81,15 @@ export const useAudioTranscription = () => {
         recognitionRef.current.abort();
       }
     };
+  }, []);
+
+  // Initialize isSupported based on window
+  useEffect(() => {
+     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+     if (!SpeechRecognition) {
+         setIsSupported(false);
+         setError('Reconhecimento de fala não suportado neste navegador');
+     }
   }, []);
 
   const startListening = useCallback(() => {

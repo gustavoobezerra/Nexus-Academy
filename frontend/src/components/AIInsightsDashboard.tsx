@@ -315,26 +315,22 @@ export const AIInsightsDashboard: React.FC<AIInsightsDashboardProps> = ({ studen
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-slate-700 overflow-x-auto">
-        {[
-          { id: 'overview', label: 'Visão Geral', icon: Brain },
-          { id: 'evasion', label: 'Risco de Evasão', icon: AlertTriangle },
-          { id: 'performance', label: 'Desempenho', icon: TrendingUp },
-          { id: 'recommendations', label: 'Recomendações', icon: Lightbulb }
-        ].map(tab => {
-          const Icon = tab.icon;
+        {(['overview', 'evasion', 'performance', 'recommendations'] as const).map(tab => {
+          const Icon = tab === 'overview' ? Brain : tab === 'evasion' ? AlertTriangle : tab === 'performance' ? TrendingUp : Lightbulb;
+          const label = tab === 'overview' ? 'Visão Geral' : tab === 'evasion' ? 'Risco de Evasão' : tab === 'performance' ? 'Desempenho' : 'Recomendações';
           return (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              key={tab}
+              onClick={() => setActiveTab(tab)}
               className={`px-4 py-3 font-medium border-b-2 transition-all whitespace-nowrap ${
-                activeTab === tab.id
+                activeTab === tab
                   ? 'border-violet-600 text-violet-400'
                   : 'border-transparent text-gray-400 hover:text-gray-200'
               }`}
             >
               <div className="flex items-center gap-2">
                 <Icon size={18} />
-                {tab.label}
+                {label}
               </div>
             </button>
           );

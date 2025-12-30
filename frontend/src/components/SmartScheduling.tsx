@@ -85,7 +85,7 @@ export const SmartScheduling: React.FC<SmartSchedulingProps> = ({ students = [],
             const isPreferredHour = preferredHours.includes(hour);
 
             let score = 50;
-            let reasons = [];
+            const reasons = [];
 
             if (isPreferredDay) {
               score += 20;
