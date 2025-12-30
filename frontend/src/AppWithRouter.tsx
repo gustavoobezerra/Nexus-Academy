@@ -190,7 +190,7 @@ function AppWithRouter() {
     if (location.pathname === '/portal/profile') {
       return <StudentProfilePage />;
     }
-    if (location.pathname === '/portal/pronunciation') {
+    if (location.pathname === '/portal/pronunciation-test') {
       return <PronunciationTest />;
     }
     if (location.pathname === '/portal/live-class' && liveClassData) {

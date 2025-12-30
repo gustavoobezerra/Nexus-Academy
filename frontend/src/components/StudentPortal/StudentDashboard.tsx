@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, BookOpen, Calendar, Trophy, MessageCircle,
   Bell, User, LogOut, Menu, Sun, Moon, Video, FileText,
-  TrendingUp, Clock, Target, Award
+  TrendingUp, Clock, Target, Award, Mic
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -290,6 +290,35 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
       />
     </div>
 
+    {/* Quick Actions */}
+    <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+      <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+        Ações Rápidas
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <button
+          onClick={() => window.location.href = '/portal/pronunciation-test'}
+          className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
+        >
+          <Mic size={20} />
+          <div className="text-left">
+            <p className="font-bold text-sm">Teste de Pronúncia</p>
+            <p className="text-xs opacity-90">Pratique e receba feedback com IA</p>
+          </div>
+        </button>
+        <button
+          onClick={onOpenChat}
+          className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
+        >
+          <MessageCircle size={20} />
+          <div className="text-left">
+            <p className="font-bold text-sm">Chat com Professor</p>
+            <p className="text-xs opacity-90">Tire suas dúvidas em tempo real</p>
+          </div>
+        </button>
+      </div>
+    </div>
+
     {/* Teacher Info */}
     <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
       <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
@@ -307,13 +336,7 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
             {student.teacher?.email || ''}
           </p>
         </div>
-        <button 
-          onClick={onOpenChat}
-          className="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-        >
-          <MessageCircle size={18} className="inline mr-2" />
-          Enviar Mensagem
-        </button>
+
       </div>
     </div>
 
