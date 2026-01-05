@@ -15,6 +15,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   useEffect(() => {
+    // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     const html = document.documentElement;
     if (isDark) {

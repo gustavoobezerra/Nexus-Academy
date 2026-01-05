@@ -28,6 +28,7 @@ export function LazyImage({
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
+            // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
             setIsInView(true);
             observer.disconnect();
           }

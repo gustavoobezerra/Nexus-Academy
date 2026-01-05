@@ -213,6 +213,50 @@ git push origin main
 - **Standard**: $25/mês (mais recursos)
 - **Pro**: $85/mês (alta disponibilidade)
 
+## 🎮 Nova Feature: Jogo da Forca Interativo
+
+O sistema agora inclui um jogo da forca completo com:
+
+### Funcionalidades:
+- **Tempo real**: Múltiplos jogadores simultâneos via Socket.IO
+- **Quadro branco colaborativo**: Professor pode desenhar e explicar
+- **Sistema de pontuação**: Pontos por acertos, penalidade por erros
+- **Chat integrado**: Comunicação entre jogadores
+- **Animação do boneco**: Animação suave com Framer Motion
+- **Modos de jogo**: Livre ou baseado em turnos
+
+### Como usar:
+
+1. **Professor cria o jogo**:
+   - Acessa componente `HangmanGame`
+   - Define palavra, dica, categoria
+   - Compartilha código do jogo com alunos
+
+2. **Alunos entram no jogo**:
+   - Inserem código do jogo
+   - Aguardam professor iniciar
+   - Tentam adivinhar letras
+
+3. **Quadro branco**:
+   - Professor pode abrir quadro branco
+   - Desenhar dicas visuais
+   - Todos veem em tempo real
+
+### Endpoints da API:
+- `GET /api/hangman/games` - Listar jogos
+- `POST /api/hangman/games` - Criar jogo
+- `GET /api/hangman/games/:id` - Detalhes do jogo
+- `DELETE /api/hangman/games/:id` - Deletar jogo
+- `GET /api/hangman/stats` - Estatísticas
+
+### WebSocket (namespace `/hangman`):
+- `create-game` - Criar novo jogo
+- `join-game` - Entrar em jogo existente
+- `start-game` - Iniciar jogo
+- `guess-letter` - Tentar letra
+- `draw-whiteboard` - Desenhar no quadro
+- `send-chat` - Enviar mensagem
+
 ## 🎉 Checklist Final
 
 - [ ] Repositório no GitHub configurado

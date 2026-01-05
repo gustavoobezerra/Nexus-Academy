@@ -99,6 +99,7 @@ export const SmartOnboarding = () => {
     const fetchSubjects = async () => {
       try {
         const data = await studentOnboardingAPI.getSubjects();
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setSubjectsByCategory(data.byCategory);
       } catch (error) {
         console.error('Erro ao carregar matérias:', error);

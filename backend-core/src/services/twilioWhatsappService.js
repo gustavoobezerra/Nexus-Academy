@@ -64,7 +64,7 @@ const twilioWhatsappService = {
     // Uncomment when ready:
     /*
     if (!client) {
-      console.log(`📱 [Twilio Mock] WhatsApp to ${to}: ${message.substring(0, 50)}...`);
+      // DEBUG: console.log(`📱 [Twilio Mock] WhatsApp to ${to}: ${message.substring(0, 50)}...`);
       return { success: true, mock: true, sid: `mock_${Date.now()}` };
     }
 
@@ -75,7 +75,7 @@ const twilioWhatsappService = {
         body: message
       });
 
-      console.log(`✅ WhatsApp enviado: ${result.sid}`);
+      // DEBUG: console.log(`✅ WhatsApp enviado: ${result.sid}`);
 
       return {
         success: true,
@@ -94,7 +94,7 @@ const twilioWhatsappService = {
     }
     */
 
-    console.log(`📱 [Twilio Mock] WhatsApp to ${to}: ${message.substring(0, 50)}...`);
+    // DEBUG: console.log(`📱 [Twilio Mock] WhatsApp to ${to}: ${message.substring(0, 50)}...`);
     return { success: true, mock: true, sid: `mock_${Date.now()}` };
   },
 
@@ -105,7 +105,7 @@ const twilioWhatsappService = {
     // Uncomment when ready:
     /*
     if (!client) {
-      console.log(`📱 [Twilio Mock] Media WhatsApp to ${to}`);
+      // DEBUG: console.log(`📱 [Twilio Mock] Media WhatsApp to ${to}`);
       return { success: true, mock: true };
     }
 
@@ -117,7 +117,7 @@ const twilioWhatsappService = {
         mediaUrl: [mediaUrl] // Array de URLs
       });
 
-      console.log(`✅ Mídia WhatsApp enviada: ${result.sid}`);
+      // DEBUG: console.log(`✅ Mídia WhatsApp enviada: ${result.sid}`);
 
       return {
         success: true,
@@ -130,7 +130,7 @@ const twilioWhatsappService = {
     }
     */
 
-    console.log(`📱 [Twilio Mock] Media WhatsApp to ${to}: ${mediaUrl}`);
+    // DEBUG: console.log(`📱 [Twilio Mock] Media WhatsApp to ${to}: ${mediaUrl}`);
     return { success: true, mock: true };
   },
 
@@ -355,7 +355,7 @@ _Nexus Academy_`;
     // Uncomment when ready:
     /*
     if (!client) {
-      console.log(`📱 [Twilio Mock] Bulk WhatsApp to ${phoneNumbers.length} recipients`);
+      // DEBUG: console.log(`📱 [Twilio Mock] Bulk WhatsApp to ${phoneNumbers.length} recipients`);
       return {
         success: true,
         total: phoneNumbers.length,
@@ -384,7 +384,7 @@ _Nexus Academy_`;
     };
     */
 
-    console.log(`📱 [Twilio Mock] Bulk WhatsApp to ${phoneNumbers.length} recipients`);
+    // DEBUG: console.log(`📱 [Twilio Mock] Bulk WhatsApp to ${phoneNumbers.length} recipients`);
     return {
       success: true,
       total: phoneNumbers.length,

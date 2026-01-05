@@ -66,7 +66,7 @@ const analyzePronunciation = async (formData: FormData) => {
   return await response.json();
 };
 
-const savePronunciationHistory = async (data: any) => {
+const savePronunciationHistory = async (data: unknown) => {
   const response = await fetch(`${API_URL}/api/portal/pronunciation/history`, {
     method: 'POST',
     headers: getAuthHeaders(),

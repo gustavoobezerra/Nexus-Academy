@@ -98,10 +98,12 @@ function AppWithRouter() {
   useEffect(() => {
     if (!isStudentPortal && !isPublicRoute) {
       const count = alertService.getUnreadCount();
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setUnreadAlerts(count);
 
       const onboardingConcluido = localStorage.getItem('onboarding_concluido');
       if (!onboardingConcluido && isAuthenticated) {
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setMostrarOnboarding(true);
       }
     }
@@ -120,6 +122,7 @@ function AppWithRouter() {
 
   useEffect(() => {
     if (!isStudentPortal && !isPublicRoute && location.pathname === '/ai-hub') {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setAbaAtiva('ai-hub');
     }
   }, [isStudentPortal, isPublicRoute, location.pathname]);
@@ -131,6 +134,7 @@ function AppWithRouter() {
       if (storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
+          // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
           setAuth(parsedUser, teacherToken);
         } catch {
           // Se houver erro, redirecionar para login

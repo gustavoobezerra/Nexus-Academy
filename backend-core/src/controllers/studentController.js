@@ -170,7 +170,7 @@ export const createStudent = async (req, res) => {
         });
 
         if (emailResult.success) {
-          console.log('✅ Email de boas-vindas enviado para:', student.name);
+          // DEBUG: console.log('✅ Email de boas-vindas enviado para:', student.name);
         } else {
           console.warn('⚠️  Falha ao enviar email de boas-vindas:', emailResult.error);
         }

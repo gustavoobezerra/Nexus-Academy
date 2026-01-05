@@ -43,6 +43,7 @@ export const IntegratedLiveClass = ({
     });
 
     newSocket.on('connect', () => {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setIsConnected(true);
       newSocket.emit('join-live-class', { sessionId, userType, userId });
       initializeWebRTC(newSocket);

@@ -62,7 +62,7 @@ export const handleStripeWebhook = async (req, res) => {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        // DEBUG: console.log(`Unhandled event type: ${event.type}`);
     }
 
     res.json({ received: true });
@@ -76,7 +76,7 @@ export const handleStripeWebhook = async (req, res) => {
  * Checkout completado - Trial iniciado
  */
 async function handleCheckoutCompleted(session) {
-  console.log('✅ Checkout completed:', session.id);
+  // DEBUG: console.log('✅ Checkout completed:', session.id);
 
   const customerId = session.customer;
   const subscriptionId = session.subscription;
@@ -115,14 +115,14 @@ async function handleCheckoutCompleted(session) {
     subscriptionRenewsAt: trialEnd
   });
 
-  console.log(`✅ User ${user.email} trial ativado até ${trialEnd}`);
+  // DEBUG: console.log(`✅ User ${user.email} trial ativado até ${trialEnd}`);
 }
 
 /**
  * Assinatura atualizada
  */
 async function handleSubscriptionUpdated(subscription) {
-  console.log('🔄 Subscription updated:', subscription.id);
+  // DEBUG: console.log('🔄 Subscription updated:', subscription.id);
 
   const user = await User.findOne({ stripeSubscriptionId: subscription.id });
 
@@ -161,14 +161,14 @@ async function handleSubscriptionUpdated(subscription) {
     subscriptionRenewsAt: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null
   });
 
-  console.log(`✅ User ${user.email} subscription atualizada para ${newStatus}`);
+  // DEBUG: console.log(`✅ User ${user.email} subscription atualizada para ${newStatus}`);
 }
 
 /**
  * Assinatura cancelada
  */
 async function handleSubscriptionDeleted(subscription) {
-  console.log('❌ Subscription deleted:', subscription.id);
+  // DEBUG: console.log('❌ Subscription deleted:', subscription.id);
 
   const user = await User.findOne({ stripeSubscriptionId: subscription.id });
 
@@ -184,19 +184,19 @@ async function handleSubscriptionDeleted(subscription) {
     subscriptionRenewsAt: null
   });
 
-  console.log(`❌ User ${user.email} subscription cancelada`);
+  // DEBUG: console.log(`❌ User ${user.email} subscription cancelada`);
 }
 
 /**
  * Pagamento bem-sucedido
  */
 async function handlePaymentSucceeded(invoice) {
-  console.log('💰 Payment succeeded:', invoice.id);
+  // DEBUG: console.log('💰 Payment succeeded:', invoice.id);
 
   const subscriptionId = invoice.subscription;
 
   if (!subscriptionId) {
-    console.log('Invoice sem subscription associada');
+    // DEBUG: console.log('Invoice sem subscription associada');
     return;
   }
 
@@ -214,7 +214,7 @@ async function handlePaymentSucceeded(invoice) {
       status: 'active'
     });
 
-    console.log(`✅ User ${user.email} pagamento regularizado`);
+    // DEBUG: console.log(`✅ User ${user.email} pagamento regularizado`);
   }
 }
 
@@ -222,12 +222,12 @@ async function handlePaymentSucceeded(invoice) {
  * Pagamento falhou
  */
 async function handlePaymentFailed(invoice) {
-  console.log('⚠️ Payment failed:', invoice.id);
+  // DEBUG: console.log('⚠️ Payment failed:', invoice.id);
 
   const subscriptionId = invoice.subscription;
 
   if (!subscriptionId) {
-    console.log('Invoice sem subscription associada');
+    // DEBUG: console.log('Invoice sem subscription associada');
     return;
   }
 
@@ -244,7 +244,7 @@ async function handlePaymentFailed(invoice) {
     status: 'suspended'
   });
 
-  console.log(`⚠️ User ${user.email} marcado como past_due`);
+  // DEBUG: console.log(`⚠️ User ${user.email} marcado como past_due`);
 
   // TODO: Enviar email notificando sobre pagamento falhado
 }

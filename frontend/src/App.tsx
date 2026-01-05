@@ -78,8 +78,10 @@ function App() {
     let frameId: number | null = null;
 
     const updateState = () => {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setUnreadAlerts(alertService.getUnreadCount());
       if (user && !user.onboardingCompletedAt) {
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setMostrarOnboarding(true);
       } else {
         setMostrarOnboarding(false);
@@ -101,6 +103,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
     const timer = setTimeout(() => setInicializado(true), 100);
 
     return () => {

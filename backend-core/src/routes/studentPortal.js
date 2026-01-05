@@ -13,9 +13,6 @@ const router = express.Router();
 const getJWTSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'development') {
-      return 'DEV-ONLY-SECRET-CHANGE-IN-PRODUCTION';
-    }
     throw new Error('JWT_SECRET must be defined in environment variables');
   }
   return secret;

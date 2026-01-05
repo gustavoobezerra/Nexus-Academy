@@ -36,6 +36,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
   // Debounce slug check
   useEffect(() => {
     if (!slug || slug.length < 3) {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setSlugAvailable(null);
       console.log('[ONBOARDING] Slug muito curto ou vazio');
       return;
@@ -50,7 +51,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         // apiService já retorna response.data, então acessamos diretamente
         setSlugAvailable(response.available);
         console.log('[ONBOARDING] Slug disponível:', response.available);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[ONBOARDING] Erro ao verificar slug:', error);
         setSlugAvailable(false);
       } finally {
@@ -84,7 +85,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         await onboardingAPI.setSlug(slug);
         toast.success('Link personalizado configurado!');
         setStep(2);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast.error(error.response?.data?.message || 'Erro ao configurar slug');
       } finally {
         setLoading(false);
@@ -137,7 +138,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
           toast.success(`${selectedGateway} configurado com sucesso!`);
         }
         setStep(3);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast.error(error.response?.data?.message || 'Erro ao configurar pagamentos');
       } finally {
         setLoading(false);
@@ -164,7 +165,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
 
         // Redirecionar para Stripe Checkout
         window.location.href = checkoutUrl;
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast.error(error.response?.data?.message || 'Erro ao criar assinatura');
         setLoading(false);
       }

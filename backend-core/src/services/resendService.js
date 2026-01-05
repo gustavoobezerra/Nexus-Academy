@@ -28,7 +28,7 @@ const resendService = {
     // Uncomment when ready:
     /*
     if (!resend) {
-      console.log(`[Resend Mock] To: ${to}, Subject: ${subject}`);
+      // DEBUG: console.log(`[Resend Mock] To: ${to}, Subject: ${subject}`);
       return { success: true, mock: true, id: `mock_${Date.now()}` };
     }
 
@@ -44,7 +44,7 @@ const resendService = {
         throw new Error(error.message);
       }
 
-      console.log(`✅ Email sent via Resend: ${data.id}`);
+      // DEBUG: console.log(`✅ Email sent via Resend: ${data.id}`);
       return { success: true, id: data.id };
     } catch (error) {
       console.error('❌ Resend error:', error);
@@ -53,7 +53,7 @@ const resendService = {
     */
 
     // Mock for now
-    console.log(`📧 [Resend Mock] To: ${to}, Subject: ${subject}`);
+    // DEBUG: console.log(`📧 [Resend Mock] To: ${to}, Subject: ${subject}`);
     return { success: true, mock: true, id: `mock_${Date.now()}` };
   },
 

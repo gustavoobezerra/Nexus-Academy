@@ -40,6 +40,7 @@ export const StudentPortalLogin = () => {
     if (savedStudentData) {
       try {
         const parsed = JSON.parse(savedStudentData);
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setSavedStudent(parsed);
         setEmail(parsed.email);
       } catch {

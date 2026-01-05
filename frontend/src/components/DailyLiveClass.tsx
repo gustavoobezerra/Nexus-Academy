@@ -49,6 +49,7 @@ export const DailyLiveClass = ({
   useEffect(() => {
     const tipsPreference = localStorage.getItem('hideTipsPanel');
     if (tipsPreference === 'true') {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setTipsHidden(true);
       setShowTips(false);
     }
@@ -58,6 +59,7 @@ export const DailyLiveClass = ({
   useEffect(() => {
     const initializeCall = async () => {
       try {
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setIsLoading(true);
 
         // Criar sala usando dailyAPI

@@ -163,7 +163,7 @@ export const StudentOnboarding = () => {
       localStorage.setItem('onboarding_completed', 'true');
 
       navigate('/portal/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Onboarding] ❌ Erro:', error);
       console.error('[Onboarding] Tipo de erro:', error?.type);
       console.error('[Onboarding] Detalhes:', error?.response || error?.message);

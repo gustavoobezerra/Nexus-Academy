@@ -19,12 +19,13 @@ export const OnboardingSuccess: React.FC = () => {
       try {
         const response = await onboardingAPI.complete() as any;
         // apiService já retorna response.data diretamente
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setUserData(response.user);
         toast.success('Onboarding completo!');
 
         // Marcar no localStorage
         localStorage.setItem('onboarding_completed', 'true');
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error completing onboarding:', error);
         toast.error('Erro ao completar onboarding');
       } finally {

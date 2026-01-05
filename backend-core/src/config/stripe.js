@@ -19,7 +19,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
  */
 export async function createPaymentIntent(amount, currency = 'brl', metadata = {}) {
   try {
-    console.log(`💳 Criando Payment Intent: R$ ${(amount / 100).toFixed(2)}`);
+    // DEBUG: console.log(`💳 Criando Payment Intent: R$ ${(amount / 100).toFixed(2)}`);
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
@@ -30,7 +30,7 @@ export async function createPaymentIntent(amount, currency = 'brl', metadata = {
       }
     });
 
-    console.log('✅ Payment Intent criado:', paymentIntent.id);
+    // DEBUG: console.log('✅ Payment Intent criado:', paymentIntent.id);
 
     return {
       success: true,
@@ -62,7 +62,7 @@ export async function createCustomer(customerData) {
       }
     });
 
-    console.log('✅ Cliente Stripe criado:', customer.id);
+    // DEBUG: console.log('✅ Cliente Stripe criado:', customer.id);
 
     return {
       success: true,

@@ -39,6 +39,7 @@ const FinalRemarksModal = ({
 
   useEffect(() => {
     if (transcript && !manualEdit) {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setRemarks(initialTranscript + ' ' + transcript);
     }
   }, [transcript, manualEdit, initialTranscript]);

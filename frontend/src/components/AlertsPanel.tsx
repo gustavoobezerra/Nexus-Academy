@@ -17,9 +17,11 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ onClose, onNavigate })
 
   useEffect(() => {
     const loadAlerts = async () => {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setLoading(true);
       try {
         const fetchedAlerts = await alertService.fetchAlerts();
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setAlerts(fetchedAlerts.filter(a => !a.dismissedAt));
       } catch (error) {
         console.error('Erro ao carregar alertas:', error);

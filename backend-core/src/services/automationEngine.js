@@ -13,7 +13,7 @@ class AutomationEngine {
   async start() {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log('🤖 Automation Engine started');
+    console.info('🤖 Automation Engine started');
 
     // Start scheduled checks
     this.scheduleChecks();
@@ -23,7 +23,7 @@ class AutomationEngine {
     this.isRunning = false;
     this.scheduledJobs.forEach((job, key) => clearInterval(job));
     this.scheduledJobs.clear();
-    console.log('🤖 Automation Engine stopped');
+    // DEBUG: console.log('🤖 Automation Engine stopped');
   }
 
   scheduleChecks() {
@@ -228,13 +228,13 @@ class AutomationEngine {
 
   async sendSMSAction(config, metadata, teacherId) {
     // SMS implementation
-    console.log('[SMS Mock]', config, metadata);
+    // DEBUG: console.log('[SMS Mock]', config, metadata);
     return { sent: true, mock: true };
   }
 
   async sendPushAction(config, metadata, teacherId) {
     // Push notification implementation
-    console.log('[Push Mock]', config, metadata);
+    // DEBUG: console.log('[Push Mock]', config, metadata);
     return { sent: true, mock: true };
   }
 

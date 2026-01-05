@@ -276,7 +276,7 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
           </div>
         ) : (
           <>
-            {aulas.map((aula: any) => {
+            {aulas.map((aula: unknown) => {
             const { hora } = formatarDataHora(aula.scheduledAt);
             return (
               <div

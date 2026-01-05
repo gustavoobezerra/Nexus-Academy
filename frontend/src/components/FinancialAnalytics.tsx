@@ -235,7 +235,7 @@ const FinancialAnalytics = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, value }: any) => `${name}: ${value}`}
+                label={({ name, value }: unknown) => `${name}: ${value}`}
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"

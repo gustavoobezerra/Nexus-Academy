@@ -17,10 +17,7 @@ const router = express.Router();
 const getJWTSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === 'development') {
-      return 'DEV-ONLY-SECRET-CHANGE-IN-PRODUCTION';
-    }
-    throw new Error('JWT_SECRET must be defined');
+    throw new Error('JWT_SECRET must be defined in environment variables');
   }
   return secret;
 };
@@ -30,7 +27,7 @@ function authenticateStudent(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
-    console.log('[StudentOnboarding Auth] Header:', authHeader ? 'Present' : 'Missing');
+    // DEBUG: console.log('[StudentOnboarding Auth] Header:', authHeader ? 'Present' : 'Missing');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
@@ -51,7 +48,7 @@ function authenticateStudent(req, res, next) {
     let decoded;
     try {
       decoded = jwt.verify(token, getJWTSecret());
-      console.log('[StudentOnboarding Auth] Decoded token:', {
+      // DEBUG: console.log('[StudentOnboarding Auth] Decoded token:', {
         type: decoded.type,
         studentId: decoded.studentId ? 'present' : 'missing',
         teacherId: decoded.teacherId || 'none'
@@ -71,7 +68,7 @@ function authenticateStudent(req, res, next) {
     }
 
     if (decoded.type !== 'student') {
-      console.log('[StudentOnboarding Auth] Access denied - type:', decoded.type, 'expected: student');
+      // DEBUG: console.log('[StudentOnboarding Auth] Access denied - type:', decoded.type, 'expected: student');
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Tipo de token inválido.'
@@ -365,7 +362,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
           entityType: 'student',
           entityId: student._id
         });
-        console.log(`[Onboarding] ✅ Notificação criada para professor ${student.teacher.name}`);
+        // DEBUG: console.log(`[Onboarding] ✅ Notificação criada para professor ${student.teacher.name}`);
       } catch (notifError) {
         console.error('[Onboarding] Erro ao criar notificação:', notifError);
         // Não bloquear o onboarding por erro de notificação
@@ -392,7 +389,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
             entityId: student._id
           });
         }
-        console.log(`[Onboarding] ✅ Notificações enviadas para ${teachers.length} professores`);
+        // DEBUG: console.log(`[Onboarding] ✅ Notificações enviadas para ${teachers.length} professores`);
       } catch (notifError) {
         console.error('[Onboarding] Erro ao criar notificações:', notifError);
       }

@@ -29,6 +29,7 @@ export const NextClassCard = ({
       const diff = classTime.getTime() - now.getTime();
 
       if (diff < 0) {
+        // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setTimeUntil('Começou!');
         return;
       }

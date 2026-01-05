@@ -44,7 +44,7 @@ export const zoomService = {
   // Meetings
   async createMeeting(accessToken, data) {
     if (!this.isConfigured() || !accessToken) {
-      console.log('[Zoom Mock] Creating meeting:', data.topic);
+      // DEBUG: console.log('[Zoom Mock] Creating meeting:', data.topic);
       return {
         mock: true,
         id: `mock_${Date.now()}`,

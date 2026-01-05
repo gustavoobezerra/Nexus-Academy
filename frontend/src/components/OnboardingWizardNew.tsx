@@ -26,6 +26,7 @@ export const OnboardingWizardNew = ({ onComplete }: OnboardingWizardNewProps) =>
   // Verificar se já tem slug salvo
   useEffect(() => {
     if (user?.slug) {
+      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setSlug(user.slug);
       // Se já tem slug, pular para step 2
       setCurrentStep(2);
