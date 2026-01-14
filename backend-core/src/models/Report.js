@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const reportSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -156,6 +157,10 @@ dashboardConfigSchema.index({ isDefault: 1 });
 
 analyticsSnapshotSchema.index({ teacher: 1, date: -1 });
 analyticsSnapshotSchema.index({ teacher: 1, type: 1 });
+
+reportSchema.plugin(tenantAwarePlugin);
+dashboardConfigSchema.plugin(tenantAwarePlugin);
+analyticsSnapshotSchema.plugin(tenantAwarePlugin);
 
 export const Report = mongoose.model('Report', reportSchema);
 export const DashboardConfig = mongoose.model('DashboardConfig', dashboardConfigSchema);

@@ -258,14 +258,6 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
           <li>• Exemplos: silva, prof-carlos, joao-matematica</li>
         </ul>
       </div>
-
-      {/* Debug info - apenas em desenvolvimento */}
-      {import.meta.env.DEV && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-xs font-mono">
-          <strong>DEBUG:</strong> available={String(slugAvailable)} | checking={String(checkingSlug)} |
-          slug="{slug}" | botão={!slugAvailable ? 'DESABILITADO' : 'HABILITADO'}
-        </div>
-      )}
     </div>
   );
 

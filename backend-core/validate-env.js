@@ -34,7 +34,9 @@ const optionalVars = [
   'CLOUDINARY_URL',
   'ASSEMBLYAI_API_KEY',
   'DAILY_API_KEY',
-  'GEMINI_API_KEY'
+  'GEMINI_API_KEY',
+  'OPENAI_API_KEY',
+  'ALLOWED_ORIGINS'
 ];
 
 console.log('🔍 Validando variáveis de ambiente...\n');

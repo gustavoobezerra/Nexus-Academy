@@ -255,7 +255,7 @@ mongoose.connection.dropDatabase()
 **Se quiser criar dados de exemplo:**
 ```bash
 cd backend-core
-node seed.js
+npm run seed
 # Isso criará usuários/alunos demo se seed.js estiver implementado
 ```
 
@@ -772,4 +772,3 @@ Suas opiniões são MUITO valiosas! ❤️
 **BOA SORTE NOS TESTES! 🚀🎉**
 
 *Lembre-se: O sucesso não é medido pela ausência de bugs, mas pela qualidade do feedback coletado e pela capacidade de iteração rápida.*
-

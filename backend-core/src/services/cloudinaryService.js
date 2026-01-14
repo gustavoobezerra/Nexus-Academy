@@ -27,11 +27,9 @@
  * - Better than S3 for startups
  */
 
-// Uncomment when ready:
-// const cloudinary = require('cloudinary').v2;
+import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary
-/*
 if (process.env.CLOUDINARY_CLOUD_NAME) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -39,7 +37,6 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
     api_secret: process.env.CLOUDINARY_API_SECRET
   });
 }
-*/
 
 const cloudinaryService = {
   isConfigured: () => !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY),
@@ -51,8 +48,6 @@ const cloudinaryService = {
    * @returns {Promise<Object>} Upload result with URL
    */
   async uploadFile(filePath, options = {}) {
-    // Uncomment when ready:
-    /*
     if (!this.isConfigured()) {
       throw new Error('Cloudinary not configured. Add credentials to .env');
     }
@@ -85,18 +80,39 @@ const cloudinaryService = {
         error: error.message
       };
     }
-    */
+  },
 
-    // Mock for now
-    // DEBUG: console.log(`☁️ [Cloudinary Mock] File would be uploaded: ${filePath}`);
-    return {
-      success: true,
-      url: `https://res.cloudinary.com/demo/image/upload/mock_${Date.now()}.jpg`,
-      publicId: `mock_${Date.now()}`,
-      format: 'jpg',
-      size: 1024000,
-      mock: true
-    };
+  async uploadAudioBuffer(buffer, options = {}) {
+    if (!this.isConfigured()) {
+      throw new Error('Cloudinary not configured. Add credentials to .env');
+    }
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: options.folder || 'nexus-academy/pronunciation',
+          resource_type: 'video',
+          public_id: options.publicId,
+          tags: options.tags || ['audio']
+        },
+        (error, result) => {
+          if (error || !result) {
+            console.error('❌ Cloudinary upload error:', error);
+            return reject(error || new Error('Upload failed'));
+          }
+          return resolve({
+            success: true,
+            url: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+            size: result.bytes,
+            resourceType: result.resource_type
+          });
+        }
+      );
+
+      uploadStream.end(buffer);
+    });
   },
 
   /**

@@ -1,7 +1,11 @@
 import express from 'express';
 import multer from 'multer';
 import PronunciationTest from '../models/PronunciationTest.js';
+import PronunciationPhrase from '../models/PronunciationPhrase.js';
+import rateLimit from 'express-rate-limit';
+import { authenticateStudent } from '../middleware/studentAuth.js';
 import { generatePhrase, analyzePronunciation } from '../services/pronunciationService.js';
+import cloudinaryService from '../services/cloudinaryService.js';
 
 const router = express.Router();
 
@@ -21,34 +25,12 @@ const upload = multer({
   }
 });
 
-// Middleware de autenticação do aluno
-const authenticateStudent = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token não fornecido'
-      });
-    }
-
-    // Aqui você deve validar o token JWT e extrair o studentId
-    // Por enquanto, vamos assumir que o token é válido
-    // Em produção, use jwt.verify() aqui
-    
-    // Exemplo simplificado:
-    // const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // req.studentId = decoded.studentId;
-    // req.teacherId = decoded.teacherId;
-    
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Token inválido'
-    });
-  }
-};
+const pronunciationLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 /**
  * @swagger
@@ -72,9 +54,29 @@ const authenticateStudent = async (req, res, next) => {
  *       200:
  *         description: Frase gerada com sucesso
  */
-router.post('/generate', authenticateStudent, async (req, res) => {
+router.post('/generate', authenticateStudent, pronunciationLimiter, async (req, res) => {
   try {
     const { difficulty = 'intermediate' } = req.body;
+
+    if (req.teacherId) {
+      const teacherPhrase = await PronunciationPhrase.findOne({
+        teacher: req.teacherId,
+        active: true,
+        difficulty
+      }).sort({ createdAt: -1 });
+
+      if (teacherPhrase) {
+        return res.json({
+          success: true,
+          data: {
+            phrase: teacherPhrase.phrase,
+            source: teacherPhrase.source,
+            audioUrl: teacherPhrase.audioUrl || null,
+            mock: false
+          }
+        });
+      }
+    }
 
     const result = await generatePhrase(difficulty);
 
@@ -118,7 +120,7 @@ router.post('/generate', authenticateStudent, async (req, res) => {
  *       200:
  *         description: Análise concluída com sucesso
  */
-router.post('/analyze', authenticateStudent, upload.single('audio'), async (req, res) => {
+router.post('/analyze', authenticateStudent, pronunciationLimiter, upload.single('audio'), async (req, res) => {
   try {
     const { originalPhrase } = req.body;
 
@@ -138,6 +140,16 @@ router.post('/analyze', authenticateStudent, upload.single('audio'), async (req,
 
     const audioBuffer = req.file.buffer;
 
+    let uploadResult = null;
+    try {
+      uploadResult = await cloudinaryService.uploadAudioBuffer(req.file.buffer, {
+        folder: 'nexus-academy/pronunciation/student',
+        tags: ['pronunciation', 'student']
+      });
+    } catch (uploadError) {
+      console.warn('⚠️ Falha ao salvar áudio do aluno:', uploadError.message);
+    }
+
     const analysis = await analyzePronunciation({
       audioBuffer,
       originalPhrase
@@ -146,7 +158,10 @@ router.post('/analyze', authenticateStudent, upload.single('audio'), async (req,
     res.json({
       success: true,
       data: {
-        analysis
+        analysis: {
+          ...analysis,
+          audioUrl: uploadResult?.url || null
+        }
       }
     });
   } catch (error) {
@@ -197,7 +212,7 @@ router.post('/analyze', authenticateStudent, upload.single('audio'), async (req,
  *       201:
  *         description: Resultado salvo com sucesso
  */
-router.post('/history', authenticateStudent, async (req, res) => {
+router.post('/history', authenticateStudent, pronunciationLimiter, async (req, res) => {
   try {
     const {
       phrase,
@@ -206,7 +221,9 @@ router.post('/history', authenticateStudent, async (req, res) => {
       fluencyScore,
       pronunciationScore,
       feedback,
-      wordScores
+      wordScores,
+      audioUrl,
+      duration
     } = req.body;
 
     // Validação básica
@@ -217,10 +234,15 @@ router.post('/history', authenticateStudent, async (req, res) => {
       });
     }
 
-    // Aqui você deve pegar o studentId e teacherId do token
-    // Por enquanto, vamos usar valores de exemplo
-    const studentId = req.studentId; // Deve vir do middleware de autenticação
-    const teacherId = req.teacherId; // Deve vir do middleware de autenticação
+    const studentId = req.studentId;
+    const teacherId = req.teacherId;
+
+    if (!studentId || !teacherId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido'
+      });
+    }
 
     const pronunciationTest = new PronunciationTest({
       student: studentId,
@@ -231,7 +253,9 @@ router.post('/history', authenticateStudent, async (req, res) => {
       fluencyScore,
       pronunciationScore,
       feedback,
-      wordScores: wordScores || []
+      wordScores: wordScores || [],
+      audioUrl: audioUrl || null,
+      duration: duration || null
     });
 
     await pronunciationTest.save();

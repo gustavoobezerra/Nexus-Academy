@@ -134,6 +134,40 @@ function scoreWord(word) {
   return Math.min(0.98, Math.max(0.45, 0.7 + (random - 0.5) * 0.4));
 }
 
+function splitSyllables(word) {
+  const clean = word.toLowerCase().replace(/[^a-z']/g, '');
+  if (!clean) return [];
+  const vowels = 'aeiouy';
+  const syllables = [];
+  let current = '';
+
+  for (let i = 0; i < clean.length; i += 1) {
+    const char = clean[i];
+    const isVowel = vowels.includes(char);
+    current += char;
+
+    const nextChar = clean[i + 1];
+    const nextIsVowel = nextChar ? vowels.includes(nextChar) : false;
+
+    if (isVowel && !nextIsVowel && current.length > 0) {
+      syllables.push(current);
+      current = '';
+    }
+  }
+
+  if (current) {
+    syllables.push(current);
+  }
+
+  return syllables.length ? syllables : [clean];
+}
+
+function scoreSyllable(syllable) {
+  const seed = syllable.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const random = (Math.sin(seed) + 1) / 2;
+  return Math.min(0.98, Math.max(0.45, 0.65 + (random - 0.5) * 0.5));
+}
+
 function buildWordScores(originalPhrase) {
   const words = originalPhrase
     .split(/\s+/)
@@ -141,12 +175,18 @@ function buildWordScores(originalPhrase) {
     .filter(Boolean);
 
   const wordScores = words.map((word) => {
-    const score = scoreWord(word.toLowerCase());
+    const syllables = splitSyllables(word);
+    const syllableScores = syllables.map((syllable) => ({
+      text: syllable,
+      score: scoreSyllable(syllable)
+    }));
+    const score = syllableScores.reduce((sum, s) => sum + s.score, 0) / Math.max(syllableScores.length, 1);
     return {
       word,
       score,
       phonetic: `/${word.toLowerCase()}/`, // placeholder simplificado
-      phonemes: []
+      phonemes: [],
+      syllables: syllableScores
     };
   });
 

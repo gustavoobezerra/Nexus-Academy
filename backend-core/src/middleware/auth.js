@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { tenantContext } from './tenantAware.js';
 
 const getJWTSecret = () => {
   const secret = process.env.JWT_SECRET;
@@ -69,7 +70,7 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    next();
+    return tenantContext.run({ teacherId: req.teacherId?.toString() }, () => next());
   } catch (error) {
     return res.status(401).json({
       success: false,

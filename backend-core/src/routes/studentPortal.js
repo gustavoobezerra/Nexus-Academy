@@ -6,6 +6,7 @@ import Course from '../models/Course.js';
 import Activity from '../models/Activity.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { authenticateStudent } from '../middleware/studentAuth.js';
 
 const router = express.Router();
 
@@ -877,68 +878,7 @@ router.get('/activities', authenticateStudent, async (req, res) => {
   }
 });
 
-// Middleware de autenticação para alunos
-function authenticateStudent(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token não fornecido' 
-      });
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer '
-    
-    if (!token || token.length < 10) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token inválido' 
-      });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, getJWTSecret());
-    } catch (jwtError) {
-      if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Sessão expirada. Faça login novamente.' 
-        });
-      }
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token inválido' 
-      });
-    }
-
-    if (decoded.type !== 'student') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Acesso negado' 
-      });
-    }
-
-    // Validar ObjectId format
-    if (!decoded.studentId || typeof decoded.studentId !== 'string') {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token malformado' 
-      });
-    }
-
-    req.studentId = decoded.studentId;
-    req.teacherId = decoded.teacherId;
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Erro de autenticação'
-    });
-  }
-}
+// authenticateStudent agora vem do middleware compartilhado
 
 // ===== NOVAS ROTAS DO DASHBOARD DO ALUNO =====
 
@@ -1171,4 +1111,3 @@ router.post('/chat/mark-read/:messageId', authenticateStudent, async (req, res) 
 });
 
 export default router;
-

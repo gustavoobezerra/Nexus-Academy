@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const certificateSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
@@ -101,5 +102,6 @@ certificateSchema.methods.revoke = function(reason) {
   return this.save();
 };
 
-export default mongoose.model('Certificate', certificateSchema);
+certificateSchema.plugin(tenantAwarePlugin);
 
+export default mongoose.model('Certificate', certificateSchema);

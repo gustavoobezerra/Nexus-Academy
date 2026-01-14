@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 // Automation Rule Schema
 const automationRuleSchema = new mongoose.Schema({
@@ -141,6 +142,10 @@ automationSequenceSchema.index({ status: 1 });
 automationLogSchema.index({ teacher: 1 });
 automationLogSchema.index({ createdAt: -1 });
 automationLogSchema.index({ rule: 1 });
+
+automationRuleSchema.plugin(tenantAwarePlugin);
+automationSequenceSchema.plugin(tenantAwarePlugin);
+automationLogSchema.plugin(tenantAwarePlugin);
 
 export const AutomationRule = mongoose.model('AutomationRule', automationRuleSchema);
 export const AutomationSequence = mongoose.model('AutomationSequence', automationSequenceSchema);

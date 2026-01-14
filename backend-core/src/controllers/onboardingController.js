@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import User from '../models/User.js';
 import { encryptGatewayCredentials } from '../utils/encryption.js';
 
@@ -403,14 +404,12 @@ export async function skipPaymentSetup(req, res) {
   }
 }
 
-import Stripe from 'stripe';
-
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // IDs dos preços no Stripe (em produção viriam do config ou banco)
 const STRIPE_PRICES = {
-  basic: process.env.STRIPE_PRICE_BASIC || 'price_basic_id',
-  pro: process.env.STRIPE_PRICE_PRO || 'price_pro_id'
+  basic: process.env.STRIPE_PRICE_BASIC,
+  pro: process.env.STRIPE_PRICE_PRO
 };
 
 /**
@@ -435,6 +434,13 @@ export async function createSubscriptionSession(req, res) {
       return res.status(500).json({
         success: false,
         message: 'Stripe não configurado no servidor'
+      });
+    }
+
+    if (!STRIPE_PRICES[plan]) {
+      return res.status(500).json({
+        success: false,
+        message: 'Preço do Stripe não configurado para o plano selecionado'
       });
     }
 

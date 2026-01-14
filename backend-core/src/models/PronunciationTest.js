@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const pronunciationTestSchema = new mongoose.Schema({
   student: {
@@ -61,6 +62,10 @@ const pronunciationTestSchema = new mongoose.Schema({
     },
     phonemes: [{
       type: String
+    }],
+    syllables: [{
+      text: { type: String },
+      score: { type: Number, min: 0, max: 1 }
     }]
   }],
   audioUrl: {
@@ -88,6 +93,8 @@ pronunciationTestSchema.index({ teacher: 1, difficulty: 1 });
 pronunciationTestSchema.virtual('scorePercentage').get(function() {
   return Math.round(this.pronunciationScore * 100);
 });
+
+pronunciationTestSchema.plugin(tenantAwarePlugin);
 
 // Método para obter estatísticas do aluno
 pronunciationTestSchema.statics.getStudentStats = async function(studentId, teacherId) {

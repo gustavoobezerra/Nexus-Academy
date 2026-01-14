@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 // Notification Template Schema
 const notificationTemplateSchema = new mongoose.Schema({
@@ -107,6 +108,10 @@ notificationSchema.index({ status: 1 });
 notificationSchema.index({ scheduledFor: 1 });
 notificationSchema.index({ createdAt: -1 });
 notificationSchema.index({ recipientId: 1 });
+
+notificationTemplateSchema.plugin(tenantAwarePlugin);
+notificationSchema.plugin(tenantAwarePlugin);
+notificationPreferenceSchema.plugin(tenantAwarePlugin);
 
 export const NotificationTemplate = mongoose.model('NotificationTemplate', notificationTemplateSchema);
 export const Notification = mongoose.model('Notification', notificationSchema);

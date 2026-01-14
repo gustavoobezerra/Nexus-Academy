@@ -83,7 +83,6 @@ export const OnboardingWizardNew = ({ onComplete }: OnboardingWizardNewProps) =>
         return (
           <Step1_SlugSelection
             onNext={handleStep1Complete}
-            userEmail={user?.email || ''}
             userName={user?.name || ''}
           />
         );

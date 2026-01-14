@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 // Chat Message Schema
 const messageSchema = new mongoose.Schema({
@@ -138,6 +139,7 @@ chatSchema.methods.addUnread = function(userId) {
   return this.save();
 };
 
+chatSchema.plugin(tenantAwarePlugin);
+
 export const Chat = mongoose.model('Chat', chatSchema);
 export const Message = mongoose.model('Message', messageSchema);
-

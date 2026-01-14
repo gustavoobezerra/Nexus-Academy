@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const contentItemSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
@@ -138,5 +139,6 @@ contentItemSchema.methods.toggleFavorite = function(userId) {
   return this.save();
 };
 
-export default mongoose.model('ContentLibrary', contentItemSchema);
+contentItemSchema.plugin(tenantAwarePlugin);
 
+export default mongoose.model('ContentLibrary', contentItemSchema);

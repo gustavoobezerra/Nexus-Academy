@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const activitySchema = new mongoose.Schema({
   class: {
@@ -209,5 +210,7 @@ activitySchema.statics.generateFromTranscript = async function(classId, transcri
     }
   };
 };
+
+activitySchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('Activity', activitySchema);

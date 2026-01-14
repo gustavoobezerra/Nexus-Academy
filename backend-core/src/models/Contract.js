@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const contractSchema = new mongoose.Schema({
   student: {
@@ -193,5 +194,7 @@ CONTRATANTE                            CONTRATADO
 {{parentName}}                         {{teacherName}}
   `;
 };
+
+contractSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('Contract', contractSchema);
