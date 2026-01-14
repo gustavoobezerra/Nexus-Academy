@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 // Question Schema
 const questionSchema = new mongoose.Schema({
@@ -192,6 +193,8 @@ quizSchema.methods.calculateStatistics = async function() {
   await this.save();
 };
 
+quizSchema.plugin(tenantAwarePlugin);
+quizAttemptSchema.plugin(tenantAwarePlugin);
+
 export const Quiz = mongoose.model('Quiz', quizSchema);
 export const QuizAttempt = mongoose.model('QuizAttempt', quizAttemptSchema);
-

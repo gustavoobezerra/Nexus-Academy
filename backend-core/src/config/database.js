@@ -30,9 +30,19 @@ const connectDB = async () => {
       return mongoose.connection;
     }
 
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/nexus-academy';
+    const mongoUri = process.env.MONGO_URI;
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    const conn = await mongoose.connect(mongoUri, connectionOptions);
+    if (!mongoUri) {
+      if (isProduction) {
+        throw new Error('MONGO_URI must be defined in production');
+      }
+      console.warn('⚠️ MONGO_URI não definida. Usando MongoDB local para desenvolvimento.');
+    }
+
+    const resolvedMongoUri = mongoUri || 'mongodb://localhost:27017/nexus-academy';
+
+    const conn = await mongoose.connect(resolvedMongoUri, connectionOptions);
 
     isConnected = true;
     reconnectAttempts = 0;
@@ -93,8 +103,15 @@ const connectDB = async () => {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);
     console.error('Stack:', error.stack);
     
+    const isProduction = process.env.NODE_ENV === 'production';
+    const hasMongoUri = Boolean(process.env.MONGO_URI);
+
+    if (isProduction && !hasMongoUri) {
+      throw error;
+    }
+
     // Em produção, não encerrar o processo imediatamente
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction) {
       console.error('⚠️ Running in production mode. Will retry connection...');
       // Retry após delay
       setTimeout(() => {

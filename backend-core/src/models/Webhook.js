@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const webhookSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -90,6 +91,9 @@ webhookSchema.methods.signPayload = function(payload) {
     .digest('hex');
   return `sha256=${signature}`;
 };
+
+webhookSchema.plugin(tenantAwarePlugin);
+webhookDeliverySchema.plugin(tenantAwarePlugin);
 
 export const Webhook = mongoose.model('Webhook', webhookSchema);
 export const WebhookDelivery = mongoose.model('WebhookDelivery', webhookDeliverySchema);

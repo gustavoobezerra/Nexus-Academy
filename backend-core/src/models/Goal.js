@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const goalSchema = new mongoose.Schema({
   teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -149,5 +150,6 @@ goalSchema.methods.addMilestone = function(value, label, reward = '') {
   return this.save();
 };
 
-export default mongoose.model('Goal', goalSchema);
+goalSchema.plugin(tenantAwarePlugin);
 
+export default mongoose.model('Goal', goalSchema);

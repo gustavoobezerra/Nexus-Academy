@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const lessonPreparationSchema = new mongoose.Schema({
   class: {
@@ -315,5 +316,7 @@ lessonPreparationSchema.statics.generatePreparation = async function(classData, 
     status: 'draft'
   };
 };
+
+lessonPreparationSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('LessonPreparation', lessonPreparationSchema);

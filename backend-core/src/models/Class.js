@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const classSchema = new mongoose.Schema({
   title: { type: String, required: [true, 'Título da aula é obrigatório'], trim: true },
@@ -139,5 +140,7 @@ classSchema.methods.cancelClass = function(reason = '') {
   this.cancellationReason = reason;
   return this.save();
 };
+
+classSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('Class', classSchema);

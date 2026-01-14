@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const paymentSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
@@ -138,5 +139,7 @@ paymentSchema.virtual('daysOverdue').get(function() {
   if (this.status !== 'late' && this.status !== 'overdue') return 0;
   return Math.floor((new Date() - this.dueDate) / (1000 * 60 * 60 * 24));
 });
+
+paymentSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('Payment', paymentSchema);

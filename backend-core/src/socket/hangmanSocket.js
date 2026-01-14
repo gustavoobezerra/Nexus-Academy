@@ -9,13 +9,23 @@ export const setupHangmanSocket = (io) => {
   const hangmanNamespace = io.of('/hangman');
   
   hangmanNamespace.on('connection', (socket) => {
+    const user = socket.data.user;
+    if (!user) {
+      socket.disconnect();
+      return;
+    }
     console.log(`🎮 Jogador conectado ao Hangman: ${socket.id}`);
     
     // Criar novo jogo
     socket.on('create-game', async ({ teacherId, word, hint, category, maxWrongGuesses, turnBased }) => {
       try {
+        if (user.role === 'student') {
+          socket.emit('error', { message: 'Apenas professores podem criar jogos' });
+          return;
+        }
+
         const game = new HangmanGame({
-          teacher: teacherId,
+          teacher: user.id,
           word: word.toUpperCase().trim(),
           hint: hint || '',
           category: category || 'Geral',
@@ -47,6 +57,11 @@ export const setupHangmanSocket = (io) => {
     // Entrar no jogo
     socket.on('join-game', async ({ gameId, studentId, studentName, studentAvatar }) => {
       try {
+        if (user.role !== 'student') {
+          socket.emit('error', { message: 'Apenas alunos podem entrar no jogo' });
+          return;
+        }
+
         let game = activeGames.get(gameId);
         
         if (!game) {
@@ -60,13 +75,13 @@ export const setupHangmanSocket = (io) => {
         }
         
         // Adicionar jogador ao jogo
-        game.addPlayer(studentId, studentName, studentAvatar);
+        game.addPlayer(user.id, studentName, studentAvatar);
         await game.save();
         
         // Adicionar socket ao mapa de jogadores
         const players = gamePlayers.get(gameId);
         players.set(socket.id, {
-          studentId,
+          studentId: user.id,
           name: studentName,
           avatar: studentAvatar
         });
@@ -143,14 +158,14 @@ export const setupHangmanSocket = (io) => {
         // Verificar turno (se jogo for baseado em turnos)
         if (game.turnBased) {
           const currentPlayer = game.players[game.currentPlayerIndex];
-          if (currentPlayer.studentId.toString() !== studentId.toString()) {
+          if (currentPlayer.studentId.toString() !== user.id.toString()) {
             socket.emit('error', { message: 'Não é seu turno' });
             return;
           }
         }
         
         // Processar tentativa
-        const result = game.guessLetter(letter, studentId);
+        const result = game.guessLetter(letter, user.id);
         await game.save();
         
         // Avançar turno se for baseado em turnos
@@ -168,8 +183,8 @@ export const setupHangmanSocket = (io) => {
           status: result.status,
           gameState: game.getGameState(),
           player: {
-            id: studentId,
-            name: game.players.find(p => p.studentId.toString() === studentId.toString())?.name
+            id: user.id,
+            name: game.players.find(p => p.studentId.toString() === user.id.toString())?.name
           }
         });
         

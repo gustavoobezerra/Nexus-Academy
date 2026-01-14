@@ -5,10 +5,12 @@ interface WordFeedbackProps {
   word: string;
   score: number;
   phonetic?: string;
+  syllables?: { text: string; score: number }[];
   onSpeak: () => void;
+  onSpeakSyllable?: (syllable: string) => void;
 }
 
-export function WordFeedback({ word, score, phonetic, onSpeak }: WordFeedbackProps) {
+export function WordFeedback({ word, score, phonetic, syllables = [], onSpeak, onSpeakSyllable }: WordFeedbackProps) {
   const [showPhonetic, setShowPhonetic] = useState(false);
 
   // Determinar cor baseada no score
@@ -38,7 +40,30 @@ export function WordFeedback({ word, score, phonetic, onSpeak }: WordFeedbackPro
         `}
       >
         <div className="flex items-center gap-2">
-          <span>{word}</span>
+          <span className="flex flex-wrap gap-1">
+            {(syllables.length ? syllables : [{ text: word, score }]).map((syllable, idx) => {
+              const syllableClass = syllable.score >= 0.85
+                ? 'bg-green-600/20 text-green-900'
+                : syllable.score >= 0.65
+                ? 'bg-yellow-300/40 text-yellow-900'
+                : 'bg-red-500/20 text-red-900';
+
+              return (
+                <button
+                  key={`${syllable.text}-${idx}`}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSpeakSyllable?.(syllable.text);
+                  }}
+                  className={`px-1 rounded ${syllableClass}`}
+                  title="Ouvir sílaba"
+                >
+                  {syllable.text}
+                </button>
+              );
+            })}
+          </span>
           <button
             onClick={(e) => {
               e.stopPropagation();

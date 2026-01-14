@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const moduleSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -71,5 +72,7 @@ courseSchema.pre('save', function(next) {
     sum + mod.lessons.reduce((lSum, lesson) => lSum + (lesson.duration || 0), 0), 0);
   next();
 });
+
+courseSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('Course', courseSchema);

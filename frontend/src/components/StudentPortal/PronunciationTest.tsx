@@ -13,6 +13,7 @@ type WordScore = {
   word: string;
   score: number;
   phonetic?: string;
+  syllables?: { text: string; score: number }[];
 };
 
 type AnalysisResult = {
@@ -22,6 +23,7 @@ type AnalysisResult = {
   feedback?: string;
   wordScores: WordScore[];
   mock?: boolean;
+  audioUrl?: string | null;
 };
 
 // Funções de API (você pode mover para um arquivo separado)
@@ -82,24 +84,30 @@ const savePronunciationHistory = async (data: unknown) => {
 
 export function PronunciationTest() {
   const navigate = useNavigate();
+  const studentToken = localStorage.getItem('studentToken');
   const [difficulty, setDifficulty] = useState('intermediate');
   const [phrase, setPhrase] = useState('');
   const [phraseSource, setPhraseSource] = useState('');
+  const [phraseAudioUrl, setPhraseAudioUrl] = useState<string | null>(null);
   const [loadingPhrase, setLoadingPhrase] = useState(false);
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysisAudioUrl, setAnalysisAudioUrl] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
   useEffect(() => {
+    if (!studentToken) {
+      return;
+    }
     handleGeneratePhrase('intermediate');
     return () => {
       mediaRecorderRef.current?.stop();
     };
-  }, []);
+  }, [studentToken]);
 
   const speak = (text: string) => {
     if (!('speechSynthesis' in window)) {
@@ -118,11 +126,15 @@ export function PronunciationTest() {
       setLoadingPhrase(true);
       setAnalysis(null);
       setAudioBlob(null);
+      setAnalysisAudioUrl(null);
+      setPhraseAudioUrl(null);
       const res = await generatePronunciationPhrase(level);
       const phraseValue = res?.data?.phrase || res?.phrase;
       const sourceValue = res?.data?.source || res?.source || 'fallback';
+      const audioValue = res?.data?.audioUrl || res?.audioUrl || null;
       setPhrase(phraseValue || 'Practice makes perfect.');
       setPhraseSource(sourceValue);
+      setPhraseAudioUrl(audioValue);
     } catch (error) {
       console.error(error);
       toast.error('Não foi possível gerar a frase. Tente novamente.');
@@ -190,6 +202,7 @@ export function PronunciationTest() {
         return;
       }
       setAnalysis(result);
+      setAnalysisAudioUrl(result.audioUrl || null);
       toast.success('Análise concluída!');
     } catch (error) {
       console.error(error);
@@ -213,7 +226,8 @@ export function PronunciationTest() {
         fluencyScore: analysis.fluencyScore,
         pronunciationScore: analysis.pronunciationScore,
         feedback: analysis.feedback,
-        wordScores: analysis.wordScores
+        wordScores: analysis.wordScores,
+        audioUrl: analysisAudioUrl
       });
       toast.success('Resultado salvo e enviado ao professor.');
     } catch (error) {
@@ -227,8 +241,52 @@ export function PronunciationTest() {
   const wordScores = analysis?.wordScores || phrase.split(/\s+/).filter(Boolean).map((word) => ({
     word,
     score: 0.75,
-    phonetic: undefined
+    phonetic: undefined,
+    syllables: []
   }));
+
+  const phraseSourceLabel = (() => {
+    switch (phraseSource) {
+      case 'teacher':
+        return '(Professor)';
+      case 'openai':
+        return '(IA)';
+      case 'fallback':
+        return '(offline)';
+      default:
+        return '';
+    }
+  })();
+
+  const handlePlayPhrase = () => {
+    if (phraseAudioUrl) {
+      const audio = new Audio(phraseAudioUrl);
+      audio.play().catch(() => {
+        toast.error('Não foi possível reproduzir o áudio da frase.');
+      });
+      return;
+    }
+    speak(phrase);
+  };
+
+  if (!studentToken) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4 md:p-8">
+        <div className="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Pronunciation Test</h1>
+          <p className="text-slate-600 mb-4">
+            Faça login no portal do aluno para acessar o teste de pronúncia.
+          </p>
+          <button
+            onClick={() => navigate('/portal/login')}
+            className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            Ir para login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4 md:p-8">
@@ -258,12 +316,12 @@ export function PronunciationTest() {
         <div className="bg-white rounded-2xl p-5 shadow-lg border border-slate-100 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Frase gerada {phraseSource === 'openai' ? '(IA)' : '(offline)'}:</p>
+              <p className="text-sm text-slate-500">Frase gerada {phraseSourceLabel}:</p>
               <h2 className="text-2xl font-bold text-slate-900">{phrase || '—'}</h2>
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => speak(phrase)}
+                onClick={handlePlayPhrase}
                 disabled={!phrase || loadingPhrase}
                 className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-50"
               >
@@ -288,7 +346,9 @@ export function PronunciationTest() {
                 word={w.word}
                 score={w.score}
                 phonetic={w.phonetic}
+                syllables={w.syllables}
                 onSpeak={() => speak(w.word)}
+                onSpeakSyllable={(syllable) => speak(syllable)}
               />
             ))}
           </div>
@@ -333,6 +393,9 @@ export function PronunciationTest() {
           </div>
           {audioBlob && (
             <audio controls src={URL.createObjectURL(audioBlob)} className="w-full mt-2" />
+          )}
+          {!audioBlob && analysisAudioUrl && (
+            <audio controls src={analysisAudioUrl} className="w-full mt-2" />
           )}
         </div>
 
