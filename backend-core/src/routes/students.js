@@ -21,7 +21,6 @@ router.route('/')
   .post(createStudent);
 
 router.get('/stats', getStudentStats);
-router.get('/stats/summary', getStudentStats);
 
 router.route('/:id')
   .get(getStudent)

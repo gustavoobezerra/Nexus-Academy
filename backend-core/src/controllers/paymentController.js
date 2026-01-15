@@ -77,7 +77,7 @@ export const updatePayment = async (req, res) => {
 
 export const getFinancialStats = async (req, res) => {
   try {
-    const teacherId = req.user.id;
+    const teacherId = req.user._id;
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
 

@@ -20,7 +20,6 @@ router.route('/')
   .post(createClass);
 
 router.get('/stats', getClassStats);
-router.get('/stats/summary', getClassStats);
 
 router.post('/:id/generate-summary', generateAISummary);
 

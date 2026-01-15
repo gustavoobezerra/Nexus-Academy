@@ -18,7 +18,6 @@ router.route('/')
   .post(createPayment);
 
 router.get('/stats', getFinancialStats);
-router.get('/stats/summary', getFinancialStats);
 
 router.route('/:id')
   .put(updatePayment);
