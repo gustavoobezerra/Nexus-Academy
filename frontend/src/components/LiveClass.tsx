@@ -5,6 +5,7 @@ import { Mic, MicOff, Video, VideoOff, Phone, Send, Users, MessageSquare, Save, 
 import toast from 'react-hot-toast';
 import { automationEngine } from '../services/automationEngine';
 import ClassSummary from './PostClassSummary';
+import BrandLogo from './BrandLogo';
 
 interface LiveClassProps {
   classId: string;
@@ -282,9 +283,15 @@ const LiveClassComponent = ({ classId, classTitle, onEnd }: LiveClassProps) => {
               </div>
               <h2 className="text-slate-400 font-medium">{classTitle}</h2>
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-              Nexus <span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Live Academy</span>
-            </h1>
+            <div className="flex items-center gap-3">
+              <div className="sm:hidden">
+                <BrandLogo variant="mark" theme="dark" size="md" />
+              </div>
+              <div className="hidden sm:flex">
+                <BrandLogo variant="horizontal" theme="dark" size="lg" />
+              </div>
+              <span className="text-sm font-semibold uppercase tracking-widest text-slate-400">Live</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

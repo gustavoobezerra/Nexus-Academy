@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { formatPhoneBR } from '../utils/security';
 import { FadeContent, BlurText, GradientText, StaggerContainer, StaggerItem, MagneticButton } from './ui/Animations';
 import { authAPI } from '../lib/api';
+import BrandLogo from './BrandLogo';
 
 export const TeacherLogin = () => {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -128,8 +129,8 @@ export const TeacherLogin = () => {
           <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 shadow-lg shadow-purple-500/20">
-                <Users className="w-7 h-7 text-white" />
+              <div className="mb-4 flex justify-center">
+                <BrandLogo variant="mark" theme="dark" size="md" />
               </div>
               <h1 className="text-2xl font-bold text-white mb-2">
                 {isRegistering ? 'Criar Conta' : (

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="mark_Ndot_primary.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs12" />
+  <sodipodi:namedview
+     id="namedview10"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
+  <rect
+     width="100%"
+     height="100%"
+     fill="none"
+     id="rect2" />
+  <g
+     aria-label="N"
+     id="text4"
+     style="font-weight:900;font-size:320px;font-family:Inter, system-ui, '-apple-system', 'Segoe UI', Roboto, Arial, sans-serif;letter-spacing:-10;fill:#0b0f1a">
+    <path
+       d="m 336.36364,127.27273 h -63.18182 v 121.81818 h -1.81818 L 188.63636,127.27273 H 135 V 360 h 63.18182 V 237.72727 h 1.36363 L 283.63636,360 h 52.72728 z"
+       id="path14" />
+  </g>
+  <circle
+     cx="365"
+     cy="165"
+     r="18"
+     fill="#6A2CFF"
+     id="circle6" />
+</svg>

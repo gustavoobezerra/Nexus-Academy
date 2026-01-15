@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { onboardingAPI } from '../lib/api';
+import BrandLogo from './BrandLogo';
 
 interface OnboardingWizardMultiTenantProps {
   onComplete: () => void;
@@ -629,6 +630,14 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
   return (
     <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-center gap-3 pt-8">
+          <div className="sm:hidden">
+            <BrandLogo variant="mark" theme="auto" size="md" />
+          </div>
+          <div className="hidden sm:flex">
+            <BrandLogo variant="horizontal" theme="auto" size="md" />
+          </div>
+        </div>
         {/* Progress Bar */}
         <div className="flex h-2">
           {[1, 2, 3].map((i) => (

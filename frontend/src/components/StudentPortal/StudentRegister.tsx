@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { GraduationCap, Lock, User, ArrowRight, Loader } from 'lucide-react';
+import { Lock, User, ArrowRight, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
 import { formatPhoneBR } from '../../utils/security';
+import BrandLogo from '../BrandLogo';
 
 export function StudentRegister() {
   const { slug: paramSlug } = useParams<{ slug: string }>();
@@ -171,8 +172,8 @@ export function StudentRegister() {
       <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center mx-auto mb-4">
-            <GraduationCap className="w-12 h-12 text-indigo-600" />
+          <div className="mb-4 flex justify-center">
+            <BrandLogo variant="mark" theme="dark" size="lg" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
             Bem-vindo ao Nexus Academy!

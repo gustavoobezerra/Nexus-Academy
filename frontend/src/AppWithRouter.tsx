@@ -44,6 +44,7 @@ import { PronunciationTest } from './components/StudentPortal/PronunciationTest'
 import AIHub from './components/AIHub';
 import TeacherSettings from './components/TeacherSettings';
 import HangmanGame from './components/HangmanGame';
+import BrandLogo from './components/BrandLogo';
 
 // NOVOS COMPONENTES DE AUTOMAÇÃO COM IA
 import { HourBankManagement } from './components/HourBankManagement';
@@ -265,8 +266,8 @@ function AppWithRouter() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-cyan-500 to-indigo-700 flex items-center justify-center">
         <div className="text-center text-white">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-3xl font-bold">N</span>
+          <div className="mx-auto mb-4 flex justify-center animate-pulse">
+            <BrandLogo variant="mark" theme="dark" size="lg" />
           </div>
           <p className="text-lg font-medium">Carregando Nexus Academy...</p>
         </div>
@@ -305,13 +306,13 @@ function AppWithRouter() {
           menuMobileAberto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}>
           <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="font-bold text-xl text-white">N</span>
+            <div className="sm:hidden">
+              <BrandLogo variant="mark" theme="dark" size="md" />
             </div>
-            <div>
-              <h1 className="font-bold text-lg">Nexus Academy</h1>
-              <p className="text-xs text-gray-400">Gestão Educacional</p>
+            <div className="hidden sm:flex">
+              <BrandLogo variant="horizontal" theme="dark" size="md" />
             </div>
+            <p className="text-xs text-gray-400">GestÆo Educacional</p>
           </div>
 
           <nav className="space-y-2 flex-1 overflow-y-auto">

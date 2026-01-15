@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { onboardingAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import BrandLogo from './BrandLogo';
 
 export const OnboardingSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -74,6 +75,9 @@ export const OnboardingSuccess: React.FC = () => {
       <div className="max-w-3xl w-full">
         {/* Success Header */}
         <div className="text-center mb-8 animate-in zoom-in duration-500">
+          <div className="flex justify-center mb-6">
+            <BrandLogo variant="horizontal" theme="dark" size="lg" />
+          </div>
           <div className="inline-flex items-center justify-center w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full mb-6 shadow-2xl">
             <CheckCircle size={56} className="text-white" />
           </div>

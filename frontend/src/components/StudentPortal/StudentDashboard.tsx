@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
 import { StudentChat } from './StudentChat';
+import BrandLogo from '../BrandLogo';
 
 interface StudentData {
   _id: string;
@@ -142,13 +143,13 @@ export const StudentDashboard = () => {
         menuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg">
-            <span className="font-bold text-xl text-white">N</span>
+          <div className="sm:hidden">
+            <BrandLogo variant="mark" theme="dark" size="md" />
           </div>
-          <div>
-            <h1 className="font-bold text-lg">Portal do Aluno</h1>
-            <p className="text-xs text-gray-400">Nexus Academy</p>
+          <div className="hidden sm:flex">
+            <BrandLogo variant="horizontal" theme="dark" size="md" />
           </div>
+          <p className="text-xs text-gray-400">Portal do Aluno</p>
         </div>
 
         <nav className="space-y-2 flex-1 overflow-y-auto">

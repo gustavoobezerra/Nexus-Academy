@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone, Calendar, BookOpen, LogIn, X } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone, Calendar, BookOpen, LogIn, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FadeContent, BlurText, GradientText, MagneticButton } from '../ui/Animations';
 import { portalAPI } from '../../lib/api';
 import { formatPhoneBR } from '../../utils/security';
+import BrandLogo from '../BrandLogo';
 
 interface SavedStudent {
   id: string;
@@ -246,8 +247,8 @@ export const StudentPortalLogin = () => {
               <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
                 {/* Header */}
                 <div className="text-center mb-6">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl mb-4 shadow-lg shadow-indigo-500/20">
-                    <GraduationCap className="w-7 h-7 text-white" />
+                  <div className="mb-4 flex justify-center">
+                    <BrandLogo variant="mark" theme="dark" size="md" />
                   </div>
                   <h1 className="text-2xl font-bold text-white mb-2">
                     Bem-vindo de volta!
@@ -376,8 +377,8 @@ export const StudentPortalLogin = () => {
             <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
               {/* Header */}
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl mb-4 shadow-lg shadow-indigo-500/20">
-                  <GraduationCap className="w-7 h-7 text-white" />
+                <div className="mb-4 flex justify-center">
+                  <BrandLogo variant="mark" theme="dark" size="md" />
                 </div>
                 <h1 className="text-2xl font-bold text-white mb-2">
                   {isRegistering ? 'Criar Conta' : (

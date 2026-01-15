@@ -4,11 +4,11 @@ import { GraduationCap, Users, ChevronRight, Sparkles, BookOpen, Award, Shield }
 import {
   FadeContent,
   BlurText,
-  GradientText,
   StaggerContainer,
   StaggerItem,
   MagneticButton
 } from './ui/Animations';
+import BrandLogo from './BrandLogo';
 
 export const LoginPage = () => {
   const [hoveredRole, setHoveredRole] = useState<'student' | 'teacher' | null>(null);
@@ -50,21 +50,9 @@ export const LoginPage = () => {
           <FadeContent delay={0} duration={0.8} blur>
             <div className="text-center mb-16">
               {/* Logo */}
-              <div className="inline-flex items-center justify-center w-20 h-20 mb-8 relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl opacity-20 blur-xl" />
-                <div className="relative w-full h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
-                  <span className="text-4xl font-black tracking-tight text-white">N</span>
-                </div>
+              <div className="flex justify-center mb-6">
+                <BrandLogo variant="stacked" theme="dark" size="lg" />
               </div>
-
-              {/* Title with gradient */}
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-                <GradientText
-                  text="Nexus Academy"
-                  colors={['#818cf8', '#a78bfa', '#c4b5fd', '#818cf8']}
-                  animationSpeed={6}
-                />
-              </h1>
 
               <BlurText
                 text="Plataforma inteligente de ensino"

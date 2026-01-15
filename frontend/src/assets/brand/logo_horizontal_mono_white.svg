@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2600" height="420" viewBox="0 0 2600 420">
+  <g>
+    <text x="120" y="255" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="240" font-weight="800" fill="#FFFFFF">Nexus</text>
+    <circle cx="1070" cy="120" r="22" fill="#FFFFFF"/>
+    <text x="1240" y="255" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial" font-size="150" font-weight="500" letter-spacing="18" fill="#FFFFFF">ACADEMY</text>
+  </g>
+</svg>

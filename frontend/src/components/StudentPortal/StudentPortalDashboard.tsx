@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalAPI } from '../../lib/api';
+import BrandLogo from '../BrandLogo';
 // import { FadeContent, StaggerContainer, StaggerItem } from '../ui/Animations';
 
 interface Student {
@@ -204,7 +205,7 @@ export const StudentPortalDashboard = () => {
               >
                 {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <GraduationCap className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              <BrandLogo variant="mark" theme="auto" size="sm" />
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">
                 Portal do Aluno
               </h1>
