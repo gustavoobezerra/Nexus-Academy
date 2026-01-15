@@ -2,7 +2,7 @@ import express from 'express';
 import Student from '../models/Student.js';
 import User from '../models/User.js';
 import { Notification } from '../models/Notification.js';
-import jwt from 'jsonwebtoken';
+import { authenticateStudent } from '../middleware/studentAuth.js';
 import {
   SUBJECT_LIST,
   SUBJECTS_BY_CATEGORY,
@@ -13,89 +13,15 @@ import {
 
 const router = express.Router();
 
-// Helper para obter JWT secret
-const getJWTSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET must be defined in environment variables');
-  }
-  return secret;
-};
-
-// Middleware de autenticação para alunos
-function authenticateStudent(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-
-    // DEBUG: console.log('[StudentOnboarding Auth] Header:', authHeader ? 'Present' : 'Missing');
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token não fornecido'
-      });
-    }
-
-    const token = authHeader.substring(7);
-
-    if (!token || token.length < 10) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido'
-      });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, getJWTSecret());
-      // DEBUG: console.log('[StudentOnboarding Auth] Decoded token:', {
-        type: decoded.type,
-        studentId: decoded.studentId ? 'present' : 'missing',
-        teacherId: decoded.teacherId || 'none'
-      });
-    } catch (jwtError) {
-      console.error('[StudentOnboarding Auth] JWT Error:', jwtError.name, jwtError.message);
-      if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          success: false,
-          message: 'Sessão expirada. Faça login novamente.'
-        });
-      }
-      return res.status(401).json({
-        success: false,
-        message: 'Token inválido'
-      });
-    }
-
-    if (decoded.type !== 'student') {
-      // DEBUG: console.log('[StudentOnboarding Auth] Access denied - type:', decoded.type, 'expected: student');
-      return res.status(403).json({
-        success: false,
-        message: 'Acesso negado. Tipo de token inválido.'
-      });
-    }
-
-    req.studentId = decoded.studentId;
-    req.teacherId = decoded.teacherId;
-    next();
-  } catch (error) {
-    console.error('[StudentOnboarding Auth] Error:', error.message);
-    return res.status(401).json({
-      success: false,
-      message: 'Erro de autenticação'
-    });
-  }
-}
-
 /**
  * @swagger
  * /api/student-onboarding/subjects:
  *   get:
- *     summary: Retorna lista de matérias disponíveis para seleção
+ *     summary: Retorna lista de mat‚rias dispon¡veis para sele‡Æo
  *     tags: [Student Onboarding]
  *     responses:
  *       200:
- *         description: Lista de matérias agrupadas por categoria
+ *         description: Lista de mat‚rias agrupadas por categoria
  */
 router.get('/subjects', (req, res) => {
   try {
@@ -108,7 +34,7 @@ router.get('/subjects', (req, res) => {
     console.error('Get subjects error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao obter matérias'
+      message: 'Erro ao obter mat‚rias'
     });
   }
 });
@@ -117,7 +43,7 @@ router.get('/subjects', (req, res) => {
  * @swagger
  * /api/student-onboarding/select-subject:
  *   post:
- *     summary: Seleciona matéria principal e retorna questionário específico
+ *     summary: Seleciona mat‚ria principal e retorna question rio espec¡fico
  *     tags: [Student Onboarding]
  *     security:
  *       - bearerAuth: []
@@ -132,13 +58,13 @@ router.get('/subjects', (req, res) => {
  *             properties:
  *               subject:
  *                 type: string
- *                 description: Nome da matéria selecionada
+ *                 description: Nome da mat‚ria selecionada
  *               customSubject:
  *                 type: string
  *                 description: Nome customizado se "Outros" foi selecionado
  *     responses:
  *       200:
- *         description: Questionário específico da matéria
+ *         description: Question rio espec¡fico da mat‚ria
  */
 router.post('/select-subject', authenticateStudent, async (req, res) => {
   try {
@@ -147,23 +73,23 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
     if (!subject) {
       return res.status(400).json({
         success: false,
-        message: 'Matéria é obrigatória'
+        message: 'Mat‚ria ‚ obrigat¢ria'
       });
     }
 
     // Se for "Outros", usar o nome customizado
-    const subjectName = subject === 'Outros' && customSubject 
-      ? customSubject.trim().slice(0, 100) 
+    const subjectName = subject === 'Outros' && customSubject
+      ? customSubject.trim().slice(0, 100)
       : subject;
 
-    // Buscar questionário específico
+    // Buscar question rio espec¡fico
     const questionnaire = getQuestionnaireForSubject(subjectName);
 
-    // Salvar a matéria selecionada no aluno (parcialmente, antes de completar onboarding)
+    // Salvar a mat‚ria selecionada no aluno (parcialmente, antes de completar onboarding)
     await Student.findByIdAndUpdate(req.studentId, {
       $set: {
         'onboarding.subject': subjectName,
-        'subject': subjectName
+        subject: subjectName
       }
     });
 
@@ -176,7 +102,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
     console.error('Select subject error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao selecionar matéria'
+      message: 'Erro ao selecionar mat‚ria'
     });
   }
 });
@@ -185,7 +111,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
  * @swagger
  * /api/student-onboarding/get-questionnaire:
  *   post:
- *     summary: Obtém questionário para uma matéria específica
+ *     summary: Obt‚m question rio para uma mat‚ria espec¡fica
  *     tags: [Student Onboarding]
  *     requestBody:
  *       required: true
@@ -200,7 +126,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
  *                 type: string
  *     responses:
  *       200:
- *         description: Questionário da matéria
+ *         description: Question rio da mat‚ria
  */
 router.post('/get-questionnaire', (req, res) => {
   try {
@@ -209,7 +135,7 @@ router.post('/get-questionnaire', (req, res) => {
     if (!subject) {
       return res.status(400).json({
         success: false,
-        message: 'Matéria é obrigatória'
+        message: 'Mat‚ria ‚ obrigat¢ria'
       });
     }
 
@@ -223,7 +149,7 @@ router.post('/get-questionnaire', (req, res) => {
     console.error('Get questionnaire error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao obter questionário'
+      message: 'Erro ao obter question rio'
     });
   }
 });
@@ -232,7 +158,7 @@ router.post('/get-questionnaire', (req, res) => {
  * @swagger
  * /api/student-onboarding/submit:
  *   post:
- *     summary: Submete respostas do questionário e completa onboarding
+ *     summary: Submete respostas do question rio e completa onboarding
  *     tags: [Student Onboarding]
  *     security:
  *       - bearerAuth: []
@@ -262,9 +188,9 @@ router.post('/get-questionnaire', (req, res) => {
  */
 router.post('/submit', authenticateStudent, async (req, res) => {
   try {
-    const { 
-      subject, 
-      answers, 
+    const {
+      subject,
+      answers,
       goals,
       studyHoursPerWeek,
       preferredSchedule
@@ -273,24 +199,24 @@ router.post('/submit', authenticateStudent, async (req, res) => {
     if (!subject) {
       return res.status(400).json({
         success: false,
-        message: 'Matéria é obrigatória'
+        message: 'Mat‚ria ‚ obrigat¢ria'
       });
     }
 
     if (!answers || typeof answers !== 'object') {
       return res.status(400).json({
         success: false,
-        message: 'Respostas são obrigatórias'
+        message: 'Respostas sÆo obrigat¢rias'
       });
     }
 
-    // Validar horário preferido
+    // Validar hor rio preferido
     const validSchedules = ['morning', 'afternoon', 'evening', 'flexible'];
     const schedule = validSchedules.includes(preferredSchedule) ? preferredSchedule : 'flexible';
 
     // Preparar dados do onboarding
     const updateData = {
-      'subject': String(subject).slice(0, 100),
+      subject: String(subject).slice(0, 100),
       'onboarding.completed': true,
       'onboarding.completedAt': new Date(),
       'onboarding.subject': String(subject).slice(0, 100),
@@ -299,13 +225,13 @@ router.post('/submit', authenticateStudent, async (req, res) => {
       'onboarding.answers.preferredSchedule': schedule
     };
 
-    // Extrair informações relevantes das respostas para campos específicos
+    // Extrair informa‡äes relevantes das respostas para campos espec¡ficos
     if (answers.level) {
       updateData['onboarding.answers.currentLevel'] = answers.level;
     }
     if (answers.objectives || answers.goal) {
       const objectives = answers.objectives || [answers.goal];
-      updateData['onboarding.answers.specificGoals'] = Array.isArray(objectives) 
+      updateData['onboarding.answers.specificGoals'] = Array.isArray(objectives)
         ? objectives.slice(0, 10).map(g => String(g).slice(0, 100))
         : [String(objectives).slice(0, 100)];
     }
@@ -335,7 +261,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
 
       await Student.findByIdAndUpdate(
         req.studentId,
-        { 
+        {
           $set: updateData,
           $push: { goals: { $each: processedGoals } }
         }
@@ -347,7 +273,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
     // Buscar aluno atualizado para notificar professor
     const student = await Student.findById(req.studentId).populate('teacher', 'name email');
 
-    // Criar notificação in-app para o professor (se houver professor atribuído)
+    // Criar notifica‡Æo in-app para o professor (se houver professor atribu¡do)
     if (student?.teacher) {
       try {
         await Notification.create({
@@ -356,25 +282,25 @@ router.post('/submit', authenticateStudent, async (req, res) => {
           recipientId: student.teacher._id,
           recipientName: student.teacher.name,
           channel: 'in_app',
-          subject: '🎓 Novo aluno completou o onboarding!',
-          body: `O aluno ${student.name} completou o questionário inicial e está pronto para começar as aulas de ${subject}. Nível: ${answers.level || 'Não informado'}. Horário preferido: ${schedule === 'morning' ? 'Manhã' : schedule === 'afternoon' ? 'Tarde' : schedule === 'evening' ? 'Noite' : 'Flexível'}.`,
+          subject: '?? Novo aluno completou o onboarding!',
+          body: `O aluno ${student.name} completou o question rio inicial e est  pronto para come‡ar as aulas de ${subject}. N¡vel: ${answers.level || 'NÆo informado'}. Hor rio preferido: ${schedule === 'morning' ? 'ManhÆ' : schedule === 'afternoon' ? 'Tarde' : schedule === 'evening' ? 'Noite' : 'Flex¡vel'}.`,
           status: 'pending',
           entityType: 'student',
           entityId: student._id
         });
-        // DEBUG: console.log(`[Onboarding] ✅ Notificação criada para professor ${student.teacher.name}`);
+        // DEBUG: console.log(`[Onboarding] ? Notifica‡Æo criada para professor ${student.teacher.name}`);
       } catch (notifError) {
-        console.error('[Onboarding] Erro ao criar notificação:', notifError);
-        // Não bloquear o onboarding por erro de notificação
+        console.error('[Onboarding] Erro ao criar notifica‡Æo:', notifError);
+        // NÆo bloquear o onboarding por erro de notifica‡Æo
       }
     }
 
-    // Criar notificação genérica para todos os professores (para alunos sem professor atribuído)
+    // Criar notifica‡Æo gen‚rica para todos os professores (para alunos sem professor atribu¡do)
     if (!student?.teacher) {
       try {
-        // Buscar todos os professores ativos para notificar sobre novo aluno disponível
+        // Buscar todos os professores ativos para notificar sobre novo aluno dispon¡vel
         const teachers = await User.find({ role: 'teacher', status: 'active' }).select('_id name').limit(10);
-        
+
         for (const teacher of teachers) {
           await Notification.create({
             teacher: teacher._id,
@@ -382,22 +308,22 @@ router.post('/submit', authenticateStudent, async (req, res) => {
             recipientId: teacher._id,
             recipientName: teacher.name,
             channel: 'in_app',
-            subject: '👋 Novo aluno disponível!',
-            body: `Um novo aluno (${student.name}) se cadastrou e está procurando aulas de ${subject}. Seja o primeiro a entrar em contato!`,
+            subject: '?? Novo aluno dispon¡vel!',
+            body: `Um novo aluno (${student.name}) se cadastrou e est  procurando aulas de ${subject}. Seja o primeiro a entrar em contato!`,
             status: 'pending',
             entityType: 'student',
             entityId: student._id
           });
         }
-        // DEBUG: console.log(`[Onboarding] ✅ Notificações enviadas para ${teachers.length} professores`);
+        // DEBUG: console.log(`[Onboarding] ? Notifica‡äes enviadas para ${teachers.length} professores`);
       } catch (notifError) {
-        console.error('[Onboarding] Erro ao criar notificações:', notifError);
+        console.error('[Onboarding] Erro ao criar notifica‡äes:', notifError);
       }
     }
 
     res.json({
       success: true,
-      message: 'Onboarding concluído com sucesso! 🎉',
+      message: 'Onboarding conclu¡do com sucesso! ??',
       data: {
         subject,
         completedAt: new Date()
@@ -413,4 +339,3 @@ router.post('/submit', authenticateStudent, async (req, res) => {
 });
 
 export default router;
-

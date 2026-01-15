@@ -7,12 +7,13 @@ import {
   deleteStudent,
   getStudentStats
 } from '../controllers/studentController.js';
-import { protect, requireCompletedOnboarding } from '../middleware/auth.js';
+import { authorize, protect, requireCompletedOnboarding } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Proteger com autenticação E onboarding completo
 router.use(protect);
+router.use(authorize('teacher', 'admin'));
 router.use(requireCompletedOnboarding);
 
 router.route('/')

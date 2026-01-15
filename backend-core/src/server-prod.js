@@ -7,14 +7,21 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import jwt from 'jsonwebtoken';
 import connectDB, { isDBConnected } from './config/database.js';
-import { sanitizeInput } from './middleware/auth.js';
+import { authenticateOptional, sanitizeInput } from './middleware/auth.js';
 import { setupHangmanSocket } from './socket/hangmanSocket.js';
-import Class from './models/Class.js';
 import liveClassService from './services/liveClassService.js';
-import User from './models/User.js';
-import Student from './models/Student.js';
+import { tenantContextMiddleware } from './middleware/tenantAware.js';
+import {
+  authenticateSocket,
+  validateClassRoomAccess,
+  validateLiveSessionAccess,
+  checkRateLimit,
+  cleanupRateLimit,
+  sanitizeEventData,
+  createSocketError,
+  logSecurityEvent
+} from './socket/socketSecurity.js';
 
 import authRoutes from './routes/auth.js';
 import onboardingRoutes from './routes/onboarding.js';
@@ -41,6 +48,9 @@ import webhooksRoutes from './routes/webhooks.js';
 import analyticsRoutes from './routes/analytics.js';
 import aiAssistantRoutes from './routes/aiAssistant.js';
 import hangmanRoutes from './routes/hangman.js';
+import teachingAssistantRoutes from './routes/teachingAssistant.js';
+import gamificationRoutes from './routes/gamification.js';
+import auditLogsRoutes from './routes/auditLogs.js';
 
 dotenv.config();
 
@@ -93,71 +103,35 @@ const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api', apiLimiter);
+app.use('/api', authenticateOptional);
+app.use('/api', tenantContextMiddleware);
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, credentials: true }
+  cors: { origin: allowedOrigins, credentials: true },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  maxHttpBufferSize: 1e6, // 1MB max message size
+  connectTimeout: 45000
 });
 app.set('io', io);
 
-const getSocketToken = (socket) => {
-  if (socket.handshake.auth?.token) {
-    return socket.handshake.auth.token;
-  }
-  const authHeader = socket.handshake.headers?.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-};
-
-const getJWTSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET must be defined in environment variables');
-  }
-  return secret;
-};
-
-io.use(async (socket, next) => {
-  try {
-    const token = getSocketToken(socket);
-    if (!token) {
-      return next(new Error('Token não fornecido'));
-    }
-
-    const decoded = jwt.verify(token, getJWTSecret());
-
-    if (decoded.type === 'student') {
-      const student = await Student.findById(decoded.studentId).select('_id teacher');
-      if (!student) {
-        return next(new Error('Aluno não encontrado'));
-      }
-      socket.data.user = {
-        id: student._id.toString(),
-        role: 'student',
-        teacherId: student.teacher?.toString()
-      };
-      return next();
-    }
-
-    const user = await User.findById(decoded.id).select('_id role');
-    if (!user) {
-      return next(new Error('Usuário não encontrado'));
-    }
-    socket.data.user = { id: user._id.toString(), role: user.role };
-    return next();
-  } catch (error) {
-    return next(new Error('Token inválido'));
-  }
-});
+// Apply authentication middleware to all namespaces
+io.use(authenticateSocket);
 
 io.on('connection', (socket) => {
   const user = socket.data.user;
+
+  // Double-check authentication (should never happen with middleware)
   if (!user) {
+    logSecurityEvent('UNAUTHENTICATED_CONNECTION', socket);
     socket.disconnect();
     return;
   }
 
+  console.log(`✅ Socket connected: ${socket.id} | User: ${user.name} (${user.role})`);
+
+  // Auto-join user-specific rooms
   socket.join(`user:${user.id}`);
 
   if (user.role === 'student') {
@@ -169,59 +143,204 @@ io.on('connection', (socket) => {
     socket.join(`teacher:${user.id}`);
   }
 
-  socket.on('join-classroom', async ({ classId }) => {
-    if (!classId) {
-      return;
-    }
-    const classDoc = await Class.findById(classId).select('_id teacher student');
-    if (!classDoc) {
-      return;
-    }
-    const isTeacher = user.role !== 'student' && classDoc.teacher.toString() === user.id;
-    const isStudent = user.role === 'student' && classDoc.student.toString() === user.id;
+  // === JOIN CLASSROOM ===
+  socket.on('join-classroom', async (data) => {
+    const sanitizedData = sanitizeEventData(data);
+    const { classId } = sanitizedData;
 
-    if (!isTeacher && !isStudent) {
+    // Rate limiting
+    if (!checkRateLimit(socket, 'join')) {
+      socket.emit('error', createSocketError('RATE_LIMIT_EXCEEDED', 'Too many join requests'));
+      logSecurityEvent('RATE_LIMIT_EXCEEDED', socket, { event: 'join-classroom' });
       return;
     }
 
+    // Validate access
+    const validation = await validateClassRoomAccess(classId, user);
+
+    if (!validation.allowed) {
+      socket.emit('error', createSocketError(validation.reason, 'Cannot join classroom'));
+      logSecurityEvent('UNAUTHORIZED_CLASS_ACCESS', socket, { classId, reason: validation.reason });
+      return;
+    }
+
+    // Join room
     socket.join(classId);
+
+    // Notify room
+    io.to(classId).emit('user-joined', {
+      userId: user.id,
+      userName: user.name,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log(`👤 ${user.name} joined class ${classId}`);
   });
 
-  socket.on('join-live-session', ({ sessionId }) => {
+  // === JOIN LIVE SESSION ===
+  socket.on('join-live-session', (data) => {
+    const sanitizedData = sanitizeEventData(data);
+    const { sessionId } = sanitizedData;
+
+    // Rate limiting
+    if (!checkRateLimit(socket, 'join')) {
+      socket.emit('error', createSocketError('RATE_LIMIT_EXCEEDED', 'Too many join requests'));
+      return;
+    }
+
+    // Get session
     const session = liveClassService.getSession(sessionId);
-    if (!session) return;
 
-    const allowed = user.role === 'student'
-      ? session.studentId === user.id
-      : session.teacherId === user.id;
+    // Validate access
+    const validation = validateLiveSessionAccess(session, user);
 
-    if (!allowed) return;
+    if (!validation.allowed) {
+      socket.emit('error', createSocketError(validation.reason, 'Cannot join live session'));
+      logSecurityEvent('UNAUTHORIZED_SESSION_ACCESS', socket, { sessionId, reason: validation.reason });
+      return;
+    }
 
+    // Join room
     socket.join(sessionId);
+
+    // Notify room
+    io.to(sessionId).emit('participant-joined', {
+      userId: user.id,
+      userName: user.name,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log(`🎥 ${user.name} joined live session ${sessionId}`);
   });
 
+  // === WEBRTC SIGNALING (with validation) ===
   socket.on('webrtc-offer', (data) => {
-    if (!data?.to || !data?.offer) return;
-    io.to(data.to).emit('webrtc-offer', {
+    const sanitizedData = sanitizeEventData(data);
+
+    if (!sanitizedData?.to || !sanitizedData?.offer) {
+      return;
+    }
+
+    // Rate limiting
+    if (!checkRateLimit(socket, 'event')) {
+      return;
+    }
+
+    io.to(sanitizedData.to).emit('webrtc-offer', {
       from: socket.id,
-      offer: data.offer
+      offer: sanitizedData.offer
     });
   });
 
   socket.on('webrtc-answer', (data) => {
-    if (!data?.to || !data?.answer) return;
-    io.to(data.to).emit('webrtc-answer', {
+    const sanitizedData = sanitizeEventData(data);
+
+    if (!sanitizedData?.to || !sanitizedData?.answer) {
+      return;
+    }
+
+    // Rate limiting
+    if (!checkRateLimit(socket, 'event')) {
+      return;
+    }
+
+    io.to(sanitizedData.to).emit('webrtc-answer', {
       from: socket.id,
-      answer: data.answer
+      answer: sanitizedData.answer
     });
   });
 
   socket.on('ice-candidate', (data) => {
-    if (!data?.to || !data?.candidate) return;
-    io.to(data.to).emit('ice-candidate', {
+    const sanitizedData = sanitizeEventData(data);
+
+    if (!sanitizedData?.to || !sanitizedData?.candidate) {
+      return;
+    }
+
+    // Rate limiting
+    if (!checkRateLimit(socket, 'event')) {
+      return;
+    }
+
+    io.to(sanitizedData.to).emit('ice-candidate', {
       from: socket.id,
-      candidate: data.candidate
+      candidate: sanitizedData.candidate
     });
+  });
+
+  // === CHAT MESSAGE ===
+  socket.on('class-message', async (data) => {
+    const sanitizedData = sanitizeEventData(data);
+    const { classId, message } = sanitizedData;
+
+    // Rate limiting for messages
+    if (!checkRateLimit(socket, 'message')) {
+      socket.emit('error', createSocketError('RATE_LIMIT_EXCEEDED', 'Sending messages too fast'));
+      return;
+    }
+
+    // Validate message content
+    if (!message || typeof message !== 'string' || message.length > 2000) {
+      socket.emit('error', createSocketError('INVALID_MESSAGE', 'Message must be 1-2000 characters'));
+      return;
+    }
+
+    // Validate class access
+    const validation = await validateClassRoomAccess(classId, user);
+    if (!validation.allowed) {
+      socket.emit('error', createSocketError('UNAUTHORIZED', 'Cannot send message to this class'));
+      return;
+    }
+
+    // Broadcast message
+    const messageData = {
+      classId,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      message: message.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    io.to(classId).emit('new-message', messageData);
+  });
+
+  // === TYPING INDICATORS ===
+  socket.on('typing-start', (data) => {
+    const sanitizedData = sanitizeEventData(data);
+    const { roomId } = sanitizedData;
+
+    if (roomId) {
+      socket.to(roomId).emit('user-typing', {
+        userId: user.id,
+        userName: user.name
+      });
+    }
+  });
+
+  socket.on('typing-stop', (data) => {
+    const sanitizedData = sanitizeEventData(data);
+    const { roomId } = sanitizedData;
+
+    if (roomId) {
+      socket.to(roomId).emit('user-stopped-typing', {
+        userId: user.id
+      });
+    }
+  });
+
+  // === DISCONNECT ===
+  socket.on('disconnect', (reason) => {
+    console.log(`❌ Socket disconnected: ${socket.id} | Reason: ${reason}`);
+    cleanupRateLimit(socket.id);
+  });
+
+  // === ERROR HANDLER ===
+  socket.on('error', (error) => {
+    console.error(`Socket error for ${socket.id}:`, error);
+    logSecurityEvent('SOCKET_ERROR', socket, { error: error.message });
   });
 });
 
@@ -252,6 +371,9 @@ app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiAssistantRoutes);
 app.use('/api/hangman', hangmanRoutes);
+app.use('/api/teaching-assistant', teachingAssistantRoutes);
+app.use('/api/gamification', gamificationRoutes);
+app.use('/api/audit-logs', auditLogsRoutes);
 
 app.get('/api/health', (req, res) => {
   const dbConnected = isDBConnected();

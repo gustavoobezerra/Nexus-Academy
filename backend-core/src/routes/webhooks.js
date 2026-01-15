@@ -1,6 +1,6 @@
 import express from 'express';
 import { Webhook, WebhookDelivery } from '../models/Webhook.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import { handleStripeWebhook } from '../controllers/webhookController.js';
 import axios from 'axios';
 
@@ -13,8 +13,11 @@ const router = express.Router();
 // O express.raw já está configurado no server.js para esta rota
 router.post('/stripe', handleStripeWebhook);
 
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
+
 // Get all webhooks
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const webhooks = await Webhook.find({ teacher: req.user._id });
     res.json({ success: true, webhooks });
@@ -24,7 +27,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // Get single webhook
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const webhook = await Webhook.findOne({ _id: req.params.id, teacher: req.user._id }).select('+secret');
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
@@ -35,7 +38,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // Create webhook
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const webhook = await Webhook.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, webhook });
@@ -45,7 +48,7 @@ router.post('/', protect, async (req, res) => {
 });
 
 // Update webhook
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const webhook = await Webhook.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -60,7 +63,7 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // Delete webhook
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     await Webhook.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Webhook removido' });
@@ -70,7 +73,7 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 // Toggle webhook
-router.put('/:id/toggle', protect, async (req, res) => {
+router.put('/:id/toggle', async (req, res) => {
   try {
     const webhook = await Webhook.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
@@ -83,7 +86,7 @@ router.put('/:id/toggle', protect, async (req, res) => {
 });
 
 // Test webhook
-router.post('/:id/test', protect, async (req, res) => {
+router.post('/:id/test', async (req, res) => {
   try {
     const webhook = await Webhook.findOne({ _id: req.params.id, teacher: req.user._id }).select('+secret');
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
@@ -156,7 +159,7 @@ router.post('/:id/test', protect, async (req, res) => {
 });
 
 // Get webhook deliveries
-router.get('/:id/deliveries', protect, async (req, res) => {
+router.get('/:id/deliveries', async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const webhook = await Webhook.findOne({ _id: req.params.id, teacher: req.user._id });
@@ -176,7 +179,7 @@ router.get('/:id/deliveries', protect, async (req, res) => {
 });
 
 // Retry delivery
-router.post('/deliveries/:id/retry', protect, async (req, res) => {
+router.post('/deliveries/:id/retry', async (req, res) => {
   try {
     const delivery = await WebhookDelivery.findById(req.params.id).populate('webhook');
     if (!delivery) return res.status(404).json({ success: false, message: 'Entrega não encontrada' });
@@ -216,7 +219,7 @@ router.post('/deliveries/:id/retry', protect, async (req, res) => {
 });
 
 // Regenerate secret
-router.post('/:id/regenerate-secret', protect, async (req, res) => {
+router.post('/:id/regenerate-secret', async (req, res) => {
   try {
     const webhook = await Webhook.findOne({ _id: req.params.id, teacher: req.user._id }).select('+secret');
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });

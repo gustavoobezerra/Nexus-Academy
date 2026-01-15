@@ -1,9 +1,12 @@
 import express from 'express';
 import { Quiz, QuizAttempt } from '../models/Quiz.js';
 import Student from '../models/Student.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -14,7 +17,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { status, relatedClass, relatedStudent } = req.query;
     const query = { teacher: req.user._id };
@@ -43,7 +46,7 @@ router.get('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const quizData = {
       ...req.body,
@@ -66,7 +69,7 @@ router.post('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const quiz = await Quiz.findOne({ _id: req.params.id, teacher: req.user._id })
       .populate('relatedClass', 'title')
@@ -91,7 +94,7 @@ router.get('/:id', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/attempts', protect, async (req, res) => {
+router.post('/:id/attempts', async (req, res) => {
   try {
     const { studentId } = req.body;
     const quiz = await Quiz.findOne({ _id: req.params.id, teacher: req.user._id });
@@ -142,7 +145,7 @@ router.post('/:id/attempts', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/attempts/:id/submit', protect, async (req, res) => {
+router.post('/attempts/:id/submit', async (req, res) => {
   try {
     const { answers } = req.body;
     const attempt = await QuizAttempt.findOne({ 
@@ -238,7 +241,7 @@ router.post('/attempts/:id/submit', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/attempts/:id', protect, async (req, res) => {
+router.get('/attempts/:id', async (req, res) => {
   try {
     const attempt = await QuizAttempt.findOne({ 
       _id: req.params.id,

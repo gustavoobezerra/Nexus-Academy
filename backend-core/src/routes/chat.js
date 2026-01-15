@@ -1,9 +1,12 @@
 import express from 'express';
 import { Chat, Message } from '../models/Chat.js';
 import Student from '../models/Student.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -14,7 +17,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const chats = await Chat.find({ teacher: req.user._id })
       .populate('relatedStudent', 'name email')
@@ -56,7 +59,7 @@ router.get('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { studentId, participantType = 'student' } = req.body;
 
@@ -127,7 +130,7 @@ router.post('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/:id/messages', protect, async (req, res) => {
+router.get('/:id/messages', async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
     const chat = await Chat.findOne({ _id: req.params.id, teacher: req.user._id });
@@ -168,7 +171,7 @@ router.get('/:id/messages', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/messages', protect, async (req, res) => {
+router.post('/:id/messages', async (req, res) => {
   try {
     const { content, messageType = 'text', attachments = [] } = req.body;
 
@@ -241,7 +244,7 @@ router.post('/:id/messages', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/read', protect, async (req, res) => {
+router.post('/:id/read', async (req, res) => {
   try {
     const chat = await Chat.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!chat) {

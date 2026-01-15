@@ -1,11 +1,14 @@
 import express from 'express';
 import Course from '../models/Course.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
+
 // Get all courses
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const courses = await Course.find({ teacher: req.user._id }).populate('enrollments.student', 'name email');
     res.json({ success: true, courses });
@@ -15,7 +18,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // Get single course
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const course = await Course.findOne({ _id: req.params.id, teacher: req.user._id }).populate('enrollments.student', 'name email');
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
@@ -26,7 +29,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // Create course
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const course = await Course.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, course });
@@ -36,7 +39,7 @@ router.post('/', protect, async (req, res) => {
 });
 
 // Update course
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const course = await Course.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -51,7 +54,7 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // Delete course
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const course = await Course.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
@@ -62,7 +65,7 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 // Enroll student
-router.post('/:id/enroll', protect, async (req, res) => {
+router.post('/:id/enroll', async (req, res) => {
   try {
     const course = await Course.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
@@ -80,7 +83,7 @@ router.post('/:id/enroll', protect, async (req, res) => {
 });
 
 // Update student progress
-router.put('/:id/progress/:studentId', protect, async (req, res) => {
+router.put('/:id/progress/:studentId', async (req, res) => {
   try {
     const course = await Course.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
@@ -98,7 +101,7 @@ router.put('/:id/progress/:studentId', protect, async (req, res) => {
 });
 
 // Complete lesson
-router.post('/:id/complete-lesson', protect, async (req, res) => {
+router.post('/:id/complete-lesson', async (req, res) => {
   try {
     const { studentId, moduleIndex, lessonIndex } = req.body;
     const course = await Course.findOne({ _id: req.params.id, teacher: req.user._id });

@@ -1,15 +1,18 @@
 import express from 'express';
 import { AutomationRule, AutomationSequence, AutomationLog } from '../models/Automation.js';
 import { NotificationTemplate } from '../models/Notification.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import automationEngine from '../services/automationEngine.js';
 
 const router = express.Router();
 
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
+
 // ========== AUTOMATION RULES ==========
 
 // Get all rules
-router.get('/rules', protect, async (req, res) => {
+router.get('/rules', async (req, res) => {
   try {
     const rules = await AutomationRule.find({ teacher: req.user._id });
     res.json({ success: true, rules });
@@ -19,7 +22,7 @@ router.get('/rules', protect, async (req, res) => {
 });
 
 // Get single rule
-router.get('/rules/:id', protect, async (req, res) => {
+router.get('/rules/:id', async (req, res) => {
   try {
     const rule = await AutomationRule.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!rule) return res.status(404).json({ success: false, message: 'Regra não encontrada' });
@@ -30,7 +33,7 @@ router.get('/rules/:id', protect, async (req, res) => {
 });
 
 // Create rule
-router.post('/rules', protect, async (req, res) => {
+router.post('/rules', async (req, res) => {
   try {
     const rule = await AutomationRule.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, rule });
@@ -40,7 +43,7 @@ router.post('/rules', protect, async (req, res) => {
 });
 
 // Update rule
-router.put('/rules/:id', protect, async (req, res) => {
+router.put('/rules/:id', async (req, res) => {
   try {
     const rule = await AutomationRule.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -55,7 +58,7 @@ router.put('/rules/:id', protect, async (req, res) => {
 });
 
 // Delete rule
-router.delete('/rules/:id', protect, async (req, res) => {
+router.delete('/rules/:id', async (req, res) => {
   try {
     await AutomationRule.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Regra removida' });
@@ -65,7 +68,7 @@ router.delete('/rules/:id', protect, async (req, res) => {
 });
 
 // Toggle rule
-router.put('/rules/:id/toggle', protect, async (req, res) => {
+router.put('/rules/:id/toggle', async (req, res) => {
   try {
     const rule = await AutomationRule.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!rule) return res.status(404).json({ success: false, message: 'Regra não encontrada' });
@@ -78,7 +81,7 @@ router.put('/rules/:id/toggle', protect, async (req, res) => {
 });
 
 // Test rule
-router.post('/rules/:id/test', protect, async (req, res) => {
+router.post('/rules/:id/test', async (req, res) => {
   try {
     const rule = await AutomationRule.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!rule) return res.status(404).json({ success: false, message: 'Regra não encontrada' });
@@ -99,7 +102,7 @@ router.post('/rules/:id/test', protect, async (req, res) => {
 
 // ========== AUTOMATION SEQUENCES ==========
 
-router.get('/sequences', protect, async (req, res) => {
+router.get('/sequences', async (req, res) => {
   try {
     const sequences = await AutomationSequence.find({ teacher: req.user._id });
     res.json({ success: true, sequences });
@@ -108,7 +111,7 @@ router.get('/sequences', protect, async (req, res) => {
   }
 });
 
-router.post('/sequences', protect, async (req, res) => {
+router.post('/sequences', async (req, res) => {
   try {
     const sequence = await AutomationSequence.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, sequence });
@@ -117,7 +120,7 @@ router.post('/sequences', protect, async (req, res) => {
   }
 });
 
-router.put('/sequences/:id', protect, async (req, res) => {
+router.put('/sequences/:id', async (req, res) => {
   try {
     const sequence = await AutomationSequence.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -130,7 +133,7 @@ router.put('/sequences/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/sequences/:id', protect, async (req, res) => {
+router.delete('/sequences/:id', async (req, res) => {
   try {
     await AutomationSequence.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Sequência removida' });
@@ -141,7 +144,7 @@ router.delete('/sequences/:id', protect, async (req, res) => {
 
 // ========== TEMPLATES ==========
 
-router.get('/templates', protect, async (req, res) => {
+router.get('/templates', async (req, res) => {
   try {
     const templates = await NotificationTemplate.find({ teacher: req.user._id });
     res.json({ success: true, templates });
@@ -150,7 +153,7 @@ router.get('/templates', protect, async (req, res) => {
   }
 });
 
-router.post('/templates', protect, async (req, res) => {
+router.post('/templates', async (req, res) => {
   try {
     const template = await NotificationTemplate.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, template });
@@ -159,7 +162,7 @@ router.post('/templates', protect, async (req, res) => {
   }
 });
 
-router.put('/templates/:id', protect, async (req, res) => {
+router.put('/templates/:id', async (req, res) => {
   try {
     const template = await NotificationTemplate.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -172,7 +175,7 @@ router.put('/templates/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/templates/:id', protect, async (req, res) => {
+router.delete('/templates/:id', async (req, res) => {
   try {
     await NotificationTemplate.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Template removido' });
@@ -183,7 +186,7 @@ router.delete('/templates/:id', protect, async (req, res) => {
 
 // ========== LOGS ==========
 
-router.get('/logs', protect, async (req, res) => {
+router.get('/logs', async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
     const logs = await AutomationLog.find({ teacher: req.user._id })
@@ -200,7 +203,7 @@ router.get('/logs', protect, async (req, res) => {
 
 // ========== STATS ==========
 
-router.get('/stats', protect, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const [totalRules, activeRules, totalSequences, activeSequences, recentLogs] = await Promise.all([
       AutomationRule.countDocuments({ teacher: req.user._id }),
@@ -221,7 +224,7 @@ router.get('/stats', protect, async (req, res) => {
 });
 
 // Manual trigger
-router.post('/trigger', protect, async (req, res) => {
+router.post('/trigger', async (req, res) => {
   try {
     const { trigger, entityType, entityId, metadata } = req.body;
     const results = await automationEngine.fireTrigger(trigger, entityType, entityId, metadata, req.user._id);

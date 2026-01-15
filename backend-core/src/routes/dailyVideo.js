@@ -1,7 +1,10 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(authorize('teacher', 'admin'));
 
 // Daily.co API configuration
 const DAILY_API_KEY = process.env.DAILY_API_KEY;
@@ -59,7 +62,7 @@ async function dailyFetch(endpoint, options = {}) {
  *       200:
  *         description: Sala criada com sucesso
  */
-router.post('/create-room', authenticate, async (req, res) => {
+router.post('/create-room', async (req, res) => {
   try {
     // Verificar se Daily.co está configurado
     if (!DAILY_API_KEY) {
@@ -164,7 +167,7 @@ router.post('/create-room', authenticate, async (req, res) => {
  *       200:
  *         description: Token criado com sucesso
  */
-router.post('/create-token', authenticate, async (req, res) => {
+router.post('/create-token', async (req, res) => {
   try {
     // Verificar se Daily.co está configurado
     if (!DAILY_API_KEY) {
@@ -246,7 +249,7 @@ router.post('/create-token', authenticate, async (req, res) => {
  *       200:
  *         description: Informações da sala
  */
-router.get('/room-info/:roomName', authenticate, async (req, res) => {
+router.get('/room-info/:roomName', async (req, res) => {
   try {
     if (!DAILY_API_KEY) {
       return res.json({
@@ -301,7 +304,7 @@ router.get('/room-info/:roomName', authenticate, async (req, res) => {
  *       200:
  *         description: Sala deletada com sucesso
  */
-router.delete('/delete-room/:roomName', authenticate, async (req, res) => {
+router.delete('/delete-room/:roomName', async (req, res) => {
   try {
     if (!DAILY_API_KEY) {
       return res.json({

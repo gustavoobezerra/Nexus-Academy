@@ -154,7 +154,7 @@ class LiveClassService {
       }
 
       // Descontar horas do banco de horas
-      await this.deductHoursFromBank(session.studentId, duration);
+      await this.deductHoursFromBank(session.studentId, session.teacherId, duration);
 
       // Salvar gravação se houver
       if (session.recording.enabled && session.recording.videoUrl) {
@@ -194,10 +194,14 @@ class LiveClassService {
   /**
    * Descontar horas do banco de horas
    */
-  async deductHoursFromBank(studentId, minutes) {
+  async deductHoursFromBank(studentId, teacherId, minutes) {
     try {
       const hoursUsed = minutes / 60;
-      const hourBank = await HourBank.findOne({ student: studentId, active: true });
+      const hourBank = await HourBank.findOne({
+        student: studentId,
+        teacher: teacherId,
+        active: true
+      });
 
       if (hourBank) {
         const purchased = Number(hourBank.totalHoursPurchased || 0);

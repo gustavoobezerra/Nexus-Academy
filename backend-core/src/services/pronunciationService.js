@@ -127,11 +127,39 @@ export async function generatePhrase(difficulty) {
   }
 }
 
-function scoreWord(word) {
-  // Score pseudo-aleatório estável baseado na palavra
-  const seed = word.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const random = (Math.sin(seed) + 1) / 2; // 0..1
-  return Math.min(0.98, Math.max(0.45, 0.7 + (random - 0.5) * 0.4));
+/**
+ * Deterministic word scoring based on complexity factors
+ * No randomness - same word always gets same score
+ */
+function scoreWord(word, context = {}) {
+  const clean = word.toLowerCase().replace(/[^a-z']/g, '');
+  if (!clean) return 0.85;
+
+  // Calculate complexity factors
+  const length = clean.length;
+  const hasApostrophe = word.includes("'");
+  const consonantClusters = (clean.match(/[bcdfghjklmnpqrstvwxyz]{3,}/gi) || []).length;
+  const vowelClusters = (clean.match(/[aeiouy]{3,}/gi) || []).length;
+
+  // Base score starts high
+  let score = 0.92;
+
+  // Penalize based on length (longer words harder)
+  if (length > 8) score -= 0.08;
+  else if (length > 6) score -= 0.04;
+  else if (length > 4) score -= 0.02;
+
+  // Penalize consonant clusters
+  score -= consonantClusters * 0.05;
+
+  // Penalize vowel clusters
+  score -= vowelClusters * 0.03;
+
+  // Slight penalty for apostrophes
+  if (hasApostrophe) score -= 0.02;
+
+  // Ensure score stays in reasonable range
+  return Math.min(0.98, Math.max(0.60, score));
 }
 
 function splitSyllables(word) {
@@ -162,10 +190,44 @@ function splitSyllables(word) {
   return syllables.length ? syllables : [clean];
 }
 
+/**
+ * Deterministic syllable scoring based on phonetic complexity
+ * No randomness - same syllable always gets same score
+ */
 function scoreSyllable(syllable) {
-  const seed = syllable.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const random = (Math.sin(seed) + 1) / 2;
-  return Math.min(0.98, Math.max(0.45, 0.65 + (random - 0.5) * 0.5));
+  const clean = syllable.toLowerCase();
+  if (!clean) return 0.85;
+
+  // Base score
+  let score = 0.88;
+
+  // Check for difficult consonant combinations at start
+  const startConsonants = clean.match(/^[bcdfghjklmnpqrstvwxyz]+/);
+  if (startConsonants && startConsonants[0].length >= 3) {
+    score -= 0.10; // "str", "thr", "spr"
+  } else if (startConsonants && startConsonants[0].length === 2) {
+    score -= 0.05; // "sh", "ch", "th", "st"
+  }
+
+  // Check for difficult consonant combinations at end
+  const endConsonants = clean.match(/[bcdfghjklmnpqrstvwxyz]+$/);
+  if (endConsonants && endConsonants[0].length >= 3) {
+    score -= 0.08; // "ngth", "nts", "cts"
+  } else if (endConsonants && endConsonants[0].length === 2) {
+    score -= 0.03; // "nt", "st", "nd"
+  }
+
+  // Penalize complex vowel patterns
+  if (/[aeiouy]{3,}/.test(clean)) {
+    score -= 0.06; // "eau", "ieu"
+  }
+
+  // Penalize syllables with no clear vowel
+  if (!/[aeiouy]/.test(clean)) {
+    score -= 0.10;
+  }
+
+  return Math.min(0.98, Math.max(0.55, score));
 }
 
 function buildWordScores(originalPhrase) {
@@ -193,28 +255,110 @@ function buildWordScores(originalPhrase) {
   return wordScores;
 }
 
+/**
+ * Analyze pronunciation - DETERMINISTIC IMPLEMENTATION
+ * Same audio + phrase = same results
+ * Ready for real API integration (Azure Speech, Google Cloud Speech, etc.)
+ *
+ * @param {Buffer} audioBuffer - Audio file buffer
+ * @param {string} originalPhrase - Expected phrase
+ * @returns {Object} Analysis results with scores and feedback
+ */
 export async function analyzePronunciation({ audioBuffer, originalPhrase }) {
-  // Para futuras integrações, enviar audioBuffer para provedor externo (Azure, Google, etc.)
-  // Aqui usamos um mock baseado na frase para manter o fluxo funcionando em ambientes sem chave.
+  // For production: integrate with real speech recognition API
+  // Azure Speech API example:
+  // const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
+  // const audioConfig = sdk.AudioConfig.fromWavFileInput(audioBuffer);
+  // const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+  // const result = await recognizer.recognizeOnceAsync();
+
+  // CURRENT: Deterministic mock based on phrase complexity
   const wordScores = buildWordScores(originalPhrase);
+
+  // Calculate metrics deterministically
   const accuracyScore = wordScores.reduce((sum, w) => sum + w.score, 0) / Math.max(wordScores.length, 1);
-  const fluencyScore = Math.min(0.98, Math.max(0.5, accuracyScore - 0.05 + Math.random() * 0.1));
+
+  // Fluency based on phrase characteristics (deterministic)
+  const wordCount = wordScores.length;
+  const avgWordLength = originalPhrase.replace(/[^a-zA-Z]/g, '').length / Math.max(wordCount, 1);
+
+  let fluencyScore = 0.85;
+
+  // Longer phrases = slightly harder fluency
+  if (wordCount > 10) fluencyScore -= 0.05;
+  else if (wordCount > 7) fluencyScore -= 0.03;
+
+  // Longer average word length = slightly harder
+  if (avgWordLength > 7) fluencyScore -= 0.04;
+  else if (avgWordLength > 5) fluencyScore -= 0.02;
+
+  fluencyScore = Math.min(0.98, Math.max(0.60, fluencyScore));
+
+  // Overall pronunciation score (weighted average)
   const pronunciationScore = (accuracyScore * 0.6) + (fluencyScore * 0.4);
 
-  const feedback = pronunciationScore >= 0.9
-    ? 'Parabéns! Pronúncia excelente. Continue praticando para manter o nível.'
-    : pronunciationScore >= 0.75
-      ? 'Bom trabalho! Foque em ajustar a articulação de algumas palavras.'
-      : 'Continue praticando. Concentre-se em ritmo e clareza dos sons.';
+  // Generate contextual feedback
+  const feedback = generateFeedback(pronunciationScore, wordScores, originalPhrase);
+
+  // Calculate additional metrics
+  const duration = estimateAudioDuration(originalPhrase);
 
   return {
-    mock: true,
-    accuracyScore,
-    fluencyScore,
-    pronunciationScore,
+    mock: true, // Set to false when real API is integrated
+    accuracyScore: Math.round(accuracyScore * 100) / 100,
+    fluencyScore: Math.round(fluencyScore * 100) / 100,
+    pronunciationScore: Math.round(pronunciationScore * 100) / 100,
     feedback,
-    wordScores
+    wordScores,
+    duration,
+    metadata: {
+      wordCount,
+      avgWordLength: Math.round(avgWordLength * 10) / 10,
+      syllableCount: wordScores.reduce((sum, w) => sum + (w.syllables?.length || 0), 0)
+    }
   };
+}
+
+/**
+ * Generate contextual feedback based on scores
+ */
+function generateFeedback(pronunciationScore, wordScores, phrase) {
+  const weakWords = wordScores.filter(w => w.score < 0.70);
+  const strongWords = wordScores.filter(w => w.score >= 0.85);
+
+  if (pronunciationScore >= 0.90) {
+    return 'Excellent pronunciation! Your clarity and articulation are outstanding. Keep up the great work!';
+  }
+
+  if (pronunciationScore >= 0.80) {
+    const tips = weakWords.length > 0
+      ? ` Pay extra attention to words like "${weakWords[0].word}".`
+      : ' Focus on maintaining consistency across all words.';
+    return `Great job! Your pronunciation is very good.${tips}`;
+  }
+
+  if (pronunciationScore >= 0.70) {
+    const tips = weakWords.length > 0
+      ? ` Try breaking down challenging words like "${weakWords[0].word}" into syllables and practice each part separately.`
+      : ' Focus on rhythm and pace to improve fluency.';
+    return `Good effort! You're making solid progress.${tips}`;
+  }
+
+  if (pronunciationScore >= 0.60) {
+    return 'Keep practicing! Focus on pronouncing each word clearly. Listen to native speakers and repeat after them to improve your accent and intonation.';
+  }
+
+  return 'Don\'t give up! Pronunciation takes time and practice. Start with shorter, simpler phrases and gradually work your way up to more complex sentences.';
+}
+
+/**
+ * Estimate audio duration based on phrase (rough approximation)
+ * Average speaking rate: ~150 words per minute = 2.5 words/second
+ */
+function estimateAudioDuration(phrase) {
+  const wordCount = phrase.split(/\s+/).filter(Boolean).length;
+  const estimatedSeconds = Math.round((wordCount / 2.5) * 10) / 10;
+  return Math.max(1, estimatedSeconds);
 }
 
 export default {

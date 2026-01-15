@@ -1,8 +1,11 @@
 import express from 'express';
 import { Notification } from '../models/Notification.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -27,7 +30,7 @@ const router = express.Router();
  *       200:
  *         description: Lista de notificações
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { status = 'all', limit = 20, page = 1 } = req.query;
     const teacherId = req.user._id;
@@ -96,7 +99,7 @@ router.get('/', authenticate, async (req, res) => {
  *       200:
  *         description: Contagem de não lidas
  */
-router.get('/unread-count', authenticate, async (req, res) => {
+router.get('/unread-count', async (req, res) => {
   try {
     const teacherId = req.user._id;
 
@@ -136,7 +139,7 @@ router.get('/unread-count', authenticate, async (req, res) => {
  *       200:
  *         description: Notificação marcada como lida
  */
-router.put('/:id/read', authenticate, async (req, res) => {
+router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
     const teacherId = req.user._id;
@@ -182,7 +185,7 @@ router.put('/:id/read', authenticate, async (req, res) => {
  *       200:
  *         description: Todas as notificações marcadas como lidas
  */
-router.put('/read-all', authenticate, async (req, res) => {
+router.put('/read-all', async (req, res) => {
   try {
     const teacherId = req.user._id;
 
@@ -228,7 +231,7 @@ router.put('/read-all', authenticate, async (req, res) => {
  *       200:
  *         description: Notificação deletada
  */
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const teacherId = req.user._id;

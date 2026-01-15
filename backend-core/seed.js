@@ -3,13 +3,18 @@
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import connectDB from './src/config/database.js';
 import User from './src/models/User.js';
 import Student from './src/models/Student.js';
 import Class from './src/models/Class.js';
 import Payment from './src/models/Payment.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '.env') });
 
 const seedDatabase = async () => {
   try {

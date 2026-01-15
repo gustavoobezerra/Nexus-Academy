@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const hourBankSchema = new mongoose.Schema({
+  teacher: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   student: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
@@ -73,6 +79,10 @@ const hourBankSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  active: {
+    type: Boolean,
+    default: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -126,5 +136,7 @@ hourBankSchema.methods.addHours = function(hours, type = 'purchase', description
 
   return this.save();
 };
+
+hourBankSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('HourBank', hourBankSchema);

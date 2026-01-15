@@ -5,11 +5,12 @@ import {
   updatePayment,
   getFinancialStats
 } from '../controllers/paymentController.js';
-import { protect, requireCompletedOnboarding } from '../middleware/auth.js';
+import { authorize, protect, requireCompletedOnboarding } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.use(protect);
+router.use(authorize('teacher', 'admin'));
 router.use(requireCompletedOnboarding);
 
 router.route('/')

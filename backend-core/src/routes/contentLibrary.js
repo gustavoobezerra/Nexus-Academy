@@ -1,8 +1,11 @@
 import express from 'express';
 import ContentLibrary from '../models/ContentLibrary.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -13,7 +16,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { 
       search, 
@@ -87,7 +90,7 @@ router.get('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const contentData = {
       ...req.body,
@@ -110,7 +113,7 @@ router.post('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/review', protect, async (req, res) => {
+router.post('/:id/review', async (req, res) => {
   try {
     const { rating, comment } = req.body;
     const content = await ContentLibrary.findById(req.params.id);
@@ -135,7 +138,7 @@ router.post('/:id/review', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/favorite', protect, async (req, res) => {
+router.post('/:id/favorite', async (req, res) => {
   try {
     const content = await ContentLibrary.findById(req.params.id);
     if (!content) {

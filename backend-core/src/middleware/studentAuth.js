@@ -59,8 +59,11 @@ export const authenticateStudent = (req, res, next) => {
       });
     }
 
+    req.userId = decoded.studentId;
     req.studentId = decoded.studentId;
     req.teacherId = decoded.teacherId;
+    req.roles = ['student'];
+    req.tenantId = decoded.teacherId || null;
 
     return tenantContext.run({ teacherId: decoded.teacherId?.toString() }, () => next());
   } catch (error) {

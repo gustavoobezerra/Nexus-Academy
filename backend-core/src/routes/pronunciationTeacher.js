@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { protect, authorize } from '../middleware/auth.js';
 import PronunciationPhrase from '../models/PronunciationPhrase.js';
+import PronunciationTest from '../models/PronunciationTest.js';
 import cloudinaryService from '../services/cloudinaryService.js';
 
 const router = express.Router();
@@ -86,6 +87,180 @@ router.get('/phrases', protect, authorize('teacher', 'admin'), async (req, res) 
     return res.status(500).json({
       success: false,
       message: 'Erro ao listar frases de pronúncia'
+    });
+  }
+});
+
+// Update phrase
+router.put('/phrases/:id', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const { phrase, difficulty, active } = req.body;
+
+    const phraseDoc = await PronunciationPhrase.findOne({
+      _id: req.params.id,
+      teacher: req.user._id
+    });
+
+    if (!phraseDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Phrase not found'
+      });
+    }
+
+    if (phrase) phraseDoc.phrase = phrase;
+    if (difficulty) phraseDoc.difficulty = difficulty;
+    if (active !== undefined) phraseDoc.active = Boolean(active);
+
+    // If activating this phrase, deactivate others with same difficulty
+    if (active) {
+      await PronunciationPhrase.updateMany(
+        {
+          teacher: req.user._id,
+          difficulty: phraseDoc.difficulty,
+          _id: { $ne: phraseDoc._id }
+        },
+        { $set: { active: false } }
+      );
+    }
+
+    await phraseDoc.save();
+
+    return res.json({ success: true, data: phraseDoc });
+  } catch (error) {
+    console.error('Error updating phrase:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating phrase'
+    });
+  }
+});
+
+// Delete phrase
+router.delete('/phrases/:id', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const phraseDoc = await PronunciationPhrase.findOneAndDelete({
+      _id: req.params.id,
+      teacher: req.user._id
+    });
+
+    if (!phraseDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Phrase not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Phrase deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting phrase:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error deleting phrase'
+    });
+  }
+});
+
+// Get student pronunciation tests (teacher view)
+router.get('/tests', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const { studentId, difficulty, limit = 20 } = req.query;
+
+    const query = { teacher: req.user._id };
+    if (studentId) query.student = studentId;
+    if (difficulty) query.difficulty = difficulty;
+
+    const tests = await PronunciationTest.find(query)
+      .populate('student', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    return res.json({ success: true, data: tests });
+  } catch (error) {
+    console.error('Error fetching tests:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching pronunciation tests'
+    });
+  }
+});
+
+// Get aggregated pronunciation statistics for all students
+router.get('/stats', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const PronunciationTest = (await import('../models/PronunciationTest.js')).default;
+
+    const overallStats = await PronunciationTest.aggregate([
+      { $match: { teacher: req.user._id } },
+      {
+        $group: {
+          _id: null,
+          totalTests: { $sum: 1 },
+          avgAccuracy: { $avg: '$accuracyScore' },
+          avgFluency: { $avg: '$fluencyScore' },
+          avgPronunciation: { $avg: '$pronunciationScore' }
+        }
+      }
+    ]);
+
+    const byDifficulty = await PronunciationTest.aggregate([
+      { $match: { teacher: req.user._id } },
+      {
+        $group: {
+          _id: '$difficulty',
+          count: { $sum: 1 },
+          avgScore: { $avg: '$pronunciationScore' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const topStudents = await PronunciationTest.aggregate([
+      { $match: { teacher: req.user._id } },
+      {
+        $group: {
+          _id: '$student',
+          testsCount: { $sum: 1 },
+          avgScore: { $avg: '$pronunciationScore' }
+        }
+      },
+      { $sort: { avgScore: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'students',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'studentInfo'
+        }
+      },
+      { $unwind: '$studentInfo' },
+      {
+        $project: {
+          studentId: '$_id',
+          studentName: '$studentInfo.name',
+          testsCount: 1,
+          avgScore: { $round: ['$avgScore', 2] }
+        }
+      }
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        overall: overallStats[0] || {},
+        byDifficulty,
+        topStudents
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching pronunciation statistics'
     });
   }
 });

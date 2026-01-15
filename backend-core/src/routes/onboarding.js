@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 import {
   checkSlugAvailability,
   setSlug,
@@ -14,6 +14,7 @@ const router = express.Router();
 
 // Todas as rotas requerem autenticação
 router.use(authenticate);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -189,4 +190,3 @@ router.post('/create-subscription-session', createSubscriptionSession);
 router.post('/complete', completeOnboarding);
 
 export default router;
-

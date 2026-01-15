@@ -1,8 +1,11 @@
 import express from 'express';
 import liveClassService from '../services/liveClassService.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -13,7 +16,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.post('/start', protect, async (req, res) => {
+router.post('/start', async (req, res) => {
   try {
     const { classId } = req.body;
     const io = req.app.get('io');
@@ -53,7 +56,7 @@ router.post('/start', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:sessionId/join', protect, async (req, res) => {
+router.post('/:sessionId/join', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const userType = req.user.role === 'student' ? 'student' : 'teacher';
@@ -90,7 +93,7 @@ router.post('/:sessionId/join', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:sessionId/end', protect, async (req, res) => {
+router.post('/:sessionId/end', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const io = req.app.get('io');
@@ -123,7 +126,7 @@ router.post('/:sessionId/end', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/:sessionId', protect, async (req, res) => {
+router.get('/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const session = liveClassService.getSession(sessionId);
@@ -162,7 +165,7 @@ router.get('/:sessionId', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/active/list', protect, async (req, res) => {
+router.get('/active/list', async (req, res) => {
   try {
     const sessions = liveClassService.getTeacherActiveSessions(req.user._id);
     res.json({ success: true, sessions });

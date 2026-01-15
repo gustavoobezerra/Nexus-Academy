@@ -1,6 +1,6 @@
 import express from 'express';
 import { register, login, getMe } from '../controllers/authController.js';
-import { protect, loginRateLimiter, recordLoginAttempt } from '../middleware/auth.js';
+import { authorize, protect, loginRateLimiter, recordLoginAttempt } from '../middleware/auth.js';
 import User from '../models/User.js';
 import rateLimit from 'express-rate-limit';
 
@@ -33,10 +33,10 @@ const loginLimiter = rateLimit({
 
 router.post('/register', registerLimiter, register);
 router.post('/login', loginLimiter, login);
-router.get('/me', protect, getMe);
+router.get('/me', protect, authorize('teacher', 'admin'), getMe);
 
 // Atualizar perfil do professor
-router.put('/profile', protect, async (req, res) => {
+router.put('/profile', protect, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { name, email, phone, bio, subjects, slug } = req.body;
 
@@ -80,7 +80,7 @@ router.put('/profile', protect, async (req, res) => {
 });
 
 // Atualizar configurações de pagamento
-router.put('/payment-settings', protect, async (req, res) => {
+router.put('/payment-settings', protect, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { paymentMethod, manualPaymentType, pixKey, pixKeyType } = req.body;
 
@@ -121,7 +121,7 @@ router.put('/payment-settings', protect, async (req, res) => {
 });
 
 // Atualizar preferências de notificação
-router.put('/notification-settings', protect, async (req, res) => {
+router.put('/notification-settings', protect, authorize('teacher', 'admin'), async (req, res) => {
   try {
     const { notifications } = req.body;
 

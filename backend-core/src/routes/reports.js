@@ -3,14 +3,17 @@ import { Report, DashboardConfig, AnalyticsSnapshot } from '../models/Report.js'
 import Student from '../models/Student.js';
 import Payment from '../models/Payment.js';
 import Class from '../models/Class.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import reportGeneratorService from '../services/reportGeneratorService.js';
 
 const router = express.Router();
 
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
+
 // ========== REPORTS ==========
 
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const reports = await Report.find({ teacher: req.user._id }).sort({ createdAt: -1 });
     res.json({ success: true, reports });
@@ -19,7 +22,7 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const report = await Report.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!report) return res.status(404).json({ success: false, message: 'Relatório não encontrado' });
@@ -29,7 +32,7 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const report = await Report.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, report });
@@ -38,7 +41,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const report = await Report.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -51,7 +54,7 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     await Report.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Relatório removido' });
@@ -61,7 +64,7 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 // Generate report
-router.post('/:id/generate', protect, async (req, res) => {
+router.post('/:id/generate', async (req, res) => {
   try {
     const report = await Report.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!report) return res.status(404).json({ success: false, message: 'Relatório não encontrado' });
@@ -165,7 +168,7 @@ function groupByStudent(classes) {
 
 // ========== DASHBOARD CONFIGS ==========
 
-router.get('/dashboards', protect, async (req, res) => {
+router.get('/dashboards', async (req, res) => {
   try {
     const dashboards = await DashboardConfig.find({ teacher: req.user._id });
     res.json({ success: true, dashboards });
@@ -174,7 +177,7 @@ router.get('/dashboards', protect, async (req, res) => {
   }
 });
 
-router.post('/dashboards', protect, async (req, res) => {
+router.post('/dashboards', async (req, res) => {
   try {
     const dashboard = await DashboardConfig.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, dashboard });
@@ -183,7 +186,7 @@ router.post('/dashboards', protect, async (req, res) => {
   }
 });
 
-router.put('/dashboards/:id', protect, async (req, res) => {
+router.put('/dashboards/:id', async (req, res) => {
   try {
     const dashboard = await DashboardConfig.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
@@ -196,7 +199,7 @@ router.put('/dashboards/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/dashboards/:id', protect, async (req, res) => {
+router.delete('/dashboards/:id', async (req, res) => {
   try {
     await DashboardConfig.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Dashboard removido' });
@@ -207,7 +210,7 @@ router.delete('/dashboards/:id', protect, async (req, res) => {
 
 // ========== ANALYTICS SNAPSHOTS ==========
 
-router.get('/snapshots', protect, async (req, res) => {
+router.get('/snapshots', async (req, res) => {
   try {
     const { type = 'daily', limit = 30 } = req.query;
     const snapshots = await AnalyticsSnapshot.find({ teacher: req.user._id, type })
@@ -220,7 +223,7 @@ router.get('/snapshots', protect, async (req, res) => {
 });
 
 // Generate snapshot
-router.post('/snapshots/generate', protect, async (req, res) => {
+router.post('/snapshots/generate', async (req, res) => {
   try {
     const { type = 'daily' } = req.body;
     const teacherId = req.user._id;
@@ -266,7 +269,7 @@ router.post('/snapshots/generate', protect, async (req, res) => {
 });
 
 // Export report
-router.get('/:id/export', protect, async (req, res) => {
+router.get('/:id/export', async (req, res) => {
   try {
     const { format = 'json' } = req.query;
     const report = await Report.findOne({ _id: req.params.id, teacher: req.user._id });
@@ -317,7 +320,7 @@ function convertToCSV(data) {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/parents/monthly', protect, async (req, res) => {
+router.post('/parents/monthly', async (req, res) => {
   try {
     const { studentId, month, year, sendEmail } = req.body;
 
@@ -377,7 +380,7 @@ router.post('/parents/monthly', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/parents/preview', protect, async (req, res) => {
+router.get('/parents/preview', async (req, res) => {
   try {
     const { studentId, month, year } = req.query;
 

@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
+import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
 const aiAnalysisSchema = new mongoose.Schema({
+  teacher: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   student: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
@@ -131,6 +137,7 @@ const aiAnalysisSchema = new mongoose.Schema({
 
 // Índices para consultas rápidas
 aiAnalysisSchema.index({ student: 1, analysisType: 1 });
+aiAnalysisSchema.index({ teacher: 1, student: 1 });
 aiAnalysisSchema.index({ processedAt: -1 });
 aiAnalysisSchema.index({ 'data.evasionRisk.level': 1 });
 
@@ -246,5 +253,7 @@ aiAnalysisSchema.statics.calculateEvasionRisk = async function(studentId, classe
     daysInactive
   };
 };
+
+aiAnalysisSchema.plugin(tenantAwarePlugin);
 
 export default mongoose.model('AIAnalysis', aiAnalysisSchema);

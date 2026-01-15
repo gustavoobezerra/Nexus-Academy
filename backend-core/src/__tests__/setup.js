@@ -4,6 +4,10 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 let mongoServer;
 
 beforeAll(async () => {
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'test-secret-key-for-jwt-signing-32chars';
+  }
+
   mongoServer = await MongoMemoryServer.create({
     instance: {
       launchTimeoutMS: 60000,

@@ -1,15 +1,18 @@
 import express from 'express';
 import User from '../models/User.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import stripeService from '../services/stripeService.js';
 import googleCalendarService from '../services/googleCalendarService.js';
 import zoomService from '../services/zoomService.js';
 
 const router = express.Router();
 
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
+
 // ========== STATUS ==========
 
-router.get('/status', protect, async (req, res) => {
+router.get('/status', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     res.json({
@@ -28,7 +31,7 @@ router.get('/status', protect, async (req, res) => {
 
 // ========== STRIPE ==========
 
-router.get('/stripe/connect', protect, async (req, res) => {
+router.get('/stripe/connect', async (req, res) => {
   try {
     if (!stripeService.isConfigured()) {
       return res.status(400).json({ success: false, message: 'Stripe não configurado' });
@@ -54,7 +57,7 @@ router.get('/stripe/connect', protect, async (req, res) => {
   }
 });
 
-router.post('/stripe/disconnect', protect, async (req, res) => {
+router.post('/stripe/disconnect', async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.stripe': { connected: false } });
     res.json({ success: true, message: 'Stripe desconectado' });
@@ -65,7 +68,7 @@ router.post('/stripe/disconnect', protect, async (req, res) => {
 
 // ========== GOOGLE CALENDAR ==========
 
-router.get('/google/auth-url', protect, (req, res) => {
+router.get('/google/auth-url', (req, res) => {
   try {
     if (!googleCalendarService.isConfigured()) {
       return res.status(400).json({ success: false, message: 'Google não configurado' });
@@ -77,7 +80,7 @@ router.get('/google/auth-url', protect, (req, res) => {
   }
 });
 
-router.post('/google/callback', protect, async (req, res) => {
+router.post('/google/callback', async (req, res) => {
   try {
     const { code } = req.body;
     const tokens = await googleCalendarService.getTokens(code);
@@ -96,7 +99,7 @@ router.post('/google/callback', protect, async (req, res) => {
   }
 });
 
-router.get('/google/calendars', protect, async (req, res) => {
+router.get('/google/calendars', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user.integrations?.google?.connected) {
@@ -114,7 +117,7 @@ router.get('/google/calendars', protect, async (req, res) => {
   }
 });
 
-router.post('/google/set-calendar', protect, async (req, res) => {
+router.post('/google/set-calendar', async (req, res) => {
   try {
     const { calendarId } = req.body;
     await User.findByIdAndUpdate(req.user._id, { 'integrations.google.calendarId': calendarId });
@@ -124,7 +127,7 @@ router.post('/google/set-calendar', protect, async (req, res) => {
   }
 });
 
-router.post('/google/disconnect', protect, async (req, res) => {
+router.post('/google/disconnect', async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.google': { connected: false } });
     res.json({ success: true, message: 'Google desconectado' });
@@ -135,7 +138,7 @@ router.post('/google/disconnect', protect, async (req, res) => {
 
 // ========== ZOOM ==========
 
-router.get('/zoom/auth-url', protect, (req, res) => {
+router.get('/zoom/auth-url', (req, res) => {
   try {
     if (!zoomService.isConfigured()) {
       return res.status(400).json({ success: false, message: 'Zoom não configurado' });
@@ -148,7 +151,7 @@ router.get('/zoom/auth-url', protect, (req, res) => {
   }
 });
 
-router.post('/zoom/callback', protect, async (req, res) => {
+router.post('/zoom/callback', async (req, res) => {
   try {
     const { code } = req.body;
     const tokens = await zoomService.getAccessToken(code, `${process.env.API_URL}/api/integrations/zoom/callback`);
@@ -168,7 +171,7 @@ router.post('/zoom/callback', protect, async (req, res) => {
   }
 });
 
-router.post('/zoom/disconnect', protect, async (req, res) => {
+router.post('/zoom/disconnect', async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.zoom': { connected: false } });
     res.json({ success: true, message: 'Zoom desconectado' });
@@ -177,7 +180,7 @@ router.post('/zoom/disconnect', protect, async (req, res) => {
   }
 });
 
-router.post('/zoom/create-meeting', protect, async (req, res) => {
+router.post('/zoom/create-meeting', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user.integrations?.zoom?.connected) {
@@ -193,7 +196,7 @@ router.post('/zoom/create-meeting', protect, async (req, res) => {
 
 // ========== WHATSAPP ==========
 
-router.post('/whatsapp/verify', protect, async (req, res) => {
+router.post('/whatsapp/verify', async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     
@@ -239,7 +242,7 @@ router.post('/whatsapp/verify', protect, async (req, res) => {
   }
 });
 
-router.post('/whatsapp/confirm', protect, async (req, res) => {
+router.post('/whatsapp/confirm', async (req, res) => {
   try {
     const { code } = req.body;
     
@@ -286,7 +289,7 @@ router.post('/whatsapp/confirm', protect, async (req, res) => {
   }
 });
 
-router.post('/whatsapp/disconnect', protect, async (req, res) => {
+router.post('/whatsapp/disconnect', async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.whatsapp': { verified: false } });
     res.json({ success: true, message: 'WhatsApp desconectado' });

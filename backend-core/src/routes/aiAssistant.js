@@ -1,6 +1,6 @@
 import express from 'express';
 import aiAssistantService from '../services/aiAssistantService.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Student from '../models/Student.js';
 import Class from '../models/Class.js';
@@ -20,7 +20,10 @@ const models = { User, Student, Class, Payment, Course };
  *     security:
  *       - bearerAuth: []
  */
-router.post('/chat', protect, async (req, res) => {
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
+
+router.post('/chat', async (req, res) => {
   try {
     const { message } = req.body;
 
@@ -56,7 +59,7 @@ router.post('/chat', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/suggestions', protect, async (req, res) => {
+router.get('/suggestions', async (req, res) => {
   try {
     const suggestions = await aiAssistantService.getQuickSuggestions(
       req.user._id,
@@ -82,7 +85,7 @@ router.get('/suggestions', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.get('/history', protect, async (req, res) => {
+router.get('/history', async (req, res) => {
   try {
     const history = aiAssistantService.getHistory(req.user._id.toString());
     res.json({ success: true, history });
@@ -100,7 +103,7 @@ router.get('/history', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.delete('/history', protect, async (req, res) => {
+router.delete('/history', async (req, res) => {
   try {
     aiAssistantService.clearHistory(req.user._id.toString());
     res.json({ success: true, message: 'Histórico limpo' });

@@ -1,8 +1,11 @@
 import express from 'express';
 import HangmanGame from '../models/HangmanGame.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(authenticate);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -29,7 +32,7 @@ const router = express.Router();
  *       200:
  *         description: Lista de jogos
  */
-router.get('/games', authenticate, async (req, res) => {
+router.get('/games', async (req, res) => {
   try {
     const { status, limit = 20 } = req.query;
     const teacherId = req.user._id;
@@ -88,7 +91,7 @@ router.get('/games', authenticate, async (req, res) => {
  *       200:
  *         description: Detalhes do jogo
  */
-router.get('/games/:id', authenticate, async (req, res) => {
+router.get('/games/:id', async (req, res) => {
   try {
     const game = await HangmanGame.findById(req.params.id)
       .populate('players.studentId', 'name email avatar');
@@ -197,7 +200,7 @@ router.get('/games/:id', authenticate, async (req, res) => {
  *       201:
  *         description: Jogo criado com sucesso
  */
-router.post('/games', authenticate, async (req, res) => {
+router.post('/games', async (req, res) => {
   try {
     const { word, hint, category, maxWrongGuesses, turnBased, classId } = req.body;
     
@@ -266,7 +269,7 @@ router.post('/games', authenticate, async (req, res) => {
  *       200:
  *         description: Jogo deletado com sucesso
  */
-router.delete('/games/:id', authenticate, async (req, res) => {
+router.delete('/games/:id', async (req, res) => {
   try {
     const game = await HangmanGame.findById(req.params.id);
     
@@ -312,7 +315,7 @@ router.delete('/games/:id', authenticate, async (req, res) => {
  *       200:
  *         description: Estatísticas dos jogos
  */
-router.get('/stats', authenticate, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const teacherId = req.user._id;
     

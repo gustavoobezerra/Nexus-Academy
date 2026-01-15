@@ -1000,6 +1000,13 @@ router.get('/chat/messages', authenticateStudent, async (req, res) => {
   try {
     const { teacherId } = req.query;
 
+    if (req.teacherId && teacherId && teacherId.toString() !== req.teacherId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado'
+      });
+    }
+
     if (!teacherId) {
       return res.status(400).json({
         success: false,
@@ -1045,6 +1052,13 @@ router.get('/chat/messages', authenticateStudent, async (req, res) => {
 router.post('/chat/send', authenticateStudent, async (req, res) => {
   try {
     const { teacherId, content, type = 'text' } = req.body;
+
+    if (req.teacherId && teacherId && teacherId.toString() !== req.teacherId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado'
+      });
+    }
 
     if (!teacherId || !content) {
       return res.status(400).json({

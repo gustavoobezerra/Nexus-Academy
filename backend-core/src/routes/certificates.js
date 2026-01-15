@@ -2,9 +2,12 @@ import express from 'express';
 import Certificate from '../models/Certificate.js';
 import Student from '../models/Student.js';
 import Course from '../models/Course.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -15,7 +18,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { studentId, courseId, status } = req.query;
     const query = { teacher: req.user._id };
@@ -44,7 +47,7 @@ router.get('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { studentId, courseId, classId, title, description, achievementType, score, grade } = req.body;
 

@@ -3,9 +3,12 @@ import Goal from '../models/Goal.js';
 import Student from '../models/Student.js';
 import Class from '../models/Class.js';
 import Payment from '../models/Payment.js';
-import { protect } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(protect);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -16,7 +19,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.get('/', protect, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { status, type, priority } = req.query;
     const query = { teacher: req.user._id };
@@ -45,7 +48,7 @@ router.get('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const goalData = {
       ...req.body,
@@ -68,7 +71,7 @@ router.post('/', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/update', protect, async (req, res) => {
+router.post('/:id/update', async (req, res) => {
   try {
     const { value, notes } = req.body;
     const goal = await Goal.findOne({ _id: req.params.id, teacher: req.user._id });
@@ -93,7 +96,7 @@ router.post('/:id/update', protect, async (req, res) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post('/auto-update', protect, async (req, res) => {
+router.post('/auto-update', async (req, res) => {
   try {
     const goals = await Goal.find({ 
       teacher: req.user._id, 
