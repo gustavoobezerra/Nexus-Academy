@@ -41,3 +41,9 @@ coverage/
 # Database
 *.sqlite
 *.db
+
+# local configs
+.claude/settings.local.json
+# temp
+/tmpclaude-*
+/backend-core/tmpclaude-*
