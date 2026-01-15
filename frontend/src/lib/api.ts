@@ -7,6 +7,7 @@ import type { Pagamento, Aula, Aluno, TeacherAnalytics, StudentPaymentStatus, AI
 
 export const paymentsAPI = {
   getAll: () => apiService.get<Pagamento[]>('/payments'),
+  getStats: () => apiService.get<{ stats: { monthlyRevenue: number; yearlyRevenue: number; pendingAmount: number; lateAmount: number; pendingCount: number; lateCount: number } }>('/payments/stats'),
   update: (id: string, data: Partial<Pagamento>) => apiService.put<Pagamento>(`/payments/${id}`, data),
 };
 
@@ -21,6 +22,7 @@ export const classesAPI = {
 
 export const studentsAPI = {
   getAll: () => apiService.get<{ students: Aluno[] }>('/students'),
+  getStats: () => apiService.get<{ stats: { totalStudents: number; totalMonthlyRevenue: number; pendingPayments: number } }>('/students/stats'),
   create: (data: Partial<Aluno>) => apiService.post<Aluno>('/students', data),
   delete: (id: string) => apiService.delete<void>(`/students/${id}`),
 };
@@ -59,10 +61,11 @@ export const dailyAPI = {
 export const onboardingAPI = {
   checkSlug: (slug: string) => apiService.post<{ available: boolean }>('/onboarding/check-slug', { slug }),
   setSlug: (slug: string) => apiService.post<void>('/onboarding/set-slug', { slug }),
-  setupManualPayment: (data: { manualType: 'pix_in_system' | 'external'; pixKey?: string; pixKeyType?: string }) => apiService.post<void>('/onboarding/payment/manual', data),
-  setupAutomaticPayment: (data: { provider: string; credentials: Record<string, string> }) => apiService.post<void>('/onboarding/payment/automatic', data),
-  createSubscriptionSession: (plan: string) => apiService.post<{ checkoutUrl: string }>('/onboarding/subscription', { plan }),
+  setupManualPayment: (data: { manualType: 'pix_in_system' | 'external'; pixKey?: string; pixKeyType?: string }) => apiService.post<void>('/onboarding/setup-manual-payment', data),
+  setupAutomaticPayment: (data: { provider: string; credentials: Record<string, string> }) => apiService.post<void>('/onboarding/setup-automatic-payment', data),
+  createSubscriptionSession: (plan: string) => apiService.post<{ checkoutUrl: string }>('/onboarding/create-subscription-session', { plan }),
   skipPayment: () => apiService.post<void>('/onboarding/skip-payment'),
+  complete: () => apiService.post<{ user: { id: string; name: string; email: string; slug: string; subscriptionStatus?: string; subscriptionPlan?: string; trialEndsAt?: string; status?: string; publicUrl?: string } }>('/onboarding/complete')
 };
 
 // ============================================================================

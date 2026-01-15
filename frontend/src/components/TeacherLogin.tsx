@@ -162,6 +162,7 @@ export const TeacherLogin = () => {
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           required
+                          autoComplete="name"
                           className={inputClasses}
                           placeholder="Seu nome completo"
                         />
@@ -178,6 +179,7 @@ export const TeacherLogin = () => {
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
+                          autoComplete="tel"
                           className={inputClasses}
                           placeholder="(99) 99999-9999"
                         />
@@ -197,6 +199,7 @@ export const TeacherLogin = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      autoComplete="email"
                       className={inputClasses}
                       placeholder="professor@email.com"
                     />
@@ -214,6 +217,7 @@ export const TeacherLogin = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      autoComplete={isRegistering ? 'new-password' : 'current-password'}
                       className={`${inputClasses} pr-12`}
                       placeholder="••••••••"
                     />
@@ -239,6 +243,7 @@ export const TeacherLogin = () => {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
+                        autoComplete="new-password"
                         className={inputClasses}
                         placeholder="••••••••"
                       />

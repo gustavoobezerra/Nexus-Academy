@@ -57,8 +57,22 @@ let users = [
     password: null, // Sera definido na inicializacao
     phone: '(11) 99999-9999',
     role: 'teacher',
+    status: 'pending_setup',
+    onboardingCompletedAt: null,
+    slug: null,
+    subscriptionStatus: 'none',
+    subscriptionPlan: null,
+    trialEndsAt: null,
+    paymentMethod: 'pending',
     createdAt: new Date()
   }
+];
+
+const RESERVED_SLUGS = [
+  'admin', 'api', 'dashboard', 'login', 'register', 'signup',
+  'professor', 'student', 'payment', 'nexus', 'onboarding',
+  'settings', 'profile', 'help', 'support', 'about', 'contact',
+  'terms', 'privacy', 'blog', 'docs', 'status', 'health'
 ];
 
 // 10 alunos demo com dados variados
@@ -864,6 +878,13 @@ app.post('/api/auth/register', async (req, res) => {
       password: hashedPassword,
       phone: phone || '',
       role: 'teacher',
+      status: 'pending_setup',
+      onboardingCompletedAt: null,
+      slug: null,
+      subscriptionStatus: 'none',
+      subscriptionPlan: null,
+      trialEndsAt: null,
+      paymentMethod: 'pending',
       createdAt: new Date()
     };
 
@@ -878,7 +899,15 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        onboardingCompletedAt: user.onboardingCompletedAt,
+        slug: user.slug
+      },
       token
     });
   } catch (error) {
@@ -918,7 +947,15 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        onboardingCompletedAt: user.onboardingCompletedAt,
+        slug: user.slug
+      },
       token
     });
   } catch (error) {
@@ -938,6 +975,163 @@ app.get('/api/auth/me', protect, (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro ao buscar usuário', error: error.message });
   }
+});
+
+// ====== ROTAS DE ONBOARDING (SIMPLE) ======
+
+const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
+
+const validateSlug = (slug) => {
+  if (!slug || typeof slug !== 'string') {
+    return { ok: false, message: 'Slug e obrigatorio' };
+  }
+
+  const trimmed = slug.trim().toLowerCase();
+
+  if (!/^[a-z0-9-]+$/.test(trimmed)) {
+    return { ok: false, message: 'Slug deve conter apenas letras minusculas, numeros e hifen' };
+  }
+
+  if (trimmed.length < 3 || trimmed.length > 30) {
+    return { ok: false, message: 'Slug deve ter entre 3 e 30 caracteres' };
+  }
+
+  if (RESERVED_SLUGS.includes(trimmed)) {
+    return { ok: false, message: 'Slug reservado. Escolha outro.' };
+  }
+
+  return { ok: true, slug: trimmed };
+};
+
+app.post('/api/onboarding/check-slug', protect, (req, res) => {
+  const validation = validateSlug(req.body?.slug);
+  if (!validation.ok) {
+    return res.status(400).json({ success: false, available: false, message: validation.message });
+  }
+
+  const inUse = users.some(u => u.slug === validation.slug);
+
+  return res.json({
+    success: true,
+    available: !inUse,
+    message: inUse ? 'Slug ja esta em uso. Escolha outro.' : 'Slug disponivel!'
+  });
+});
+
+app.post('/api/onboarding/set-slug', protect, (req, res) => {
+  const validation = validateSlug(req.body?.slug);
+  if (!validation.ok) {
+    return res.status(400).json({ success: false, message: validation.message });
+  }
+
+  const inUse = users.some(u => u.slug === validation.slug && u.id !== req.user.id);
+  if (inUse) {
+    return res.status(400).json({ success: false, message: 'Slug ja esta em uso. Escolha outro.' });
+  }
+
+  req.user.slug = validation.slug;
+
+  return res.json({
+    success: true,
+    message: 'Slug configurado com sucesso',
+    slug: req.user.slug,
+    publicUrl: `${getFrontendUrl()}/professor/${req.user.slug}`
+  });
+});
+
+app.post('/api/onboarding/setup-manual-payment', protect, (req, res) => {
+  const { manualType, pixKey, pixKeyType } = req.body || {};
+  if (!['pix_in_system', 'external'].includes(manualType)) {
+    return res.status(400).json({ success: false, message: 'Tipo de pagamento manual invalido' });
+  }
+
+  if (manualType === 'pix_in_system') {
+    if (!pixKey || !pixKeyType) {
+      return res.status(400).json({ success: false, message: 'Chave PIX e tipo sao obrigatorios' });
+    }
+  }
+
+  req.user.paymentMethod = 'manual';
+  req.user.manualPaymentType = manualType;
+  req.user.pixKey = manualType === 'pix_in_system' ? String(pixKey || '').trim() : null;
+  req.user.pixKeyType = manualType === 'pix_in_system' ? pixKeyType : null;
+
+  return res.json({
+    success: true,
+    message: 'Pagamento manual configurado com sucesso'
+  });
+});
+
+app.post('/api/onboarding/setup-automatic-payment', protect, (req, res) => {
+  const { provider, credentials } = req.body || {};
+  const validProviders = ['mercadopago', 'asaas', 'pagseguro', 'efi'];
+
+  if (!validProviders.includes(provider)) {
+    return res.status(400).json({ success: false, message: 'Gateway invalido' });
+  }
+
+  if (!credentials || typeof credentials !== 'object') {
+    return res.status(400).json({ success: false, message: 'Credenciais sao obrigatorias' });
+  }
+
+  req.user.paymentMethod = 'automatic';
+  req.user.gatewayProvider = provider;
+  req.user.gatewayCredentials = credentials;
+
+  return res.json({
+    success: true,
+    message: 'Gateway configurado com sucesso'
+  });
+});
+
+app.post('/api/onboarding/skip-payment', protect, (req, res) => {
+  req.user.paymentMethod = 'pending';
+  return res.json({
+    success: true,
+    message: 'Voce pode configurar pagamentos depois no dashboard'
+  });
+});
+
+app.post('/api/onboarding/create-subscription-session', protect, (req, res) => {
+  const { plan } = req.body || {};
+  if (!['basic', 'pro'].includes(plan)) {
+    return res.status(400).json({ success: false, message: 'Plano invalido' });
+  }
+
+  const checkoutUrl = `${getFrontendUrl()}/onboarding/success?session_id=demo`;
+
+  return res.json({
+    success: true,
+    checkoutUrl
+  });
+});
+
+app.post('/api/onboarding/complete', protect, (req, res) => {
+  if (!req.user.onboardingCompletedAt) {
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+
+    req.user.status = 'active';
+    req.user.subscriptionStatus = 'trialing';
+    req.user.trialEndsAt = trialEndsAt;
+    req.user.onboardingCompletedAt = new Date();
+  }
+
+  return res.json({
+    success: true,
+    message: 'Onboarding completo!',
+    user: {
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      slug: req.user.slug,
+      subscriptionStatus: req.user.subscriptionStatus,
+      subscriptionPlan: req.user.subscriptionPlan,
+      trialEndsAt: req.user.trialEndsAt,
+      status: req.user.status,
+      publicUrl: req.user.slug ? `${getFrontendUrl()}/professor/${req.user.slug}` : undefined
+    }
+  });
 });
 
 // ====== ROTAS DE ALUNOS ======
@@ -2119,3 +2313,4 @@ const iniciar = async () => {
 };
 
 iniciar();
+

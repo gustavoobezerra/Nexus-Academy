@@ -45,7 +45,11 @@
       "Bash(npx eslint:*)",
       "Skill(systematic-debugging)",
       "Bash(ls:*)",
-      "Bash(git clone:*)"
+      "Bash(git clone:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

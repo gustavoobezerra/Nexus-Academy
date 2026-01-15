@@ -20,7 +20,7 @@ export const OnboardingWizardNew = ({ onComplete }: OnboardingWizardNewProps) =>
   const [slug, setSlug] = useState('');
   const totalSteps = 4;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const token = localStorage.getItem('token');
 
   // Verificar se já tem slug salvo
