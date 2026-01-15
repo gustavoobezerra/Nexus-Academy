@@ -6,6 +6,7 @@ import Course from '../models/Course.js';
 import Activity from '../models/Activity.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { authenticateStudent } from '../middleware/studentAuth.js';
 
 const router = express.Router();
@@ -17,6 +18,16 @@ const getJWTSecret = () => {
     throw new Error('JWT_SECRET must be defined in environment variables');
   }
   return secret;
+};
+
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+
+const loadChatModel = async () => {
+  const module = await import('../models/Chat.js');
+  if (!module?.default) {
+    throw new Error('Chat model not available');
+  }
+  return module.default;
 };
 
 /**
@@ -95,6 +106,13 @@ const getJWTSecret = () => {
 router.post('/auth/register', async (req, res) => {
   try {
     const { name, email, password, age, grade, parentName, parentPhone, parentEmail, teacherId } = req.body;
+
+    if (teacherId && !isValidObjectId(teacherId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Teacher ID invalido'
+      });
+    }
 
     // Validar idade primeiro para determinar se dados do responsável são necessários
     const ageNum = parseInt(age);
@@ -386,6 +404,24 @@ router.get('/profile', authenticateStudent, async (req, res) => {
 router.put('/profile', authenticateStudent, async (req, res) => {
   try {
     const { description, interests } = req.body;
+
+    const allowedFields = ['description', 'interests'];
+    const bodyKeys = Object.keys(req.body || {});
+    const extraFields = bodyKeys.filter((key) => !allowedFields.includes(key));
+
+    if (extraFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Campos nao permitidos: ${extraFields.join(', ')}`
+      });
+    }
+
+    if (description === undefined && interests === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nada para atualizar'
+      });
+    }
     
     const updateData = {};
     
@@ -616,6 +652,13 @@ router.put('/goals/:goalId', authenticateStudent, async (req, res) => {
     const { goalId } = req.params;
     const { title, description, targetDate, progress, status } = req.body;
 
+    if (!isValidObjectId(goalId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de meta invalido'
+      });
+    }
+
     const updateFields = {};
     
     if (title !== undefined) {
@@ -675,6 +718,13 @@ router.put('/goals/:goalId', authenticateStudent, async (req, res) => {
 router.delete('/goals/:goalId', authenticateStudent, async (req, res) => {
   try {
     const { goalId } = req.params;
+
+    if (!isValidObjectId(goalId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de meta invalido'
+      });
+    }
 
     const result = await Student.findByIdAndUpdate(
       req.studentId,
@@ -804,8 +854,12 @@ router.get('/payments', authenticateStudent, async (req, res) => {
 router.get('/courses', authenticateStudent, async (req, res) => {
   try {
     const courses = await Course.find({
-      'enrollments.student': req.studentId,
-      'enrollments.status': 'active'
+      enrollments: {
+        $elemMatch: {
+          student: req.studentId,
+          status: 'active'
+        }
+      }
     })
       .select('title description thumbnail modules totalLessons totalDuration')
       .lean();
@@ -831,49 +885,6 @@ router.get('/courses', authenticateStudent, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro ao obter cursos'
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/portal/activities:
- *   get:
- *     summary: Listar atividades do aluno
- *     tags: [Student Portal]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de atividades
- */
-router.get('/activities', authenticateStudent, async (req, res) => {
-  try {
-    // Buscar atividades relacionadas às aulas do aluno
-    const classes = await Class.find({ student: req.studentId })
-      .select('homework title scheduledAt')
-      .sort({ scheduledAt: -1 });
-
-    const activities = classes.flatMap(cls => 
-      cls.homework.map(hw => ({
-        id: hw._id,
-        title: hw.title,
-        description: hw.description,
-        dueDate: hw.dueDate,
-        completed: hw.completed,
-        classTitle: cls.title,
-        classDate: cls.scheduledAt
-      }))
-    );
-
-    res.json({
-      success: true,
-      activities
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao obter atividades'
     });
   }
 });
@@ -907,8 +918,8 @@ router.get('/me', authenticateStudent, async (req, res) => {
     const nextClass = await Class.findOne({
       student: req.studentId,
       status: 'scheduled',
-      date: { $gte: new Date() }
-    }).sort({ date: 1 });
+      scheduledAt: { $gte: new Date() }
+    }).sort({ scheduledAt: 1 });
 
     res.json({
       success: true,
@@ -923,7 +934,7 @@ router.get('/me', authenticateStudent, async (req, res) => {
       },
       points: student.points || 0,
       level: student.level || 1,
-      nextClass: nextClass ? new Date(nextClass.date).toLocaleDateString('pt-BR') : null,
+      nextClass: nextClass ? new Date(nextClass.scheduledAt).toLocaleDateString('pt-BR') : null,
       teacher: student.teacher || null
     });
   } catch (error) {
@@ -964,61 +975,52 @@ router.get('/activities', authenticateStudent, async (req, res) => {
   }
 });
 
-// GET /api/portal/classes - Listar aulas do aluno
-router.get('/classes', authenticateStudent, async (req, res) => {
-  try {
-    const classes = await Class.find({
-      student: req.studentId
-    })
-      .sort({ date: -1 })
-      .limit(20)
-      .lean();
-
-    res.json({
-      success: true,
-      classes: classes.map(c => ({
-        _id: c._id,
-        title: c.title || 'Aula',
-        date: c.date,
-        duration: c.duration || 60,
-        status: c.status || 'scheduled'
-      }))
-    });
-  } catch (error) {
-    console.error('[StudentPortal] Error fetching classes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao carregar aulas'
-    });
-  }
-});
-
 // ===== ROTAS DE CHAT ALUNO-PROFESSOR =====
 
 // GET /api/portal/chat/messages - Obter mensagens com o professor
 router.get('/chat/messages', authenticateStudent, async (req, res) => {
   try {
     const { teacherId } = req.query;
+    const requestedTeacherId = typeof teacherId === 'string' ? teacherId : null;
+    const tokenTeacherId = req.teacherId ? req.teacherId.toString() : null;
 
-    if (req.teacherId && teacherId && teacherId.toString() !== req.teacherId.toString()) {
+    if (tokenTeacherId && requestedTeacherId && requestedTeacherId != tokenTeacherId) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado'
       });
     }
 
-    if (!teacherId) {
+    const effectiveTeacherId = tokenTeacherId || requestedTeacherId;
+    if (!effectiveTeacherId) {
       return res.status(400).json({
         success: false,
-        message: 'teacherId é obrigatório'
+        message: 'teacherId obrigatorio'
       });
     }
 
-    const Chat = (await import('../models/Chat.js')).default;
+    if (!isValidObjectId(effectiveTeacherId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacherId invalido'
+      });
+    }
+
+    let Chat;
+    try {
+      Chat = await loadChatModel();
+    } catch (error) {
+      console.error('[StudentPortal] Chat model load error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar chat'
+      });
+    }
+
     const messages = await Chat.find({
       $or: [
-        { sender: req.studentId, recipient: teacherId },
-        { sender: teacherId, recipient: req.studentId }
+        { sender: req.studentId, recipient: effectiveTeacherId },
+        { sender: effectiveTeacherId, recipient: req.studentId }
       ]
     })
       .sort({ timestamp: 1 })
@@ -1030,7 +1032,7 @@ router.get('/chat/messages', authenticateStudent, async (req, res) => {
       messages: messages.map(m => ({
         _id: m._id,
         sender: m.sender.toString() === req.studentId.toString() ? 'student' : 'teacher',
-        senderName: m.senderName || 'Usuário',
+        senderName: m.senderName || 'Usuario',
         content: m.content,
         timestamp: m.timestamp,
         read: m.read || false,
@@ -1052,28 +1054,55 @@ router.get('/chat/messages', authenticateStudent, async (req, res) => {
 router.post('/chat/send', authenticateStudent, async (req, res) => {
   try {
     const { teacherId, content, type = 'text' } = req.body;
+    const requestedTeacherId = typeof teacherId === 'string' ? teacherId : null;
+    const tokenTeacherId = req.teacherId ? req.teacherId.toString() : null;
 
-    if (req.teacherId && teacherId && teacherId.toString() !== req.teacherId.toString()) {
+    if (tokenTeacherId && requestedTeacherId && requestedTeacherId != tokenTeacherId) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado'
       });
     }
 
-    if (!teacherId || !content) {
+    const targetTeacherId = tokenTeacherId || requestedTeacherId;
+    if (!targetTeacherId) {
       return res.status(400).json({
         success: false,
-        message: 'teacherId e content são obrigatórios'
+        message: 'teacherId obrigatorio'
+      });
+    }
+
+    if (!isValidObjectId(targetTeacherId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacherId invalido'
+      });
+    }
+
+    if (!content) {
+      return res.status(400).json({
+        success: false,
+        message: 'teacherId e content sao obrigatorios'
       });
     }
 
     const student = await Student.findById(req.studentId);
-    const Chat = (await import('../models/Chat.js')).default;
+
+    let Chat;
+    try {
+      Chat = await loadChatModel();
+    } catch (error) {
+      console.error('[StudentPortal] Chat model load error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar chat'
+      });
+    }
 
     const message = new Chat({
       sender: req.studentId,
       senderName: student.name,
-      recipient: teacherId,
+      recipient: targetTeacherId,
       content,
       type,
       timestamp: new Date(),
@@ -1107,7 +1136,24 @@ router.post('/chat/send', authenticateStudent, async (req, res) => {
 router.post('/chat/mark-read/:messageId', authenticateStudent, async (req, res) => {
   try {
     const { messageId } = req.params;
-    const Chat = (await import('../models/Chat.js')).default;
+
+    if (!isValidObjectId(messageId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de mensagem invalido'
+      });
+    }
+
+    let Chat;
+    try {
+      Chat = await loadChatModel();
+    } catch (error) {
+      console.error('[StudentPortal] Chat model load error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar chat'
+      });
+    }
 
     await Chat.findByIdAndUpdate(messageId, { read: true });
 

@@ -21,7 +21,10 @@ export function StudentRegister() {
     return match ? match[1] : null;
   };
 
-  const slug = paramSlug || extractSlugFromPath();
+  const rawSlug = paramSlug || extractSlugFromPath();
+  const normalizedSlug = rawSlug ? rawSlug.trim().toLowerCase() : null;
+  const isValidSlug = !!normalizedSlug && /^[a-z0-9-]+$/.test(normalizedSlug) && normalizedSlug.length >= 3;
+  const slug = isValidSlug ? normalizedSlug : null;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,7 +44,7 @@ export function StudentRegister() {
   useEffect(() => {
     const fetchTeacher = async () => {
       if (!slug) {
-        toast.error('Link do professor inválido');
+        toast.error('Link do professor invalido');
         // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setLoading(false);
         navigate('/');

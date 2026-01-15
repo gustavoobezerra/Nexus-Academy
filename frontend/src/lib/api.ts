@@ -39,13 +39,17 @@ export const studentOnboardingAPI = {
 };
 
 export const portalAPI = {
-  login: (email: string, password: string) => apiService.post<{ student: Aluno; token: string }>('/portal/login', { email, password }),
-  register: (data: Partial<Aluno>) => apiService.post<{ student: Aluno; token: string }>('/portal/register', data),
+  login: (email: string, password: string) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/login', { email, password }),
+  register: (data: Partial<Aluno>) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/register', data),
   getProfile: () => apiService.get<{ student: any }>('/portal/profile'),
   updateProfile: (data: unknown) => apiService.put<{ student: any }>('/portal/profile', data),
   createGoal: (data: unknown) => apiService.post<{ goal: any }>('/portal/goals', data),
   updateGoal: (id: string, data: any) => apiService.put<{ goal: any }>(`/portal/goals/${id}`, data),
   deleteGoal: (id: string) => apiService.delete<void>(`/portal/goals/${id}`),
+  getClasses: (params?: { status?: string; limit?: number; page?: number }) =>
+    apiService.get<{ classes: Aula[]; pagination?: { total: number; page: number; limit: number; pages: number } }>('/portal/classes', { params }),
+  getPayments: () => apiService.get<{ payments: StudentPaymentStatus[] }>('/portal/payments'),
+  getActivities: () => apiService.get<{ activities: Activity[] }>('/portal/activities')
 };
 
 export const liveClassAPI = {

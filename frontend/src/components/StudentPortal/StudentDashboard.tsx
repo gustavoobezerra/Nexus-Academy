@@ -70,9 +70,16 @@ export const StudentDashboard = () => {
         apiService.get('/portal/classes')
       ]);
 
+      const activitiesData = Array.isArray(activitiesRes)
+        ? activitiesRes
+        : ((activitiesRes as any)?.activities || []);
+      const classesData = Array.isArray(classesRes)
+        ? classesRes
+        : ((classesRes as any)?.classes || []);
+
       setStudent(studentRes as any);
-      setActivities(activitiesRes as any);
-      setClasses(classesRes as any);
+      setActivities(activitiesData as any);
+      setClasses(classesData as any);
     } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados do painel');

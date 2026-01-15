@@ -604,7 +604,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
             >
               <Sparkles size={18} />
-              Gerar palavra com IA
+              Gerar sugestao
             </button>
             
             <div>
