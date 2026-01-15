@@ -12,12 +12,14 @@ const RESERVED_SLUGS = [
 
 /**
  * Verifica disponibilidade de slug
+ * GET /api/onboarding/check-slug?slug=nome
  * POST /api/onboarding/check-slug
  * Body: { slug: string }
  */
 export async function checkSlugAvailability(req, res) {
   try {
-    const { slug } = req.body;
+    // Suporta tanto GET (query) quanto POST (body)
+    const { slug } = req.method === 'GET' ? req.query : req.body;
 
     // Validação de formato
     if (!slug || typeof slug !== 'string') {

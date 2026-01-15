@@ -26,8 +26,23 @@ router.use(authorize('teacher', 'admin'));
 /**
  * @swagger
  * /api/onboarding/check-slug:
+ *   get:
+ *     summary: Verifica disponibilidade de slug (GET)
+ *     tags: [Onboarding]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "professor-silva"
+ *     responses:
+ *       200:
+ *         description: Status da disponibilidade
  *   post:
- *     summary: Verifica disponibilidade de slug
+ *     summary: Verifica disponibilidade de slug (POST)
  *     tags: [Onboarding]
  *     security:
  *       - bearerAuth: []
@@ -47,6 +62,7 @@ router.use(authorize('teacher', 'admin'));
  *       200:
  *         description: Status da disponibilidade
  */
+router.get('/check-slug', checkSlugAvailability);
 router.post('/check-slug', checkSlugAvailability);
 
 /**
