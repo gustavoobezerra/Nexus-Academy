@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { GraduationCap, Lock, User, ArrowRight, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
+import { formatPhoneBR } from '../../utils/security';
 
 export function StudentRegister() {
   const { slug: paramSlug } = useParams<{ slug: string }>();
@@ -69,9 +70,12 @@ export function StudentRegister() {
   }, [slug, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name: fieldName, value } = e.target;
+    const formattedValue = fieldName === 'parentPhone' ? formatPhoneBR(value) : value;
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [fieldName]: formattedValue
     });
   };
 

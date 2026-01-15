@@ -43,6 +43,7 @@ import { StudentRegister } from './components/StudentPortal/StudentRegister';
 import { PronunciationTest } from './components/StudentPortal/PronunciationTest';
 import AIHub from './components/AIHub';
 import TeacherSettings from './components/TeacherSettings';
+import HangmanGame from './components/HangmanGame';
 
 // NOVOS COMPONENTES DE AUTOMAÇÃO COM IA
 import { HourBankManagement } from './components/HourBankManagement';
@@ -68,6 +69,7 @@ function AppWithRouter() {
   const [liveClassData, setLiveClassData] = useState<{ id: string; title: string } | null>(null);
   const [useDaily] = useState(true); // Usar Daily.co como padrão (true) ou Jitsi (false)
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
+  const [mostrarHangman, setMostrarHangman] = useState(false);
 
   // Verificar rotas
   const isLoginPage = location.pathname === '/' || location.pathname === '/login';
@@ -110,6 +112,12 @@ function AppWithRouter() {
   }, [isStudentPortal, isPublicRoute, isAuthenticated]);
 
   const handleNavegar = useCallback((tab: string) => {
+    if (tab === 'hangman') {
+      setMostrarHangman(true);
+      setMenuMobileAberto(false);
+      return;
+    }
+
     setAbaAtiva(tab);
     setMenuMobileAberto(false);
 
@@ -194,6 +202,26 @@ function AppWithRouter() {
     }
     if (location.pathname === '/portal/pronunciation-test') {
       return <PronunciationTest />;
+    }
+    if (location.pathname === '/portal/hangman') {
+      const storedStudentRaw = localStorage.getItem('student') || localStorage.getItem('studentData');
+      let storedStudent: any = null;
+      if (storedStudentRaw) {
+        try {
+          storedStudent = JSON.parse(storedStudentRaw);
+        } catch {
+          storedStudent = null;
+        }
+      }
+      return (
+        <HangmanGame
+          isTeacher={false}
+          userId={storedStudent?.id || storedStudent?._id || 'student'}
+          userName={storedStudent?.name || 'Aluno'}
+          userAvatar={storedStudent?.profile?.avatar}
+          onClose={() => navigate('/portal/dashboard')}
+        />
+      );
     }
     if (location.pathname === '/portal/live-class' && liveClassData) {
       return useDaily ? (
@@ -487,8 +515,18 @@ function AppWithRouter() {
       {mostrarConfiguracoes && (
         <TeacherSettings onClose={() => setMostrarConfiguracoes(false)} />
       )}
+      {mostrarHangman && (
+        <HangmanGame
+          isTeacher
+          userId={user?.id || user?._id || 'teacher'}
+          userName={user?.name || 'Professor'}
+          userAvatar={(user as any)?.avatar}
+          onClose={() => setMostrarHangman(false)}
+        />
+      )}
     </>
   );
 }
 
 export default AppWithRouter;
+

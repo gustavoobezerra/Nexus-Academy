@@ -4,6 +4,7 @@ import { protect, authorize } from '../middleware/auth.js';
 import PronunciationPhrase from '../models/PronunciationPhrase.js';
 import PronunciationTest from '../models/PronunciationTest.js';
 import cloudinaryService from '../services/cloudinaryService.js';
+import { generatePhrase } from '../services/pronunciationService.js';
 
 const router = express.Router();
 
@@ -87,6 +88,20 @@ router.get('/phrases', protect, authorize('teacher', 'admin'), async (req, res) 
     return res.status(500).json({
       success: false,
       message: 'Erro ao listar frases de pronúncia'
+    });
+  }
+});
+
+router.post('/phrases/generate', protect, authorize('teacher', 'admin'), async (req, res) => {
+  try {
+    const { difficulty } = req.body || {};
+    const result = await generatePhrase(difficulty);
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Erro ao gerar frase de pron£ncia:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao gerar frase de pron£ncia'
     });
   }
 });

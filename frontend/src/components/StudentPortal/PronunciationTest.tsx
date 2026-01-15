@@ -27,7 +27,9 @@ type AnalysisResult = {
 };
 
 // Funções de API (você pode mover para um arquivo separado)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+  .replace(/\/+$/, '')
+  .replace(/\/api$/, '');
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('studentToken');
@@ -271,9 +273,9 @@ export function PronunciationTest() {
 
   if (!studentToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4 md:p-8">
-        <div className="max-w-3xl mx-auto bg-white rounded-2xl p-6 shadow-lg border border-slate-100">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Pronunciation Test</h1>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 p-4 md:p-8">
+        <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-slate-800">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Pronunciation Test</h1>
           <p className="text-slate-600 mb-4">
             Faça login no portal do aluno para acessar o teste de pronúncia.
           </p>
@@ -289,35 +291,60 @@ export function PronunciationTest() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-slate-500 font-medium">Treinamento de Pronúncia com IA</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Pronunciation Test</h1>
-            <p className="text-slate-500 mt-1">Escolha a dificuldade, grave sua voz e receba feedback palavra a palavra.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Treinamento de Pronúncia com IA</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100">Pronunciation Test</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Escolha a dificuldade, grave sua voz e receba feedback palavra a palavra.</p>
           </div>
           <button
             onClick={() => navigate('/portal/dashboard')}
-            className="px-4 py-2 rounded-lg bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-100"
+            className="px-4 py-2 rounded-lg bg-white border border-slate-200 shadow-sm text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Voltar
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-lg border border-slate-100">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle2 size={18} className="text-emerald-500" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Como funciona</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm text-slate-600 dark:text-slate-300">
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-3">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">1. Ouça</p>
+              <p>Escute a frase gerada e se familiarize com a pronúncia.</p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-3">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">2. Grave</p>
+              <p>Fale a frase em voz alta e finalize a gravação.</p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-3">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">3. Analise</p>
+              <p>Receba notas por palavra e dicas específicas.</p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-3">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">4. Salve</p>
+              <p>Envie o resultado para seu professor acompanhar.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="text-indigo-500" size={18} />
-            <p className="text-sm font-semibold text-slate-700">Selecione o nível</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Selecione o nível</p>
           </div>
           <DifficultySelector value={difficulty} onSelect={handleDifficultySelect} />
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-lg border border-slate-100 space-y-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Frase gerada {phraseSourceLabel}:</p>
-              <h2 className="text-2xl font-bold text-slate-900">{phrase || '—'}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Frase gerada {phraseSourceLabel}:</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{phrase || '—'}</h2>
             </div>
             <div className="flex gap-2">
               <button
@@ -331,7 +358,7 @@ export function PronunciationTest() {
               <button
                 onClick={() => handleGeneratePhrase(difficulty)}
                 disabled={loadingPhrase}
-                className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 flex items-center gap-2 disabled:opacity-50"
+                className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:border-slate-700 flex items-center gap-2 disabled:opacity-50"
               >
                 {loadingPhrase ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                 Nova frase
@@ -354,10 +381,10 @@ export function PronunciationTest() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-lg border border-slate-100 space-y-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Grave sua pronúncia e envie para análise</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Grave sua pronúncia e envie para análise</p>
               <div className="flex items-center gap-2 mt-1 text-sm text-slate-600">
                 <CheckCircle2 size={14} className="text-emerald-500" />
                 Use um ambiente silencioso para melhores resultados.
@@ -400,15 +427,15 @@ export function PronunciationTest() {
         </div>
 
         {analysis && (
-          <div className="bg-white rounded-2xl p-5 shadow-lg border border-slate-100 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Feedback da IA {analysis.mock ? '(simulado)' : ''}</p>
-                <h3 className="text-xl font-bold text-slate-900">Resultados</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Feedback da IA {analysis.mock ? '(simulado)' : ''}</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Resultados</h3>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-black text-indigo-600">{(analysis.pronunciationScore * 100).toFixed(0)}%</p>
-                <p className="text-sm text-slate-500">Score geral</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Score geral</p>
               </div>
             </div>
 
@@ -418,12 +445,12 @@ export function PronunciationTest() {
               <ScoreCard label="Pronúncia" value={analysis.pronunciationScore} />
             </div>
 
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-              <p className="text-slate-700">{analysis.feedback || 'Continue praticando para melhorar sua pronúncia.'}</p>
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
+              <p className="text-slate-700 dark:text-slate-200">{analysis.feedback || 'Continue praticando para melhorar sua pronúncia.'}</p>
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">Envie o resultado ao professor e salve no histórico</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Envie o resultado ao professor e salve no histórico</p>
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -442,9 +469,9 @@ export function PronunciationTest() {
 
 function ScoreCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="text-2xl font-bold text-slate-900">{(value * 100).toFixed(0)}%</p>
+    <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{(value * 100).toFixed(0)}%</p>
       <div className="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-indigo-500 to-cyan-500"
@@ -454,3 +481,8 @@ function ScoreCard({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
+
+
+
+

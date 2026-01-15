@@ -4,6 +4,7 @@ import { GraduationCap, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, P
 import toast from 'react-hot-toast';
 import { FadeContent, BlurText, GradientText, MagneticButton } from '../ui/Animations';
 import { portalAPI } from '../../lib/api';
+import { formatPhoneBR } from '../../utils/security';
 
 interface SavedStudent {
   id: string;
@@ -494,7 +495,7 @@ export const StudentPortalLogin = () => {
                             <input
                               type="tel"
                               value={parentPhone}
-                              onChange={(e) => setParentPhone(e.target.value)}
+                              onChange={(e) => setParentPhone(formatPhoneBR(e.target.value))}
                               className={inputClassesSmall}
                               placeholder="(99) 99999"
                             />

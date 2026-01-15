@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { formatPhoneBR } from '../utils/security';
 import { FadeContent, BlurText, GradientText, StaggerContainer, StaggerItem, MagneticButton } from './ui/Animations';
 import { authAPI } from '../lib/api';
 
@@ -178,7 +179,7 @@ export const TeacherLogin = () => {
                         <input
                           type="tel"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
+                          onChange={(e) => setPhone(formatPhoneBR(e.target.value))}
                           autoComplete="tel"
                           className={inputClasses}
                           placeholder="(99) 99999-9999"

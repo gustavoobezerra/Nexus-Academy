@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   User, Mail, Phone, Link2, Copy, Check, Save, X,
   CreditCard, Bell, Shield, Key,
-  ChevronRight, ExternalLink, Camera, Loader2
+  ChevronRight, ExternalLink, Camera, Loader2, Mic, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import apiService from '../services/api.service';
+import { formatPhoneBR } from '../utils/security';
 
 interface TeacherData {
   id: string;
@@ -48,7 +49,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'notifications' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'payment' | 'notifications' | 'security' | 'pronunciation'>('profile');
 
   const [_teacherData, setTeacherData] = useState<TeacherData | null>(null);
 
@@ -75,9 +76,24 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
     push: true
   });
 
+  const [phraseForm, setPhraseForm] = useState({
+    phrase: '',
+    difficulty: 'intermediate'
+  });
+  const [phraseList, setPhraseList] = useState<any[]>([]);
+  const [phraseLoading, setPhraseLoading] = useState(false);
+  const [phraseSaving, setPhraseSaving] = useState(false);
+  const [phraseGenerating, setPhraseGenerating] = useState(false);
+
   useEffect(() => {
     fetchTeacherData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'pronunciation') {
+      fetchPronunciationPhrases();
+    }
+  }, [activeTab]);
 
   const fetchTeacherData = async () => {
     try {
@@ -108,6 +124,86 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       toast.error('Erro ao carregar configurações');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPronunciationPhrases = async () => {
+    try {
+      setPhraseLoading(true);
+      const response = await apiService.get<any>('/pronunciation/phrases');
+      setPhraseList(response.data || []);
+    } catch (error: unknown) {
+      toast.error(error.message || 'Erro ao carregar frases de pronúncia');
+    } finally {
+      setPhraseLoading(false);
+    }
+  };
+
+  const handleGeneratePhrase = async () => {
+    try {
+      setPhraseGenerating(true);
+      const response = await apiService.post<any>('/pronunciation/phrases/generate', {
+        difficulty: phraseForm.difficulty
+      });
+      const phrase = response?.data?.phrase || response?.phrase;
+      if (!phrase) {
+        toast.error('Não foi possível gerar frase');
+        return;
+      }
+      setPhraseForm({ ...phraseForm, phrase });
+    } catch (error: unknown) {
+      toast.error(error.message || 'Erro ao gerar frase');
+    } finally {
+      setPhraseGenerating(false);
+    }
+  };
+
+  const handleSavePhrase = async () => {
+    if (!phraseForm.phrase.trim()) {
+      toast.error('Digite uma frase para salvar');
+      return;
+    }
+
+    try {
+      setPhraseSaving(true);
+      const form = new FormData();
+      form.append('phrase', phraseForm.phrase.trim());
+      form.append('difficulty', phraseForm.difficulty);
+      form.append('active', 'true');
+      await apiService.upload('/pronunciation/phrases', form);
+      toast.success('Frase salva e ativada');
+      setPhraseForm({ phrase: '', difficulty: phraseForm.difficulty });
+      fetchPronunciationPhrases();
+    } catch (error: unknown) {
+      toast.error(error.message || 'Erro ao salvar frase');
+    } finally {
+      setPhraseSaving(false);
+    }
+  };
+
+  const handleActivatePhrase = async (phraseId: string) => {
+    try {
+      setPhraseSaving(true);
+      await apiService.put(`/pronunciation/phrases/${phraseId}`, { active: true });
+      toast.success('Frase ativada');
+      fetchPronunciationPhrases();
+    } catch (error: unknown) {
+      toast.error(error.message || 'Erro ao ativar frase');
+    } finally {
+      setPhraseSaving(false);
+    }
+  };
+
+  const handleDeletePhrase = async (phraseId: string) => {
+    try {
+      setPhraseSaving(true);
+      await apiService.delete(`/pronunciation/phrases/${phraseId}`);
+      toast.success('Frase removida');
+      fetchPronunciationPhrases();
+    } catch (error: unknown) {
+      toast.error(error.message || 'Erro ao remover frase');
+    } finally {
+      setPhraseSaving(false);
     }
   };
 
@@ -188,6 +284,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
     { id: 'profile', label: 'Perfil', icon: User },
     { id: 'payment', label: 'Pagamentos', icon: CreditCard },
     { id: 'notifications', label: 'Notificações', icon: Bell },
+    { id: 'pronunciation', label: 'Pronúncia', icon: Mic },
     { id: 'security', label: 'Segurança', icon: Shield }
   ];
 
@@ -281,7 +378,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
                         <input
                           type="tel"
                           value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          onChange={(e) => setFormData({ ...formData, phone: formatPhoneBR(e.target.value) })}
                           className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                           placeholder="(11) 99999-9999"
                         />
@@ -536,7 +633,124 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
               </div>
             )}
 
-            {/* Tab Segurança */}
+            
+            {/* Tab Pronúncia */}
+            {activeTab === 'pronunciation' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Teste de Pronúncia</h3>
+                  <p className="text-slate-400 text-sm">
+                    Defina frases por nível para os alunos treinarem. A frase ativa é usada no portal do aluno.
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-xl p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Frase</label>
+                    <textarea
+                      value={phraseForm.phrase}
+                      onChange={(e) => setPhraseForm({ ...phraseForm, phrase: e.target.value })}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="Ex: Practice makes perfect."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Nível</label>
+                      <select
+                        value={phraseForm.difficulty}
+                        onChange={(e) => setPhraseForm({ ...phraseForm, difficulty: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="beginner">Iniciante</option>
+                        <option value="elementary">Básico</option>
+                        <option value="intermediate">Intermediário</option>
+                        <option value="upper-intermediate">Intermediário+</option>
+                        <option value="advanced">Avançado</option>
+                        <option value="proficient">Proficiente</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGeneratePhrase}
+                      disabled={phraseGenerating}
+                      className="mt-6 md:mt-0 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                    >
+                      {phraseGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      Gerar com IA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSavePhrase}
+                      disabled={phraseSaving}
+                      className="mt-6 md:mt-0 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                    >
+                      {phraseSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Salvar e ativar
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-slate-400">
+                    Você pode gerar com IA e ajustar manualmente antes de salvar.
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-white font-semibold">Frases recentes</h4>
+                    <button
+                      type="button"
+                      onClick={fetchPronunciationPhrases}
+                      className="text-sm text-indigo-400 hover:text-indigo-300"
+                    >
+                      Atualizar
+                    </button>
+                  </div>
+
+                  {phraseLoading ? (
+                    <div className="text-slate-400">Carregando frases...</div>
+                  ) : phraseList.length === 0 ? (
+                    <div className="text-slate-400">Nenhuma frase cadastrada ainda.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {phraseList.map((phrase: any) => (
+                        <div key={phrase._id} className="p-3 bg-slate-900/50 rounded-lg border border-slate-700 flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-white font-medium">{phrase.phrase}</p>
+                            <p className="text-xs text-slate-400">
+                              {phrase.difficulty} - {phrase.source === 'teacher' ? 'Professor' : 'IA'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {phrase.active ? (
+                              <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-300 rounded-full">Ativa</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleActivatePhrase(phrase._id)}
+                                className="px-2 py-1 text-xs bg-indigo-600/20 text-indigo-300 rounded-full hover:bg-indigo-600/30"
+                              >
+                                Ativar
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePhrase(phrase._id)}
+                              className="px-2 py-1 text-xs bg-red-600/20 text-red-300 rounded-full hover:bg-red-600/30"
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+{/* Tab Segurança */}
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <div>
@@ -596,3 +810,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
 };
 
 export default TeacherSettings;
+
+
+
+

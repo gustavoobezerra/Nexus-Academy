@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, BookOpen, Calendar, Trophy, MessageCircle,
   Bell, User, LogOut, Menu, Sun, Moon, Video, FileText,
-  TrendingUp, Clock, Target, Award, Mic
+  TrendingUp, Clock, Target, Award, Mic, Gamepad2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -307,6 +307,16 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
           </div>
         </button>
         <button
+          onClick={() => window.location.href = '/portal/hangman'}
+          className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
+        >
+          <Gamepad2 size={20} />
+          <div className="text-left">
+            <p className="font-bold text-sm">Jogo da Forca</p>
+            <p className="text-xs opacity-90">Treine vocabulário com a turma</p>
+          </div>
+        </button>
+        <button
           onClick={onOpenChat}
           className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
         >
@@ -404,3 +414,4 @@ const StatCard = ({ icon, label, value, isDark, small = false }: unknown) => (
 );
 
 export default StudentDashboard;
+

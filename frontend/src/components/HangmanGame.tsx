@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { io, Socket } from 'socket.io-client';
 import { 
   Users, Trophy, Clock, MessageCircle, Eraser, 
-  Play, X, Check, AlertCircle 
+  Play, X, Check, AlertCircle, Sparkles, Copy
 } from 'lucide-react';
 
 interface Player {
@@ -39,6 +39,77 @@ interface HangmanGameProps {
   onClose?: () => void;
 }
 
+const HANGMAN_SUGGESTIONS: Record<string, { word: string; hint: string }[]> = {
+  ingles: [
+    { word: 'SUSTAINABLE', hint: 'Relacionado a sustentabilidade' },
+    { word: 'NEIGHBOR', hint: 'Pessoa que mora perto' },
+    { word: 'LANGUAGE', hint: 'Idioma' },
+    { word: 'EDUCATION', hint: 'Processo de aprendizado' },
+    { word: 'HORIZON', hint: 'Linha onde o mar e o céu se encontram' }
+  ],
+  portugues: [
+    { word: 'APRENDIZADO', hint: 'Processo de aprender' },
+    { word: 'PROFESSOR', hint: 'Quem ensina' },
+    { word: 'ESTUDANTE', hint: 'Quem aprende' },
+    { word: 'CONHECIMENTO', hint: 'Resultado do estudo' },
+    { word: 'DIDÁTICA', hint: 'Arte de ensinar' }
+  ],
+  matematica: [
+    { word: 'EQUAÇÃO', hint: 'Expressão matemática com igualdade' },
+    { word: 'GEOMETRIA', hint: 'Estudo das formas' },
+    { word: 'FRAÇÃO', hint: 'Parte de um todo' },
+    { word: 'FUNÇÃO', hint: 'Relação entre conjuntos' },
+    { word: 'PROBABILIDADE', hint: 'Chance de algo acontecer' }
+  ],
+  ciencias: [
+    { word: 'ENERGIA', hint: 'Capacidade de realizar trabalho' },
+    { word: 'ECOSSISTEMA', hint: 'Conjunto de seres vivos e ambiente' },
+    { word: 'FOTOSSÍNTESE', hint: 'Processo das plantas' },
+    { word: 'MATÉRIA', hint: 'Tudo que tem massa' },
+    { word: 'EVOLUÇÃO', hint: 'Mudanças ao longo do tempo' }
+  ],
+  historia: [
+    { word: 'REVOLUÇÃO', hint: 'Mudança profunda na sociedade' },
+    { word: 'IMPERADOR', hint: 'Chefe de um império' },
+    { word: 'COLONIZAÇÃO', hint: 'Domínio de territórios' },
+    { word: 'REPUBLICA', hint: 'Forma de governo' },
+    { word: 'GUERRA', hint: 'Conflito armado' }
+  ],
+  geografia: [
+    { word: 'CONTINENTE', hint: 'Grande massa de terra' },
+    { word: 'LATITUDE', hint: 'Coordenada geográfica' },
+    { word: 'CLIMA', hint: 'Condições atmosféricas' },
+    { word: 'RELEVO', hint: 'Formas da superfície terrestre' },
+    { word: 'HIDROGRAFIA', hint: 'Estudo das águas' }
+  ],
+  geral: [
+    { word: 'INSPIRAÇÃO', hint: 'Ato de se inspirar' },
+    { word: 'CRIATIVIDADE', hint: 'Capacidade de criar' },
+    { word: 'DISCIPLINA', hint: 'Organização e foco' },
+    { word: 'OBJETIVO', hint: 'Meta a alcançar' },
+    { word: 'PERSISTÊNCIA', hint: 'Manter o esforço' }
+  ]
+};
+
+const getSocketBaseUrl = () => {
+  const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const trimmed = raw.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+};
+
+const normalizeCategory = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const getSuggestionByCategory = (category: string) => {
+  const key = normalizeCategory(category || 'geral');
+  const list = HANGMAN_SUGGESTIONS[key] || HANGMAN_SUGGESTIONS.geral;
+  return list[Math.floor(Math.random() * list.length)];
+};
+
 const HangmanGame: React.FC<HangmanGameProps> = ({
   gameId: initialGameId,
   isTeacher,
@@ -54,6 +125,9 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [copied, setCopied] = useState(false);
   
   // Whiteboard state
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,7 +148,13 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
   
   // Conectar ao Socket.IO
   useEffect(() => {
-    const socketInstance = io(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/hangman`, {
+    const socketBaseUrl = getSocketBaseUrl();
+    const token = isTeacher
+      ? localStorage.getItem('token')
+      : (localStorage.getItem('studentToken') || localStorage.getItem('token'));
+
+    const socketInstance = io(`${socketBaseUrl}/hangman`, {
+      auth: token ? { token } : undefined,
       transports: ['websocket', 'polling']
     });
     
@@ -82,6 +162,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     
     socketInstance.on('connect', () => {
       console.log('Conectado ao servidor Hangman');
+      setJoinError('');
       
       // Se já tem gameId, entrar no jogo
       if (initialGameId) {
@@ -174,6 +255,11 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       clearCanvas();
     });
     
+    socketInstance.on('connect_error', (error) => {
+      console.error('Erro de conexÆo no Hangman:', error?.message || error);
+      setJoinError('Nao foi possivel conectar ao jogo. Verifique seu login.');
+    });
+
     socketInstance.on('error', ({ message }) => {
       alert(message);
     });
@@ -181,12 +267,12 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     return () => {
       socketInstance.disconnect();
     };
-  }, [initialGameId, userId, userName, userAvatar]);
+  }, [initialGameId, userId, userName, userAvatar, isTeacher]);
   
   // Criar jogo (professor)
   const handleCreateGame = () => {
     if (!socket || !createForm.word.trim()) {
-      alert('Digite uma palavra válida');
+      alert('Digite uma palavra valida');
       return;
     }
     
@@ -198,6 +284,46 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       maxWrongGuesses: createForm.maxWrongGuesses,
       turnBased: createForm.turnBased
     });
+  };
+  const handleGenerateSuggestion = () => {
+    const suggestion = getSuggestionByCategory(createForm.category);
+    setCreateForm(prev => ({
+      ...prev,
+      word: suggestion.word,
+      hint: suggestion.hint
+    }));
+  };
+
+  const handleJoinGame = () => {
+    if (!socket) {
+      setJoinError('Conexao indisponivel no momento.');
+      return;
+    }
+
+    const trimmed = joinCode.trim();
+    if (!trimmed) {
+      setJoinError('Informe o codigo do jogo.');
+      return;
+    }
+
+    setJoinError('');
+    socket.emit('join-game', {
+      gameId: trimmed,
+      studentId: userId,
+      studentName: userName,
+      studentAvatar: userAvatar
+    });
+  };
+
+  const handleCopyGameCode = async () => {
+    if (!gameId) return;
+    try {
+      await navigator.clipboard.writeText(gameId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      alert('Nao foi possivel copiar o codigo do jogo.');
+    }
   };
   
   // Iniciar jogo (professor)
@@ -252,6 +378,13 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       ctx.beginPath();
       ctx.moveTo(x, y);
     }
+
+    if (socket && gameId) {
+      socket.emit('draw-whiteboard', {
+        gameId,
+        drawData: { x, y, color: drawColor, lineWidth, isStart: true }
+      });
+    }
   };
   
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -284,14 +417,40 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
   
   const stopDrawing = () => {
     setIsDrawing(false);
+
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (ctx) {
+      ctx.closePath();
+    }
+
+    if (socket && gameId) {
+      socket.emit('draw-whiteboard', {
+        gameId,
+        drawData: { isStop: true }
+      });
+    }
   };
   
-  const drawOnCanvas = (drawData: any, emit = true) => {
+  const drawOnCanvas = (drawData: any) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    if (ctx && drawData.isDrawing) {
+    if (!ctx) return;
+
+    if (drawData.isStart) {
+      ctx.beginPath();
+      ctx.moveTo(drawData.x, drawData.y);
+      return;
+    }
+
+    if (drawData.isStop) {
+      ctx.closePath();
+      return;
+    }
+
+    if (drawData.isDrawing) {
       ctx.strokeStyle = drawData.color;
       ctx.lineWidth = drawData.lineWidth;
       ctx.lineCap = 'round';
@@ -411,16 +570,20 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl"
+          className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-8 max-w-md w-full shadow-2xl"
         >
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Criar Jogo da Forca</h2>
             {onClose && (
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
                 <X size={24} />
               </button>
             )}
           </div>
+
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            Defina a palavra, compartilhe o codigo e inicie o jogo quando a turma entrar.
+          </p>
           
           <div className="space-y-4">
             <div>
@@ -430,10 +593,19 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                 value={createForm.word}
                 onChange={(e) => setCreateForm({ ...createForm, word: e.target.value.toUpperCase() })}
                 placeholder="Digite a palavra"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
                 maxLength={20}
               />
             </div>
+
+            <button
+              type="button"
+              onClick={handleGenerateSuggestion}
+              className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+            >
+              <Sparkles size={18} />
+              Gerar palavra com IA
+            </button>
             
             <div>
               <label className="block text-sm font-semibold mb-2">Dica</label>
@@ -442,7 +614,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                 value={createForm.hint}
                 onChange={(e) => setCreateForm({ ...createForm, hint: e.target.value })}
                 placeholder="Dica para os alunos"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
@@ -451,7 +623,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               <select
                 value={createForm.category}
                 onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
               >
                 <option>Inglês</option>
                 <option>Português</option>
@@ -471,7 +643,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                 onChange={(e) => setCreateForm({ ...createForm, maxWrongGuesses: parseInt(e.target.value) })}
                 min={3}
                 max={10}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
@@ -498,15 +670,60 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     );
   }
   
-  // Tela principal do jogo
+  
+  if (!isTeacher && !gameId) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-8 max-w-md w-full shadow-2xl"
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Entrar no Jogo da Forca</h2>
+            {onClose && (
+              <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+                <X size={24} />
+              </button>
+            )}
+          </div>
+
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            Digite o codigo do jogo enviado pelo professor para entrar.
+          </p>
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleJoinGame()}
+              placeholder="Codigo do jogo"
+              className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+            />
+            {joinError && (
+              <div className="text-sm text-red-500">{joinError}</div>
+            )}
+            <button
+              onClick={handleJoinGame}
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
+            >
+              Entrar no jogo
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+// Tela principal do jogo
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col z-50">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-950 dark:to-slate-900 flex flex-col z-50 text-slate-900 dark:text-slate-100">
       {/* Header */}
-      <div className="bg-white shadow-md px-6 py-4 flex justify-between items-center">
+      <div className="bg-white dark:bg-slate-900 shadow-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-800">🎮 Jogo da Forca</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">🎮 Jogo da Forca</h1>
           {gameState && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-slate-800 dark:text-slate-200 rounded-full text-sm font-semibold">
               {gameState.category}
             </span>
           )}
@@ -515,13 +732,13 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         <div className="flex items-center gap-4">
           {gameState && (
             <>
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                 <Users size={20} />
                 <span>{gameState.players.length}</span>
               </div>
               
               {gameState.startedAt && (
-                <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <Clock size={20} />
                   <span>{Math.floor(gameState.duration / 60)}:{(gameState.duration % 60).toString().padStart(2, '0')}</span>
                 </div>
@@ -532,13 +749,28 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
           {onClose && (
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100"
+              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <X size={24} />
             </button>
           )}
         </div>
       </div>
+
+      {isTeacher && gameId && (
+        <div className="px-6 py-3 bg-blue-50 dark:bg-slate-800/70 border-b border-blue-100 dark:border-slate-700 flex items-center justify-between">
+          <div className="text-sm text-blue-800 dark:text-slate-200">
+            Codigo do jogo: <span className="font-mono font-bold">{gameId}</span>
+          </div>
+          <button
+            onClick={handleCopyGameCode}
+            className="flex items-center gap-2 text-blue-700 hover:text-blue-900 dark:text-slate-200 dark:hover:text-slate-100 text-sm font-semibold"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+      )}
       
       <div className="flex-1 flex overflow-hidden">
         {/* Área principal do jogo */}
@@ -557,13 +789,13 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
           
           {gameState && gameState.status === 'waiting' && !isTeacher && (
             <div className="mb-8 text-center">
-              <p className="text-xl text-gray-600">Aguardando o professor iniciar o jogo...</p>
+              <p className="text-xl text-slate-600 dark:text-slate-300">Aguardando o professor iniciar o jogo...</p>
             </div>
           )}
           
           {/* Forca */}
           <div className="mb-8">
-            <svg width="300" height="250" className="text-gray-800">
+            <svg width="300" height="250" className="text-slate-800 dark:text-slate-100">
               {/* Base */}
               <line x1="20" y1="230" x2="150" y2="230" stroke="currentColor" strokeWidth="4" />
               {/* Poste vertical */}
@@ -598,7 +830,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               </div>
               
               {gameState.hint && (
-                <p className="text-center mt-4 text-gray-600">
+                <p className="text-center mt-4 text-slate-600 dark:text-slate-300">
                   💡 Dica: {gameState.hint}
                 </p>
               )}
@@ -625,7 +857,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                         ? isCorrect
                           ? 'bg-green-500 text-white'
                           : 'bg-red-500 text-white'
-                        : 'bg-white hover:bg-blue-100 text-gray-800 shadow'
+                        : 'bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-100 shadow'
                       }
                       ${isGuessed ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                     `}
@@ -643,11 +875,11 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               className={`mt-8 p-6 rounded-xl text-center ${
-                gameState.status === 'won' ? 'bg-green-100' : 'bg-red-100'
+                gameState.status === 'won' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'
               }`}
             >
               <h2 className={`text-3xl font-bold mb-2 ${
-                gameState.status === 'won' ? 'text-green-700' : 'text-red-700'
+                gameState.status === 'won' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
               }`}>
                 {gameState.status === 'won' ? '🎉 Vitória!' : '😢 Derrota!'}
               </h2>
@@ -658,7 +890,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
           )}
           
           {/* Botão do quadro branco */}
-          {isTeacher && (
+          {gameState && (
             <button
               onClick={() => setShowWhiteboard(!showWhiteboard)}
               className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
@@ -669,7 +901,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
         </div>
         
         {/* Sidebar direita */}
-        <div className="w-80 bg-white shadow-lg flex flex-col">
+        <div className="w-80 bg-white dark:bg-slate-900 shadow-lg flex flex-col">
           {/* Placar */}
           <div className="p-4 border-b">
             <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
@@ -678,12 +910,12 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
             </h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {gameState?.players.map((player, index) => (
-                <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-800 rounded">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-700">#{index + 1}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">#{index + 1}</span>
                     <span className="text-sm">{player.name}</span>
                   </div>
-                  <span className="font-bold text-blue-600">{player.score}</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{player.score}</span>
                 </div>
               ))}
             </div>
@@ -701,10 +933,10 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                 <div
                   key={index}
                   className={`p-2 rounded text-sm ${
-                    msg.type === 'system' ? 'bg-gray-100 text-gray-600 text-center' :
-                    msg.type === 'success' ? 'bg-green-50 text-green-700' :
-                    msg.type === 'error' ? 'bg-red-50 text-red-700' :
-                    'bg-blue-50'
+                    msg.type === 'system' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-center' :
+                    msg.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' :
+                    msg.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
+                    'bg-blue-50 dark:bg-slate-800/60'
                   }`}
                 >
                   {msg.type === 'chat' && (
@@ -722,7 +954,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendChat()}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 text-sm"
               />
               <button
                 onClick={handleSendChat}
@@ -748,13 +980,13 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="bg-white rounded-xl p-6 max-w-4xl w-full shadow-2xl"
+              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-6 max-w-4xl w-full shadow-2xl"
             >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Quadro Branco Colaborativo</h3>
                 <button
                   onClick={() => setShowWhiteboard(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   <X size={24} />
                 </button>
@@ -794,7 +1026,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
                 onMouseMove={draw}
                 onMouseUp={stopDrawing}
                 onMouseLeave={stopDrawing}
-                className="border-2 border-gray-300 rounded-lg cursor-crosshair bg-white"
+                className="border-2 border-gray-300 dark:border-slate-700 rounded-lg cursor-crosshair bg-white dark:bg-slate-950"
               />
             </motion.div>
           </motion.div>
@@ -805,3 +1037,8 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
 };
 
 export default HangmanGame;
+
+
+
+
+

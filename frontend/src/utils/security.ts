@@ -71,6 +71,29 @@ export function isValidPhone(phone: string): boolean {
 }
 
 /**
+ * Formata telefone BR: (DD) 99999-9999 ou (DD) 9999-9999
+ */
+export function formatPhoneBR(value: string): string {
+  if (!value || typeof value !== 'string') return '';
+
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+
+  if (digits.length <= 2) {
+    return `(${digits}`;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  }
+
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+/**
  * Valida senha (mínimo 6 caracteres)
  */
 export function isValidPassword(password: string): boolean {

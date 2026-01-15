@@ -250,7 +250,7 @@ export const StudentDashboardComplete = ({ onJoinClass }: StudentDashboardComple
 
           {/* Card Teste de Pronúncia */}
           <button
-            onClick={() => navigate('/portal/pronunciation')}
+            onClick={() => navigate('/portal/pronunciation-test')}
             className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 group"
           >
             <div className="flex items-center justify-between mb-4">

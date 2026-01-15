@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Plus, Video, DollarSign, MessageSquare,
-  FileText, UserPlus, Zap, X, ChevronRight
+  FileText, UserPlus, Zap, X, ChevronRight, Gamepad2
 } from 'lucide-react';
 
 interface QuickActionsProps {
@@ -39,6 +39,13 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onNavigate }) => {
       icon: <MessageSquare size={20} className="text-purple-500" />,
       route: 'automation',
       description: 'WhatsApp ou E-mail'
+    },
+    {
+      id: 'hangman-game',
+      label: 'Jogo da Forca',
+      icon: <Gamepad2 size={20} className="text-rose-500" />,
+      route: 'hangman',
+      description: 'Lousa interativa'
     },
     {
       id: 'generate-report',

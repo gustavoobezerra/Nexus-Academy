@@ -9,7 +9,7 @@ type AIHubProps = {
 const tools = [
   {
     id: 'chatbot',
-    title: 'Chatbot de Tutoria',
+    title: 'IA de ensino',
     description: 'Assistente conversacional para dúvidas de alunos e suporte em tempo real.',
     icon: MessageSquare,
     action: 'Abrir chatbot',
@@ -103,3 +103,4 @@ export const AIHub: React.FC<AIHubProps> = ({ onNavigate }) => {
 };
 
 export default AIHub;
+
