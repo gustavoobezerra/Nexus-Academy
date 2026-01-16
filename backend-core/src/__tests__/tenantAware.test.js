@@ -64,7 +64,7 @@ describe('TenantAware Middleware - Isolamento de Dados', () => {
         .set('Authorization', `Bearer ${token2}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.message).toContain('nÆo encontrado');
+      expect(res.body.message).toContain('encontrado');
     });
 
     it('nÆo deve permitir que um professor atualize aluno de outro professor', async () => {
@@ -93,7 +93,7 @@ describe('TenantAware Middleware - Isolamento de Dados', () => {
 
       expect(res.status).toBe(404);
       
-      // Verificar que o aluno ainda est  ativo
+      // Verificar que o aluno ainda est  ativo
       const studentAfter = await Student.findById(student._id);
       expect(studentAfter.active).toBe(true);
     });

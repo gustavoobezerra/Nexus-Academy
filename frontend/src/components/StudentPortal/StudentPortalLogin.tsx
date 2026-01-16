@@ -93,29 +93,10 @@ export const StudentPortalLogin = () => {
       } else {
         navigate('/portal/dashboard');
       }
-    } catch (error) {
-      // Erro já foi tratado pelo interceptor, mas vamos fornecer fallback para demo
-      const demoStudent = {
-        id: 'demo_student',
-        name: 'Aluno Demo',
-        email: email || 'aluno@demo.com',
-        grade: '9º Ano',
-        subject: 'Matemática',
-        points: 1250,
-        level: 5,
-        performance: { overall: 85, trend: 'up' },
-        onboardingCompleted: false
-      };
-      localStorage.setItem('studentToken', 'demo-student-token');
-      localStorage.setItem('student', JSON.stringify(demoStudent));
-      localStorage.setItem('savedStudent', JSON.stringify({
-        id: demoStudent.id,
-        name: demoStudent.name,
-        email: demoStudent.email,
-        grade: demoStudent.grade
-      }));
-      toast.success('Login demo realizado!');
-      navigate('/portal/onboarding');
+    } catch (error: any) {
+      // Mostrar erro específico ou mensagem genérica
+      const message = error?.message || 'Erro ao fazer login. Verifique suas credenciais.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -179,29 +160,10 @@ export const StudentPortalLogin = () => {
 
       // Always go to onboarding after registration
       navigate('/portal/onboarding');
-    } catch (error) {
-      // Erro já tratado pelo interceptor, fornecer fallback demo
-      const demoStudent = {
-        id: 'new_student',
-        name: name || 'Novo Aluno',
-        email: email,
-        grade: grade || '9º Ano',
-        subject: 'Geral',
-        points: 0,
-        level: 1,
-        performance: { overall: 0, trend: 'stable' },
-        onboardingCompleted: false
-      };
-      localStorage.setItem('studentToken', 'demo-student-token');
-      localStorage.setItem('student', JSON.stringify(demoStudent));
-      localStorage.setItem('savedStudent', JSON.stringify({
-        id: demoStudent.id,
-        name: demoStudent.name,
-        email: demoStudent.email,
-        grade: demoStudent.grade
-      }));
-      toast.success('Conta demo criada!');
-      navigate('/portal/onboarding');
+    } catch (error: any) {
+      // Mostrar erro específico ou mensagem genérica
+      const message = error?.message || 'Erro ao criar conta. Tente novamente.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

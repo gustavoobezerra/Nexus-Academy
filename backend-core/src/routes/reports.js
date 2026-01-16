@@ -95,7 +95,7 @@ async function generateReportData(report, teacherId) {
 
   switch (report.type) {
     case 'financial_summary':
-    case 'financial_detailed':
+    case 'financial_detailed': {
       const payments = await Payment.find({
         teacher: teacherId,
         createdAt: { $gte: startDate, $lte: endDate }
@@ -113,16 +113,18 @@ async function generateReportData(report, teacherId) {
         byMonth: groupByMonth(payments),
         payments: report.type === 'financial_detailed' ? payments : undefined
       };
+    }
 
-    case 'student_performance':
+    case 'student_performance': {
       const students = await Student.find({ teacher: teacherId, active: true });
       return {
         totalStudents: students.length,
         averagePerformance: students.reduce((sum, s) => sum + (s.performance?.overall || 0), 0) / students.length,
         byPerformance: students.map(s => ({ name: s.name, score: s.performance?.overall || 0, trend: s.performance?.trend }))
       };
+    }
 
-    case 'class_summary':
+    case 'class_summary': {
       const classes = await Class.find({
         teacher: teacherId,
         scheduledAt: { $gte: startDate, $lte: endDate }
@@ -136,6 +138,7 @@ async function generateReportData(report, teacherId) {
         totalHours: classes.reduce((sum, c) => sum + (c.duration || 0), 0) / 60,
         byStudent: groupByStudent(classes)
       };
+    }
 
     default:
       return { message: 'Report type not implemented' };

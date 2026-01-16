@@ -78,7 +78,7 @@ export async function getTranscription(transcriptId) {
   try {
     const pollingEndpoint = `${baseUrl}/v2/transcript/${transcriptId}`;
 
-    while (true) {
+    for (;;) {
       const pollingResponse = await axios.get(pollingEndpoint, { headers });
       const result = pollingResponse.data;
 

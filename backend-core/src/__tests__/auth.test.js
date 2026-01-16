@@ -16,7 +16,7 @@ describe('Auth API', () => {
         .send({
           name: 'New Teacher',
           email: 'newteacher@test.com',
-          password: 'password123',
+          password: 'Password123!',
           phone: '(11) 99999-9999'
         });
 
@@ -39,7 +39,7 @@ describe('Auth API', () => {
         .send({
           name: 'New User',
           email: 'existing@test.com',
-          password: 'password123'
+          password: 'Password123!'
         });
 
       expect(res.status).toBe(400);

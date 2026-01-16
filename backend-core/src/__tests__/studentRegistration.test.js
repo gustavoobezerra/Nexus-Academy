@@ -208,7 +208,8 @@ describe('Fluxo Completo de Registro de Aluno', () => {
 
     it('deve buscar por nome, email ou telefone', async () => {
       const res = await request(app)
-        .get('/api/students?search=João')
+        .get('/api/students')
+        .query({ search: 'João' })
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);

@@ -43,7 +43,7 @@ router.get('/subjects', (req, res) => {
  * @swagger
  * /api/student-onboarding/select-subject:
  *   post:
- *     summary: Seleciona mat‚ria principal e retorna question rio espec¡fico
+ *     summary: Seleciona mat‚ria principal e retorna question rio espec¡fico
  *     tags: [Student Onboarding]
  *     security:
  *       - bearerAuth: []
@@ -64,7 +64,7 @@ router.get('/subjects', (req, res) => {
  *                 description: Nome customizado se "Outros" foi selecionado
  *     responses:
  *       200:
- *         description: Question rio espec¡fico da mat‚ria
+ *         description: Question rio espec¡fico da mat‚ria
  */
 router.post('/select-subject', authenticateStudent, async (req, res) => {
   try {
@@ -82,7 +82,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
       ? customSubject.trim().slice(0, 100)
       : subject;
 
-    // Buscar question rio espec¡fico
+    // Buscar question rio espec¡fico
     const questionnaire = getQuestionnaireForSubject(subjectName);
 
     // Salvar a mat‚ria selecionada no aluno (parcialmente, antes de completar onboarding)
@@ -111,7 +111,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
  * @swagger
  * /api/student-onboarding/get-questionnaire:
  *   post:
- *     summary: Obt‚m question rio para uma mat‚ria espec¡fica
+ *     summary: Obt‚m question rio para uma mat‚ria espec¡fica
  *     tags: [Student Onboarding]
  *     requestBody:
  *       required: true
@@ -126,7 +126,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
  *                 type: string
  *     responses:
  *       200:
- *         description: Question rio da mat‚ria
+ *         description: Question rio da mat‚ria
  */
 router.post('/get-questionnaire', (req, res) => {
   try {
@@ -149,7 +149,7 @@ router.post('/get-questionnaire', (req, res) => {
     console.error('Get questionnaire error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao obter question rio'
+      message: 'Erro ao obter question rio'
     });
   }
 });
@@ -158,7 +158,7 @@ router.post('/get-questionnaire', (req, res) => {
  * @swagger
  * /api/student-onboarding/submit:
  *   post:
- *     summary: Submete respostas do question rio e completa onboarding
+ *     summary: Submete respostas do question rio e completa onboarding
  *     tags: [Student Onboarding]
  *     security:
  *       - bearerAuth: []
@@ -210,7 +210,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
       });
     }
 
-    // Validar hor rio preferido
+    // Validar hor rio preferido
     const validSchedules = ['morning', 'afternoon', 'evening', 'flexible'];
     const schedule = validSchedules.includes(preferredSchedule) ? preferredSchedule : 'flexible';
 
@@ -283,7 +283,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
           recipientName: student.teacher.name,
           channel: 'in_app',
           subject: '?? Novo aluno completou o onboarding!',
-          body: `O aluno ${student.name} completou o question rio inicial e est  pronto para come‡ar as aulas de ${subject}. N¡vel: ${answers.level || 'NÆo informado'}. Hor rio preferido: ${schedule === 'morning' ? 'ManhÆ' : schedule === 'afternoon' ? 'Tarde' : schedule === 'evening' ? 'Noite' : 'Flex¡vel'}.`,
+          body: `O aluno ${student.name} completou o question rio inicial e est  pronto para come‡ar as aulas de ${subject}. N¡vel: ${answers.level || 'NÆo informado'}. Hor rio preferido: ${schedule === 'morning' ? 'ManhÆ' : schedule === 'afternoon' ? 'Tarde' : schedule === 'evening' ? 'Noite' : 'Flex¡vel'}.`,
           status: 'pending',
           entityType: 'student',
           entityId: student._id
@@ -309,7 +309,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
             recipientName: teacher.name,
             channel: 'in_app',
             subject: '?? Novo aluno dispon¡vel!',
-            body: `Um novo aluno (${student.name}) se cadastrou e est  procurando aulas de ${subject}. Seja o primeiro a entrar em contato!`,
+            body: `Um novo aluno (${student.name}) se cadastrou e est  procurando aulas de ${subject}. Seja o primeiro a entrar em contato!`,
             status: 'pending',
             entityType: 'student',
             entityId: student._id

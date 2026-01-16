@@ -45,28 +45,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ====== BANCO DE DADOS EM MEMÓRIA ======
-// Usuario demo pre-cadastrado (senha: 123456)
-// Hash sera gerado dinamicamente na inicializacao
-let senhaDemoHash = null;
+// Em produção, usar MongoDB ou outro banco persistente
+// Este banco em memória é apenas para desenvolvimento/testes
 
-let users = [
-  {
-    id: 'user_demo',
-    name: 'Professor Demo',
-    email: 'demo@nexus.com',
-    password: null, // Sera definido na inicializacao
-    phone: '(11) 99999-9999',
-    role: 'teacher',
-    status: 'pending_setup',
-    onboardingCompletedAt: null,
-    slug: null,
-    subscriptionStatus: 'none',
-    subscriptionPlan: null,
-    trialEndsAt: null,
-    paymentMethod: 'pending',
-    createdAt: new Date()
-  }
-];
+let users = [];
 
 const RESERVED_SLUGS = [
   'admin', 'api', 'dashboard', 'login', 'register', 'signup',
@@ -75,128 +57,15 @@ const RESERVED_SLUGS = [
   'terms', 'privacy', 'blog', 'docs', 'status', 'health'
 ];
 
-// 10 alunos demo com dados variados
-let students = [
-  {
-    id: 'student_1', _id: 'student_1',
-    name: 'Maria Silva', age: 12, grade: '7o Ano', monthlyFee: 450.00,
-    guardian: 'Ana Silva', parentName: 'Ana Silva',
-    email: 'ana.silva@email.com', parentEmail: 'ana.silva@email.com',
-    phone: '(11) 98888-1111', parentPhone: '(11) 98888-1111',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'paid',
-    subject: 'Matematica', nextClass: 'Segunda 14:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_2', _id: 'student_2',
-    name: 'Joao Santos', age: 10, grade: '5o Ano', monthlyFee: 400.00,
-    guardian: 'Carlos Santos', parentName: 'Carlos Santos',
-    email: 'carlos.santos@email.com', parentEmail: 'carlos.santos@email.com',
-    phone: '(11) 97777-2222', parentPhone: '(11) 97777-2222',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'pending',
-    subject: 'Portugues', nextClass: 'Terca 15:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_3', _id: 'student_3',
-    name: 'Pedro Oliveira', age: 14, grade: '9o Ano', monthlyFee: 500.00,
-    guardian: 'Lucia Oliveira', parentName: 'Lucia Oliveira',
-    email: 'lucia.oliveira@email.com', parentEmail: 'lucia.oliveira@email.com',
-    phone: '(11) 96666-3333', parentPhone: '(11) 96666-3333',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'late',
-    subject: 'Matematica', nextClass: 'Quarta 16:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_4', _id: 'student_4',
-    name: 'Ana Carolina Mendes', age: 11, grade: '6o Ano', monthlyFee: 420.00,
-    guardian: 'Roberto Mendes', parentName: 'Roberto Mendes',
-    email: 'roberto.mendes@email.com', parentEmail: 'roberto.mendes@email.com',
-    phone: '(11) 95555-4444', parentPhone: '(11) 95555-4444',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'paid',
-    subject: 'Ingles', nextClass: 'Segunda 16:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_5', _id: 'student_5',
-    name: 'Lucas Ferreira', age: 15, grade: '1o EM', monthlyFee: 550.00,
-    guardian: 'Patricia Ferreira', parentName: 'Patricia Ferreira',
-    email: 'patricia.ferreira@email.com', parentEmail: 'patricia.ferreira@email.com',
-    phone: '(11) 94444-5555', parentPhone: '(11) 94444-5555',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'paid',
-    subject: 'Fisica', nextClass: 'Quinta 14:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_6', _id: 'student_6',
-    name: 'Beatriz Costa', age: 13, grade: '8o Ano', monthlyFee: 480.00,
-    guardian: 'Marcelo Costa', parentName: 'Marcelo Costa',
-    email: 'marcelo.costa@email.com', parentEmail: 'marcelo.costa@email.com',
-    phone: '(11) 93333-6666', parentPhone: '(11) 93333-6666',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'pending',
-    subject: 'Quimica', nextClass: 'Sexta 15:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_7', _id: 'student_7',
-    name: 'Gabriel Souza', age: 9, grade: '4o Ano', monthlyFee: 380.00,
-    guardian: 'Fernanda Souza', parentName: 'Fernanda Souza',
-    email: 'fernanda.souza@email.com', parentEmail: 'fernanda.souza@email.com',
-    phone: '(11) 92222-7777', parentPhone: '(11) 92222-7777',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'paid',
-    subject: 'Matematica', nextClass: 'Terca 14:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_8', _id: 'student_8',
-    name: 'Isabela Rodrigues', age: 16, grade: '2o EM', monthlyFee: 580.00,
-    guardian: 'Antonio Rodrigues', parentName: 'Antonio Rodrigues',
-    email: 'antonio.rodrigues@email.com', parentEmail: 'antonio.rodrigues@email.com',
-    phone: '(11) 91111-8888', parentPhone: '(11) 91111-8888',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'late',
-    subject: 'Biologia', nextClass: 'Quarta 14:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_9', _id: 'student_9',
-    name: 'Rafael Lima', age: 12, grade: '7o Ano', monthlyFee: 450.00,
-    guardian: 'Sandra Lima', parentName: 'Sandra Lima',
-    email: 'sandra.lima@email.com', parentEmail: 'sandra.lima@email.com',
-    phone: '(11) 90000-9999', parentPhone: '(11) 90000-9999',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'paid',
-    subject: 'Historia', nextClass: 'Segunda 15:00',
-    deleted: false, createdAt: new Date()
-  },
-  {
-    id: 'student_10', _id: 'student_10',
-    name: 'Camila Almeida', age: 14, grade: '9o Ano', monthlyFee: 500.00,
-    guardian: 'Ricardo Almeida', parentName: 'Ricardo Almeida',
-    email: 'ricardo.almeida@email.com', parentEmail: 'ricardo.almeida@email.com',
-    phone: '(11) 98765-4321', parentPhone: '(11) 98765-4321',
-    teacherId: 'user_demo', status: 'active', paymentStatus: 'pending',
-    subject: 'Geografia', nextClass: 'Quinta 16:00',
-    deleted: false, createdAt: new Date()
-  }
-];
+// Dados iniciais vazios para produção
+let students = [];
+let payments = [];
+
+// Dados iniciais vazios para produção
+let classes = [];
 
 const mesAtual = new Date().toLocaleString('pt-BR', { month: 'long' });
 const anoAtual = new Date().getFullYear();
-
-// Pagamentos para todos os 10 alunos
-let payments = [
-  { id: 'payment_1', _id: 'payment_1', studentId: 'student_1', amount: 450.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'paid', paidAt: new Date(), createdAt: new Date() },
-  { id: 'payment_2', _id: 'payment_2', studentId: 'student_2', amount: 400.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'pending', createdAt: new Date() },
-  { id: 'payment_3', _id: 'payment_3', studentId: 'student_3', amount: 500.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth() - 1, 10), status: 'late', createdAt: new Date() },
-  { id: 'payment_4', _id: 'payment_4', studentId: 'student_4', amount: 420.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'paid', paidAt: new Date(), createdAt: new Date() },
-  { id: 'payment_5', _id: 'payment_5', studentId: 'student_5', amount: 550.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'paid', paidAt: new Date(), createdAt: new Date() },
-  { id: 'payment_6', _id: 'payment_6', studentId: 'student_6', amount: 480.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'pending', createdAt: new Date() },
-  { id: 'payment_7', _id: 'payment_7', studentId: 'student_7', amount: 380.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'paid', paidAt: new Date(), createdAt: new Date() },
-  { id: 'payment_8', _id: 'payment_8', studentId: 'student_8', amount: 580.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth() - 1, 10), status: 'late', createdAt: new Date() },
-  { id: 'payment_9', _id: 'payment_9', studentId: 'student_9', amount: 450.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'paid', paidAt: new Date(), createdAt: new Date() },
-  { id: 'payment_10', _id: 'payment_10', studentId: 'student_10', amount: 500.00, month: mesAtual, year: anoAtual, dueDate: new Date(anoAtual, new Date().getMonth(), 10), status: 'pending', createdAt: new Date() }
-];
-
-// Aulas agendadas demo
 const hoje = new Date();
 const gerarDataAula = (diasAFrente, hora, minuto) => {
   const data = new Date(hoje);
@@ -204,208 +73,6 @@ const gerarDataAula = (diasAFrente, hora, minuto) => {
   data.setHours(hora, minuto, 0, 0);
   return data;
 };
-
-let classes = [
-  // Aulas passadas (historico completo)
-  {
-    id: 'class_h1', _id: 'class_h1',
-    title: 'Matematica - Revisao Algebra',
-    studentId: 'student_1', studentName: 'Maria Silva',
-    subject: 'Matematica', grade: '7o Ano',
-    scheduledAt: gerarDataAula(-30, 14, 0),
-    duration: 60, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-maria',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Aula focada em revisao de algebra basica. Aluna demonstrou excelente compreensao dos conceitos.',
-    attendance: 'present', notes: 'Aluna muito participativa'
-  },
-  {
-    id: 'class_h2', _id: 'class_h2',
-    title: 'Matematica - Equacoes 1o Grau',
-    studentId: 'student_1', studentName: 'Maria Silva',
-    subject: 'Matematica', grade: '7o Ano',
-    scheduledAt: gerarDataAula(-23, 14, 0),
-    duration: 60, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-maria',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Introducao a equacoes de primeiro grau. Resolveu 15 exercicios com 90% de acerto.',
-    attendance: 'present', notes: 'Progresso excelente'
-  },
-  {
-    id: 'class_h3', _id: 'class_h3',
-    title: 'Portugues - Verbos e Conjugacao',
-    studentId: 'student_2', studentName: 'Joao Santos',
-    subject: 'Portugues', grade: '5o Ano',
-    scheduledAt: gerarDataAula(-20, 15, 0),
-    duration: 60, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-joao',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Estudo de verbos regulares e irregulares. Aluno precisa praticar mais conjugacao.',
-    attendance: 'present', notes: 'Reforcar exercicios de conjugacao'
-  },
-  {
-    id: 'class_h4', _id: 'class_h4',
-    title: 'Matematica - Funcoes Lineares',
-    studentId: 'student_3', studentName: 'Pedro Oliveira',
-    subject: 'Matematica', grade: '9o Ano',
-    scheduledAt: gerarDataAula(-15, 16, 0),
-    duration: 90, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-pedro',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Introducao a funcoes lineares e graficos. Aluno dominou o conteudo rapidamente.',
-    attendance: 'present', notes: 'Aluno avancado, pode receber desafios extras'
-  },
-  {
-    id: 'class_h5', _id: 'class_h5',
-    title: 'Fisica - Movimento Retilineo',
-    studentId: 'student_5', studentName: 'Lucas Ferreira',
-    subject: 'Fisica', grade: '1o EM',
-    scheduledAt: gerarDataAula(-12, 14, 0),
-    duration: 90, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-lucas',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Estudo de MRU e MRUV. Resolveu problemas praticos com boa performance.',
-    attendance: 'present', notes: 'Aluno interessado em experimentos'
-  },
-  {
-    id: 'class_h6', _id: 'class_h6',
-    title: 'Biologia - Sistema Digestorio',
-    studentId: 'student_8', studentName: 'Isabela Rodrigues',
-    subject: 'Biologia', grade: '2o EM',
-    scheduledAt: gerarDataAula(-10, 14, 0),
-    duration: 90, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-isabela',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Anatomia e fisiologia do sistema digestorio. Aluna participou ativamente.',
-    attendance: 'present', notes: 'Interessada em medicina'
-  },
-  {
-    id: 'class_h7', _id: 'class_h7',
-    title: 'Matematica - Geometria Plana',
-    studentId: 'student_7', studentName: 'Gabriel Souza',
-    subject: 'Matematica', grade: '4o Ano',
-    scheduledAt: gerarDataAula(-7, 14, 0),
-    duration: 45, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-gabriel',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Estudo de formas geometricas basicas. Aluno precisa revisar triangulos.',
-    attendance: 'present', notes: 'Trazer materiais visuais na proxima aula'
-  },
-  {
-    id: 'class_h8', _id: 'class_h8',
-    title: 'Quimica - Ligacoes Quimicas',
-    studentId: 'student_6', studentName: 'Beatriz Costa',
-    subject: 'Quimica', grade: '8o Ano',
-    scheduledAt: gerarDataAula(-5, 15, 0),
-    duration: 60, status: 'completed', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-beatriz',
-    teacherId: 'user_demo', createdAt: new Date(),
-    summary: 'Estudo de ligacoes ionicas e covalentes. Aluna teve dificuldade inicial mas compreendeu.',
-    attendance: 'present', notes: 'Enviar material complementar'
-  },
-  // Aulas de hoje
-  {
-    id: 'class_1', _id: 'class_1',
-    title: 'Matematica - Equacoes 2o Grau',
-    studentId: 'student_1', studentName: 'Maria Silva',
-    subject: 'Matematica', grade: '7o Ano',
-    scheduledAt: gerarDataAula(0, 14, 0),
-    duration: 60, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-maria',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_4', _id: 'class_4',
-    title: 'Ingles - Conversation Practice',
-    studentId: 'student_4', studentName: 'Ana Carolina Mendes',
-    subject: 'Ingles', grade: '6o Ano',
-    scheduledAt: gerarDataAula(0, 16, 0),
-    duration: 60, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-ana',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  // Aulas futuras
-  {
-    id: 'class_2', _id: 'class_2',
-    title: 'Portugues - Interpretacao de Texto',
-    studentId: 'student_2', studentName: 'Joao Santos',
-    subject: 'Portugues', grade: '5o Ano',
-    scheduledAt: gerarDataAula(1, 15, 0),
-    duration: 60, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-joao',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_7', _id: 'class_7',
-    title: 'Matematica - Multiplicacao',
-    studentId: 'student_7', studentName: 'Gabriel Souza',
-    subject: 'Matematica', grade: '4o Ano',
-    scheduledAt: gerarDataAula(1, 14, 0),
-    duration: 45, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-gabriel',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_3', _id: 'class_3',
-    title: 'Matematica - Funcoes',
-    studentId: 'student_3', studentName: 'Pedro Oliveira',
-    subject: 'Matematica', grade: '9o Ano',
-    scheduledAt: gerarDataAula(2, 16, 0),
-    duration: 90, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-pedro',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_8', _id: 'class_8',
-    title: 'Biologia - Celulas',
-    studentId: 'student_8', studentName: 'Isabela Rodrigues',
-    subject: 'Biologia', grade: '2o EM',
-    scheduledAt: gerarDataAula(2, 14, 0),
-    duration: 90, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-isabela',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_5', _id: 'class_5',
-    title: 'Fisica - Cinematica',
-    studentId: 'student_5', studentName: 'Lucas Ferreira',
-    subject: 'Fisica', grade: '1o EM',
-    scheduledAt: gerarDataAula(3, 14, 0),
-    duration: 90, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-lucas',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_6', _id: 'class_6',
-    title: 'Quimica - Tabela Periodica',
-    studentId: 'student_6', studentName: 'Beatriz Costa',
-    subject: 'Quimica', grade: '8o Ano',
-    scheduledAt: gerarDataAula(4, 15, 0),
-    duration: 60, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-beatriz',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_9', _id: 'class_9',
-    title: 'Historia - Brasil Colonial',
-    studentId: 'student_9', studentName: 'Rafael Lima',
-    subject: 'Historia', grade: '7o Ano',
-    scheduledAt: gerarDataAula(5, 15, 0),
-    duration: 60, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-rafael',
-    teacherId: 'user_demo', createdAt: new Date()
-  },
-  {
-    id: 'class_10', _id: 'class_10',
-    title: 'Geografia - Relevo Brasileiro',
-    studentId: 'student_10', studentName: 'Camila Almeida',
-    subject: 'Geografia', grade: '9o Ano',
-    scheduledAt: gerarDataAula(6, 16, 0),
-    duration: 60, status: 'scheduled', isLive: false,
-    meetingLink: 'https://meet.nexus.com/aula-camila',
-    teacherId: 'user_demo', createdAt: new Date()
-  }
-];
 
 // ====== MIDDLEWARE DE AUTENTICAÇÃO ======
 const protect = async (req, res, next) => {
@@ -415,9 +82,9 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Nao autorizado' });
     }
 
-    // Verificacao JWT normal
+    // Verificacao JWT
     try {
-      const decoded = jwt.verify(token, JWT_SECRET || 'insecure-dev-secret');
+      const decoded = jwt.verify(token, JWT_SECRET || 'nexus-secret-key-2025');
       req.user = users.find(u => u.id === decoded.id);
 
       if (!req.user) {
@@ -426,6 +93,10 @@ const protect = async (req, res, next) => {
 
       next();
     } catch (jwtError) {
+      // Tratamento específico para token expirado
+      if (jwtError.name === 'TokenExpiredError') {
+        return res.status(401).json({ success: false, message: 'Sessão expirada. Faça login novamente.' });
+      }
       return res.status(401).json({ success: false, message: 'Token invalido' });
     }
   } catch (error) {
@@ -974,6 +645,105 @@ app.get('/api/auth/me', protect, (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro ao buscar usuário', error: error.message });
+  }
+});
+
+// Atualizar perfil do professor
+app.put('/api/auth/profile', protect, (req, res) => {
+  try {
+    const userIndex = users.findIndex(u => u.id === req.user.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+    }
+
+    const allowedFields = ['name', 'phone', 'bio', 'avatar', 'socialLinks'];
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        users[userIndex][field] = req.body[field];
+      }
+    }
+
+    const { password, ...usuarioSemSenha } = users[userIndex];
+    res.json({
+      success: true,
+      user: usuarioSemSenha
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao atualizar perfil', error: error.message });
+  }
+});
+
+// Atualizar configurações de notificação
+app.put('/api/auth/notification-settings', protect, (req, res) => {
+  try {
+    const userIndex = users.findIndex(u => u.id === req.user.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+    }
+
+    users[userIndex].notificationSettings = {
+      ...users[userIndex].notificationSettings,
+      ...req.body
+    };
+
+    res.json({
+      success: true,
+      notificationSettings: users[userIndex].notificationSettings
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao atualizar configurações', error: error.message });
+  }
+});
+
+// Atualizar configurações de pagamento
+app.put('/api/auth/payment-settings', protect, (req, res) => {
+  try {
+    const userIndex = users.findIndex(u => u.id === req.user.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+    }
+
+    users[userIndex].paymentSettings = {
+      ...users[userIndex].paymentSettings,
+      ...req.body
+    };
+
+    res.json({
+      success: true,
+      paymentSettings: users[userIndex].paymentSettings
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao atualizar configurações de pagamento', error: error.message });
+  }
+});
+
+// Buscar professor pelo slug (rota pública)
+app.get('/api/auth/teacher/:slug', (req, res) => {
+  try {
+    const { slug } = req.params;
+    const teacher = users.find(u => u.slug === slug && u.role === 'teacher');
+
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: 'Professor não encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      teacher: {
+        id: teacher.id,
+        name: teacher.name,
+        email: teacher.email,
+        slug: teacher.slug,
+        bio: teacher.bio || '',
+        avatar: teacher.avatar || null,
+        subjects: teacher.subjects || ['Geral']
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar professor', error: error.message });
   }
 });
 
@@ -1788,6 +1558,7 @@ app.get('/api/analytics/student-payments', protect, (req, res) => {
 });
 
 // ====== ROTAS DE NOTIFICAÇÕES ======
+// Suporte tanto para /notifications quanto /api/notifications
 
 app.get('/notifications', protect, (req, res) => {
   try {
@@ -1797,9 +1568,74 @@ app.get('/notifications', protect, (req, res) => {
   }
 });
 
+app.get('/api/notifications', protect, (req, res) => {
+  try {
+    res.json({
+      success: true,
+      notifications: notifications.slice(0, 50)
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar notificações', error: error.message });
+  }
+});
+
+// Contar notificações não lidas
+app.get('/api/notifications/unread-count', protect, (req, res) => {
+  try {
+    const unreadCount = notifications.filter(n => !n.read && n.recipientId === req.user.id).length;
+    res.json({
+      success: true,
+      count: unreadCount
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao contar notificações', error: error.message });
+  }
+});
+
+// Marcar notificação como lida
+app.post('/api/notifications/:id/read', protect, (req, res) => {
+  try {
+    const { id } = req.params;
+    const notifIndex = notifications.findIndex(n => n.id === id);
+    if (notifIndex !== -1) {
+      notifications[notifIndex].read = true;
+      notifications[notifIndex].readAt = new Date();
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao marcar como lida', error: error.message });
+  }
+});
+
+// Marcar todas como lidas
+app.post('/api/notifications/read-all', protect, (req, res) => {
+  try {
+    notifications.forEach(n => {
+      if (n.recipientId === req.user.id && !n.read) {
+        n.read = true;
+        n.readAt = new Date();
+      }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao marcar todas como lidas', error: error.message });
+  }
+});
+
 app.get('/notifications/templates', protect, (req, res) => {
   try {
     res.json(notificationTemplates);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar templates', error: error.message });
+  }
+});
+
+app.get('/api/notifications/templates', protect, (req, res) => {
+  try {
+    res.json({
+      success: true,
+      templates: notificationTemplates
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro ao buscar templates', error: error.message });
   }
@@ -1825,7 +1661,36 @@ app.post('/notifications/templates', protect, (req, res) => {
   }
 });
 
+app.post('/api/notifications/templates', protect, (req, res) => {
+  try {
+    const { name, type, subject, body } = req.body;
+    const newTemplate = {
+      id: `template_${Date.now()}`,
+      name,
+      type,
+      subject,
+      body,
+      variables: [],
+      active: true,
+      createdAt: new Date()
+    };
+    notificationTemplates.push(newTemplate);
+    res.json({ success: true, template: newTemplate });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao criar template', error: error.message });
+  }
+});
+
 app.delete('/notifications/templates/:id', protect, (req, res) => {
+  try {
+    notificationTemplates = notificationTemplates.filter(t => t.id !== req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao deletar template', error: error.message });
+  }
+});
+
+app.delete('/api/notifications/templates/:id', protect, (req, res) => {
   try {
     notificationTemplates = notificationTemplates.filter(t => t.id !== req.params.id);
     res.json({ success: true });
@@ -1838,7 +1703,7 @@ app.post('/notifications/send', protect, (req, res) => {
   try {
     const { type, channel, recipientId, title, message, scheduledFor } = req.body;
     const student = students.find(s => s.id === recipientId);
-    
+
     const notification = {
       id: `notif_${Date.now()}`,
       type,
@@ -1850,14 +1715,41 @@ app.post('/notifications/send', protect, (req, res) => {
       scheduledFor: scheduledFor || new Date().toISOString(),
       status: scheduledFor ? 'pending' : 'sent',
       sentAt: scheduledFor ? null : new Date(),
+      read: false,
       createdAt: new Date()
     };
-    
+
     notifications.unshift(notification);
-    
-    // DEBUG: console.log(`📨 ${channel.toUpperCase()}: "${title}" → ${student?.name || recipientId}`);
-    
+
     res.json(notification);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao enviar notificação', error: error.message });
+  }
+});
+
+app.post('/api/notifications/send', protect, (req, res) => {
+  try {
+    const { type, channel, recipientId, title, message, scheduledFor } = req.body;
+    const student = students.find(s => s.id === recipientId);
+
+    const notification = {
+      id: `notif_${Date.now()}`,
+      type,
+      recipientId,
+      recipientName: student?.name || 'Unknown',
+      channel,
+      title,
+      message,
+      scheduledFor: scheduledFor || new Date().toISOString(),
+      status: scheduledFor ? 'pending' : 'sent',
+      sentAt: scheduledFor ? null : new Date(),
+      read: false,
+      createdAt: new Date()
+    };
+
+    notifications.unshift(notification);
+
+    res.json({ success: true, notification });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erro ao enviar notificação', error: error.message });
   }
@@ -2244,9 +2136,782 @@ app.delete('/api/chat/messages/:messageId', protect, (req, res) => {
   }
 });
 
+// ====== ROTAS DO PORTAL DO ALUNO ======
+
+// Banco de dados em memória para alunos do portal
+let portalStudents = [];
+
+// Middleware de autenticação do aluno
+const protectStudent = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Token não fornecido' });
+    }
+
+    const token = authHeader.substring(7);
+    if (!token || token.length < 10) {
+      return res.status(401).json({ success: false, message: 'Token inválido' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'nexus-secret-key-2025');
+
+    if (decoded.type !== 'student') {
+      return res.status(403).json({ success: false, message: 'Acesso negado' });
+    }
+
+    req.studentId = decoded.studentId;
+    req.student = portalStudents.find(s => s.id === decoded.studentId);
+
+    if (!req.student) {
+      return res.status(401).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Sessão expirada. Faça login novamente.' });
+    }
+    return res.status(401).json({ success: false, message: 'Token inválido' });
+  }
+};
+
+// Login do aluno
+app.post('/api/portal/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email e senha são obrigatórios' });
+    }
+
+    // Buscar aluno
+    let student = portalStudents.find(s => s.email?.toLowerCase() === email.toLowerCase());
+
+    // Se não encontrar, criar um aluno demo
+    if (!student) {
+      student = {
+        id: `student_portal_${Date.now()}`,
+        name: 'Aluno Demo',
+        email: email.toLowerCase(),
+        grade: '9º Ano',
+        subject: 'Matemática',
+        points: 0,
+        level: 1,
+        onboardingCompleted: false,
+        createdAt: new Date()
+      };
+      portalStudents.push(student);
+    }
+
+    // Gerar token do aluno
+    const token = jwt.sign(
+      { studentId: student.id, type: 'student' },
+      process.env.JWT_SECRET || 'nexus-secret-key-2025',
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      student: {
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        grade: student.grade,
+        subject: student.subject,
+        points: student.points || 0,
+        level: student.level || 1,
+        onboardingCompleted: student.onboardingCompleted || false
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Portal login error:', error);
+    res.status(500).json({ success: false, message: 'Erro ao fazer login', error: error.message });
+  }
+});
+
+// Registro do aluno
+app.post('/api/portal/auth/register', async (req, res) => {
+  try {
+    const { name, email, password, age, grade, parentName, parentPhone, parentEmail } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Nome, email e senha são obrigatórios' });
+    }
+
+    // Verificar se já existe
+    const existingStudent = portalStudents.find(s => s.email?.toLowerCase() === email.toLowerCase());
+    if (existingStudent) {
+      return res.status(400).json({ success: false, message: 'Email já cadastrado' });
+    }
+
+    // Criar aluno
+    const student = {
+      id: `student_portal_${Date.now()}`,
+      name,
+      email: email.toLowerCase(),
+      age: parseInt(age) || 0,
+      grade: grade || '',
+      parentName: parentName || '',
+      parentPhone: parentPhone || '',
+      parentEmail: parentEmail || '',
+      subject: 'Geral',
+      points: 0,
+      level: 1,
+      onboardingCompleted: false,
+      onboarding: {
+        completed: false,
+        subject: null,
+        questionnaire: null
+      },
+      goals: [],
+      createdAt: new Date()
+    };
+
+    portalStudents.push(student);
+
+    // Gerar token
+    const token = jwt.sign(
+      { studentId: student.id, type: 'student' },
+      process.env.JWT_SECRET || 'nexus-secret-key-2025',
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      student: {
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        grade: student.grade,
+        points: 0,
+        level: 1,
+        onboardingCompleted: false
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Portal register error:', error);
+    res.status(500).json({ success: false, message: 'Erro ao criar conta', error: error.message });
+  }
+});
+
+// Perfil do aluno (alias /me)
+app.get('/api/portal/me', protectStudent, (req, res) => {
+  try {
+    // Buscar dados do localStorage se não tiver student
+    const storedStudent = req.student || portalStudents.find(s => s.id === req.studentId);
+
+    if (!storedStudent) {
+      // Criar dados demo
+      const demoStudent = {
+        _id: req.studentId || 'demo_student',
+        id: req.studentId || 'demo_student',
+        name: 'Aluno Demo',
+        email: 'aluno@demo.com',
+        grade: '9º Ano',
+        subject: 'Matemática',
+        performance: { overall: 85, trend: 'up' },
+        points: 1250,
+        level: 5,
+        teacher: {
+          _id: 'user_demo',
+          name: 'Professor Demo',
+          email: 'demo@nexus.com'
+        }
+      };
+      return res.json(demoStudent);
+    }
+
+    res.json({
+      _id: storedStudent.id,
+      id: storedStudent.id,
+      name: storedStudent.name,
+      email: storedStudent.email,
+      grade: storedStudent.grade || '9º Ano',
+      subject: storedStudent.subject || 'Geral',
+      performance: storedStudent.performance || { overall: 75, trend: 'stable' },
+      points: storedStudent.points || 0,
+      level: storedStudent.level || 1,
+      teacher: {
+        _id: 'user_demo',
+        name: 'Professor Demo',
+        email: 'demo@nexus.com'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar perfil', error: error.message });
+  }
+});
+
+// Perfil do aluno
+app.get('/api/portal/profile', protectStudent, (req, res) => {
+  try {
+    res.json({
+      success: true,
+      student: req.student
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar perfil', error: error.message });
+  }
+});
+
+// Atualizar perfil do aluno
+app.put('/api/portal/profile', protectStudent, (req, res) => {
+  try {
+    const studentIndex = portalStudents.findIndex(s => s.id === req.studentId);
+    if (studentIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    const allowedFields = ['name', 'grade', 'profile'];
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        portalStudents[studentIndex][field] = req.body[field];
+      }
+    }
+
+    res.json({
+      success: true,
+      student: portalStudents[studentIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao atualizar perfil', error: error.message });
+  }
+});
+
+// Aulas do aluno
+app.get('/api/portal/classes', protectStudent, (req, res) => {
+  try {
+    const studentClasses = classes.filter(c => c.studentId === req.studentId);
+    res.json({
+      success: true,
+      classes: studentClasses
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar aulas', error: error.message });
+  }
+});
+
+// Pagamentos do aluno
+app.get('/api/portal/payments', protectStudent, (req, res) => {
+  try {
+    const studentPayments = payments.filter(p => p.studentId === req.studentId);
+    res.json({
+      success: true,
+      payments: studentPayments
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar pagamentos', error: error.message });
+  }
+});
+
+// Atividades do aluno
+app.get('/api/portal/activities', protectStudent, (req, res) => {
+  try {
+    // Retornar atividades demo
+    const demoActivities = [
+      {
+        _id: 'activity_1',
+        title: 'Lista de Exercícios - Matemática',
+        type: 'exercise',
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending'
+      },
+      {
+        _id: 'activity_2',
+        title: 'Redação - Tema Livre',
+        type: 'essay',
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending'
+      }
+    ];
+
+    res.json({
+      success: true,
+      activities: demoActivities
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar atividades', error: error.message });
+  }
+});
+
+// Metas do aluno
+app.get('/api/portal/goals', protectStudent, (req, res) => {
+  try {
+    const student = portalStudents.find(s => s.id === req.studentId);
+    res.json({
+      success: true,
+      goals: student?.goals || []
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar metas', error: error.message });
+  }
+});
+
+app.post('/api/portal/goals', protectStudent, (req, res) => {
+  try {
+    const studentIndex = portalStudents.findIndex(s => s.id === req.studentId);
+    if (studentIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    const goal = {
+      id: `goal_${Date.now()}`,
+      title: req.body.title,
+      description: req.body.description || '',
+      progress: 0,
+      status: 'active',
+      createdAt: new Date()
+    };
+
+    if (!portalStudents[studentIndex].goals) {
+      portalStudents[studentIndex].goals = [];
+    }
+    portalStudents[studentIndex].goals.push(goal);
+
+    res.status(201).json({
+      success: true,
+      goal
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao criar meta', error: error.message });
+  }
+});
+
+// Atualizar meta do aluno
+app.put('/api/portal/goals/:goalId', protectStudent, (req, res) => {
+  try {
+    const { goalId } = req.params;
+    const studentIndex = portalStudents.findIndex(s => s.id === req.studentId);
+    if (studentIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    if (!portalStudents[studentIndex].goals) {
+      return res.status(404).json({ success: false, message: 'Meta não encontrada' });
+    }
+
+    const goalIndex = portalStudents[studentIndex].goals.findIndex(g => g.id === goalId);
+    if (goalIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Meta não encontrada' });
+    }
+
+    const allowedFields = ['title', 'description', 'progress', 'status', 'targetDate'];
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        portalStudents[studentIndex].goals[goalIndex][field] = req.body[field];
+      }
+    }
+    portalStudents[studentIndex].goals[goalIndex].updatedAt = new Date();
+
+    res.json({
+      success: true,
+      goal: portalStudents[studentIndex].goals[goalIndex]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao atualizar meta', error: error.message });
+  }
+});
+
+// Deletar meta do aluno
+app.delete('/api/portal/goals/:goalId', protectStudent, (req, res) => {
+  try {
+    const { goalId } = req.params;
+    const studentIndex = portalStudents.findIndex(s => s.id === req.studentId);
+    if (studentIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    if (!portalStudents[studentIndex].goals) {
+      return res.status(404).json({ success: false, message: 'Meta não encontrada' });
+    }
+
+    const goalIndex = portalStudents[studentIndex].goals.findIndex(g => g.id === goalId);
+    if (goalIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Meta não encontrada' });
+    }
+
+    portalStudents[studentIndex].goals.splice(goalIndex, 1);
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao deletar meta', error: error.message });
+  }
+});
+
+// Chat do portal do aluno
+let portalChatMessages = [];
+
+app.get('/api/portal/chat/messages', protectStudent, (req, res) => {
+  try {
+    const teacherId = req.query.teacherId || 'user_demo';
+    const studentId = req.studentId;
+
+    // Filtrar mensagens entre aluno e professor
+    const messages = portalChatMessages.filter(
+      m => (m.senderId === studentId && m.receiverId === teacherId) ||
+           (m.senderId === teacherId && m.receiverId === studentId)
+    );
+
+    res.json({
+      success: true,
+      messages: messages.length > 0 ? messages : [
+        {
+          id: 'welcome_msg',
+          senderId: 'user_demo',
+          receiverId: studentId,
+          message: 'Olá! Seja bem-vindo. Como posso ajudá-lo hoje?',
+          type: 'text',
+          createdAt: new Date(),
+          read: false
+        }
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao buscar mensagens', error: error.message });
+  }
+});
+
+app.post('/api/portal/chat/send', protectStudent, (req, res) => {
+  try {
+    const { teacherId, message } = req.body;
+    const studentId = req.studentId;
+
+    const newMessage = {
+      id: `msg_${Date.now()}`,
+      senderId: studentId,
+      receiverId: teacherId || 'user_demo',
+      message,
+      type: 'text',
+      createdAt: new Date(),
+      read: false
+    };
+
+    portalChatMessages.push(newMessage);
+
+    res.status(201).json({
+      success: true,
+      message: newMessage
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao enviar mensagem', error: error.message });
+  }
+});
+
+app.post('/api/portal/chat/mark-read/:messageId', protectStudent, (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const msgIndex = portalChatMessages.findIndex(m => m.id === messageId);
+    if (msgIndex !== -1) {
+      portalChatMessages[msgIndex].read = true;
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao marcar como lida', error: error.message });
+  }
+});
+
+// ====== ROTAS DE STUDENT ONBOARDING ======
+
+// Templates de questionários
+const SUBJECTS_DATA = {
+  'Idiomas': [
+    { name: 'Inglês', icon: '🇬🇧', category: 'Idiomas', description: 'Aprenda inglês do básico ao avançado' },
+    { name: 'Espanhol', icon: '🇪🇸', category: 'Idiomas', description: 'Domine o espanhol para viagens e negócios' },
+    { name: 'Francês', icon: '🇫🇷', category: 'Idiomas', description: 'Aprenda o idioma da cultura francesa' },
+  ],
+  'Exatas': [
+    { name: 'Matemática', icon: '📐', category: 'Exatas', description: 'Álgebra, geometria e cálculo' },
+    { name: 'Física', icon: '⚛️', category: 'Exatas', description: 'Mecânica, termodinâmica e mais' },
+    { name: 'Química', icon: '🧪', category: 'Exatas', description: 'Química orgânica e inorgânica' },
+  ],
+  'Programação e Tecnologia': [
+    { name: 'Programação', icon: '💻', category: 'Programação e Tecnologia', description: 'Python, JavaScript, Java e mais' },
+    { name: 'Desenvolvimento Web', icon: '🌐', category: 'Programação e Tecnologia', description: 'HTML, CSS, React e frameworks' },
+  ],
+  'Preparação para Provas': [
+    { name: 'ENEM', icon: '🎓', category: 'Preparação para Provas', description: 'Preparação completa para o ENEM' },
+    { name: 'Vestibular', icon: '🏛️', category: 'Preparação para Provas', description: 'Vestibulares específicos' },
+    { name: 'Concursos Públicos', icon: '📋', category: 'Preparação para Provas', description: 'Preparação para concursos' },
+  ],
+  'Outros': [
+    { name: 'Outros', icon: '❓', category: 'Outros', description: 'Outra matéria ou objetivo específico' },
+  ]
+};
+
+const QUESTIONNAIRE_TEMPLATES = {
+  'Inglês': {
+    icon: '🇬🇧',
+    description: 'Aprenda inglês do básico ao avançado',
+    category: 'Idiomas',
+    questions: [
+      {
+        id: 'level',
+        type: 'single-choice',
+        question: 'Qual é seu nível atual de inglês?',
+        options: [
+          { value: 'beginner', label: 'Iniciante (nunca estudei)' },
+          { value: 'basic', label: 'Básico (sei algumas palavras e frases)' },
+          { value: 'intermediate', label: 'Intermediário (converso sobre temas simples)' },
+          { value: 'advanced', label: 'Avançado (sou fluente mas quero aperfeiçoar)' }
+        ],
+        required: true
+      },
+      {
+        id: 'objectives',
+        type: 'multiple-choice',
+        question: 'Quais são seus principais objetivos com o inglês?',
+        options: ['Viajar', 'Trabalho/carreira', 'Exames (TOEFL, IELTS)', 'Filmes e séries', 'Estudar fora'],
+        required: true
+      },
+      {
+        id: 'focus',
+        type: 'single-choice',
+        question: 'Prefere aulas focadas em:',
+        options: [
+          { value: 'conversation', label: 'Conversação e fluência' },
+          { value: 'grammar', label: 'Gramática e escrita' },
+          { value: 'balanced', label: 'Equilíbrio entre conversação e gramática' }
+        ],
+        required: true
+      }
+    ]
+  },
+  'Matemática': {
+    icon: '📐',
+    description: 'Álgebra, geometria e cálculo',
+    category: 'Exatas',
+    questions: [
+      {
+        id: 'level',
+        type: 'single-choice',
+        question: 'Para que nível você precisa de aulas?',
+        options: [
+          { value: 'fundamental', label: 'Ensino Fundamental' },
+          { value: 'medio', label: 'Ensino Médio' },
+          { value: 'vestibular', label: 'Vestibular/ENEM' },
+          { value: 'superior', label: 'Ensino Superior' }
+        ],
+        required: true
+      },
+      {
+        id: 'topics',
+        type: 'multiple-choice',
+        question: 'Quais tópicos você tem mais dificuldade?',
+        options: ['Álgebra', 'Geometria', 'Trigonometria', 'Cálculo', 'Estatística'],
+        required: true
+      },
+      {
+        id: 'goal',
+        type: 'single-choice',
+        question: 'Qual é seu objetivo principal?',
+        options: [
+          { value: 'school', label: 'Melhorar as notas na escola' },
+          { value: 'exam', label: 'Passar em uma prova específica' },
+          { value: 'foundation', label: 'Fortalecer a base matemática' }
+        ],
+        required: true
+      }
+    ]
+  }
+};
+
+// Questionário genérico
+const GENERIC_QUESTIONNAIRE = {
+  icon: '❓',
+  description: 'Questionário personalizado',
+  category: 'Outros',
+  questions: [
+    {
+      id: 'experience',
+      type: 'single-choice',
+      question: 'Você já tem alguma experiência prévia nessa área?',
+      options: [
+        { value: 'none', label: 'Nenhuma, sou totalmente iniciante' },
+        { value: 'basic', label: 'Tenho noções básicas' },
+        { value: 'intermediate', label: 'Tenho experiência intermediária' },
+        { value: 'advanced', label: 'Tenho experiência avançada' }
+      ],
+      required: true
+    },
+    {
+      id: 'goal',
+      type: 'text',
+      question: 'Qual é seu principal objetivo ao aprender isso?',
+      placeholder: 'Ex: Melhorar no trabalho, passar em provas...',
+      required: true
+    },
+    {
+      id: 'learning_preference',
+      type: 'scale',
+      question: 'Você prefere aulas mais teóricas ou práticas?',
+      min: 1,
+      max: 10,
+      labels: { min: 'Totalmente teórico', max: 'Totalmente prático' },
+      required: true
+    }
+  ]
+};
+
+// Obter lista de matérias
+app.get('/api/student-onboarding/subjects', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      byCategory: SUBJECTS_DATA
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao obter matérias' });
+  }
+});
+
+// Selecionar matéria e obter questionário
+app.post('/api/student-onboarding/select-subject', protectStudent, (req, res) => {
+  try {
+    const { subject, customSubject } = req.body;
+
+    if (!subject) {
+      return res.status(400).json({ success: false, message: 'Matéria é obrigatória' });
+    }
+
+    const subjectName = subject === 'Outros' && customSubject ? customSubject.trim() : subject;
+
+    // Buscar questionário específico ou usar genérico
+    const template = QUESTIONNAIRE_TEMPLATES[subjectName] || GENERIC_QUESTIONNAIRE;
+
+    const questionnaire = {
+      subject: subjectName,
+      icon: template.icon,
+      description: template.description,
+      category: template.category,
+      questions: template.questions
+    };
+
+    // Atualizar aluno
+    const studentIndex = portalStudents.findIndex(s => s.id === req.studentId);
+    if (studentIndex !== -1) {
+      portalStudents[studentIndex].subject = subjectName;
+      if (!portalStudents[studentIndex].onboarding) {
+        portalStudents[studentIndex].onboarding = {};
+      }
+      portalStudents[studentIndex].onboarding.subject = subjectName;
+    }
+
+    res.json({
+      success: true,
+      subject: subjectName,
+      questionnaire
+    });
+  } catch (error) {
+    console.error('Select subject error:', error);
+    res.status(500).json({ success: false, message: 'Erro ao selecionar matéria' });
+  }
+});
+
+// Obter questionário para matéria
+app.post('/api/student-onboarding/get-questionnaire', (req, res) => {
+  try {
+    const { subject } = req.body;
+
+    if (!subject) {
+      return res.status(400).json({ success: false, message: 'Matéria é obrigatória' });
+    }
+
+    const template = QUESTIONNAIRE_TEMPLATES[subject] || GENERIC_QUESTIONNAIRE;
+
+    res.json({
+      success: true,
+      questionnaire: {
+        subject,
+        ...template
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao obter questionário' });
+  }
+});
+
+// Submeter onboarding
+app.post('/api/student-onboarding/submit', protectStudent, (req, res) => {
+  try {
+    const { subject, answers, goals, studyHoursPerWeek, preferredSchedule } = req.body;
+
+    if (!subject) {
+      return res.status(400).json({ success: false, message: 'Matéria é obrigatória' });
+    }
+
+    const studentIndex = portalStudents.findIndex(s => s.id === req.studentId);
+    if (studentIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    // Atualizar dados do aluno
+    portalStudents[studentIndex].subject = subject;
+    portalStudents[studentIndex].onboardingCompleted = true;
+    portalStudents[studentIndex].onboarding = {
+      completed: true,
+      completedAt: new Date(),
+      subject,
+      questionnaire: answers,
+      answers: {
+        studyHoursPerWeek: parseInt(studyHoursPerWeek) || 5,
+        preferredSchedule: preferredSchedule || 'flexible'
+      }
+    };
+
+    // Processar metas
+    if (goals && Array.isArray(goals) && goals.length > 0) {
+      portalStudents[studentIndex].goals = goals.slice(0, 5).map(goal => ({
+        id: `goal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        title: typeof goal === 'string' ? goal : goal.title,
+        description: goal.description || '',
+        progress: 0,
+        status: 'active',
+        createdAt: new Date()
+      }));
+    }
+
+    res.json({
+      success: true,
+      message: 'Onboarding concluído com sucesso!',
+      data: {
+        subject,
+        completedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Submit onboarding error:', error);
+    res.status(500).json({ success: false, message: 'Erro ao salvar onboarding' });
+  }
+});
+
 // ====== ROTAS DO JOGO DA FORCA ======
 import hangmanRoutes from './routes/hangman.js';
 app.use('/api/hangman', hangmanRoutes);
+
+// ====== HANDLER 404 - ROTA NÃO ENCONTRADA ======
+app.use((req, res, next) => {
+  // Ignorar requisições de arquivos estáticos
+  if (req.path.includes('.') && !req.path.endsWith('.json')) {
+    return next();
+  }
+
+  res.status(404).json({
+    success: false,
+    message: `Rota não encontrada: ${req.method} ${req.path}`,
+    code: 'NOT_FOUND',
+    availableRoutes: {
+      auth: ['/api/auth/login', '/api/auth/register', '/api/auth/me', '/api/auth/profile'],
+      students: ['/api/students', '/api/students/:id'],
+      classes: ['/api/classes', '/api/classes/:id'],
+      payments: ['/api/payments', '/api/payments/:id'],
+      portal: ['/api/portal/auth/login', '/api/portal/auth/register', '/api/portal/me', '/api/portal/profile'],
+      onboarding: ['/api/student-onboarding/subjects', '/api/student-onboarding/select-subject', '/api/student-onboarding/submit']
+    }
+  });
+});
 
 // ====== MIDDLEWARE DE ERRO ======
 app.use((err, req, res, next) => {
@@ -2254,63 +2919,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Erro interno do servidor', error: err.message });
 });
 
-// ====== INICIALIZAR DADOS DEMO ======
-const inicializarDadosDemo = async () => {
-  // Criar senha hash para usuario demo
-  const senhaHash = await bcrypt.hash('123456', 12);
-  users[0].password = senhaHash;
-  senhaDemoHash = senhaHash;
-  // DEBUG: console.log('✅ Usuario demo criado: demo@nexus.com / 123456');
-};
-
 // ====== INICIAR SERVIDOR ======
 const PORT = process.env.PORT || 5000;
 
-// Inicializar dados demo ANTES de iniciar o servidor
-const iniciar = async () => {
-  await inicializarDadosDemo();
-
-  httpServer.listen(PORT, () => {
-    // DEBUG: console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║          🚀 NEXUS CORE - BACKEND SIMPLIFICADO 🚀             ║
-║                                                              ║
-║              Rodando SEM MongoDB (Memória RAM)               ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-
-✅ Servidor rodando na porta: ${PORT}
-✅ Modo: In-Memory Database (dados em memória)
-✅ Socket.IO: Ativo
-✅ API Routes configuradas
-
-👤 USUARIO DEMO:
-   Email: demo@nexus.com
-   Senha: 123456
-
-📡 Rotas disponíveis:
-   - POST   /api/auth/register
-   - POST   /api/auth/login
-   - GET    /api/students
-   - POST   /api/students
-   - PUT    /api/students/:id
-   - DELETE /api/students/:id
-   - GET    /api/students/stats/summary
-   - GET    /api/payments
-   - GET    /api/payments/stats/summary
-   - PUT    /api/payments/:id
-   - GET    /api/classes
-   - POST   /api/classes
-   - GET    /api/health
-
-⚠️  ATENÇÃO: Dados são perdidos ao reiniciar o servidor!
-💡 Para persistência, instale MongoDB ou use MongoDB Atlas
-
-🎉 Backend pronto para uso!
-    `);
-  });
-};
-
-iniciar();
+httpServer.listen(PORT, () => {
+  console.log(`Servidor Nexus Academy rodando na porta ${PORT}`);
+});
 

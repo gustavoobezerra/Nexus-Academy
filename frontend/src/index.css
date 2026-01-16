@@ -2,9 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
+/* Estilos base */
+html, body, #root {
   margin: 0;
+  padding: 0;
   min-height: 100vh;
+  width: 100%;
+}
+
+/* Dark mode - aplicado quando html tem classe 'dark' */
+html.dark {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+html.dark body {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* Light mode - aplicado quando html tem classe 'light' ou não tem classe dark */
+html:not(.dark), html.light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html:not(.dark) body, html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Transição suave para mudança de tema */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Scrollbar styling for dark mode */

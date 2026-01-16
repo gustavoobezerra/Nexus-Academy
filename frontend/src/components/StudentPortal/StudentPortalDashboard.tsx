@@ -87,75 +87,10 @@ export const StudentPortalDashboard = () => {
       setStudent(profileData.student);
       setClasses(classesData.classes || []);
       setPayments(paymentsData.payments || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Load data error:', error);
-      // Fallback para modo demo
-      const storedStudent = localStorage.getItem('student');
-      if (storedStudent) {
-        try {
-          const parsedStudent = JSON.parse(storedStudent);
-          setStudent({
-            id: parsedStudent.id || 'demo_student',
-            name: parsedStudent.name || 'Aluno Demo',
-            email: parsedStudent.email || 'aluno@demo.com',
-            grade: parsedStudent.grade || '9º Ano',
-            subject: parsedStudent.subject || 'Matemática',
-            points: parsedStudent.points || 1250,
-            level: parsedStudent.level || 5,
-            performance: parsedStudent.performance || { overall: 85, trend: 'up' }
-          });
-          // Mock classes
-          setClasses([
-            {
-              _id: '1',
-              title: 'Aula de Matemática - Equações',
-              subject: 'Matemática',
-              scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-              duration: 60,
-              status: 'scheduled'
-            },
-            {
-              _id: '2',
-              title: 'Aula de Matemática - Geometria',
-              subject: 'Matemática',
-              scheduledAt: new Date(Date.now() + 172800000).toISOString(),
-              duration: 60,
-              status: 'scheduled'
-            },
-            {
-              _id: '3',
-              title: 'Aula de Matemática - Frações',
-              subject: 'Matemática',
-              scheduledAt: new Date(Date.now() - 86400000).toISOString(),
-              duration: 60,
-              status: 'completed',
-              assessmentScore: 92
-            }
-          ]);
-          // Mock payments
-          setPayments([
-            {
-              _id: '1',
-              amount: 200,
-              status: 'paid',
-              dueDate: new Date(Date.now() - 2592000000).toISOString(),
-              paidAt: new Date(Date.now() - 2500000000).toISOString(),
-              month: 'Novembro',
-              year: 2024
-            },
-            {
-              _id: '2',
-              amount: 200,
-              status: 'pending',
-              dueDate: new Date(Date.now() + 604800000).toISOString(),
-              month: 'Dezembro',
-              year: 2024
-            }
-          ]);
-        } catch {
-          // Silently fail
-        }
-      }
+      const message = error?.message || 'Erro ao carregar dados. Tente novamente.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { recordLoginAttempt } from '../middleware/auth.js';
 
 const signToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -28,7 +29,7 @@ const validateStrongPassword = (password) => {
     return { valid: false, message: 'Senha deve conter pelo menos um número' };
   }
   
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     return { valid: false, message: 'Senha deve conter pelo menos um símbolo (!@#$%^&*...)' };
   }
   

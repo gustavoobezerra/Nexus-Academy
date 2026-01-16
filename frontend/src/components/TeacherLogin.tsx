@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, Eye, EyeOff, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { formatPhoneBR } from '../utils/security';
@@ -33,18 +33,17 @@ export const TeacherLogin = () => {
 
       setAuth(data.user, data.token);
       toast.success('Login realizado com sucesso!');
-      navigate('/');
-    } catch (error) {
-      // Erro já tratado pelo interceptor, fallback para demo
-      const demoUser = {
-        id: 'demo_teacher',
-        name: 'Professor Demo',
-        email: email || 'demo@nexus.com',
-        role: 'teacher'
-      };
-      setAuth(demoUser, 'demo-token');
-      toast.success('Login demo realizado!');
-      navigate('/');
+
+      // Redirecionar para onboarding se não foi completado
+      if (data.user.status === 'pending_setup' || !data.user.onboardingCompletedAt) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
+    } catch (error: any) {
+      // Mostrar erro específico ou mensagem genérica
+      const message = error?.message || 'Erro ao fazer login. Verifique suas credenciais.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -77,17 +76,10 @@ export const TeacherLogin = () => {
       } else {
         navigate('/');
       }
-    } catch (error) {
-      // Erro já tratado pelo interceptor, fallback demo
-      const demoUser = {
-        id: 'new_teacher',
-        name: name || 'Novo Professor',
-        email: email,
-        role: 'teacher'
-      };
-      setAuth(demoUser, 'demo-token');
-      toast.success('Conta demo criada!');
-      navigate('/');
+    } catch (error: any) {
+      // Mostrar erro específico ou mensagem genérica
+      const message = error?.message || 'Erro ao criar conta. Tente novamente.';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -278,16 +270,6 @@ export const TeacherLogin = () => {
                   >
                     {isRegistering ? 'Fazer login' : 'Criar conta'}
                   </button>
-                </p>
-              </div>
-            </FadeContent>
-
-            {/* Demo Notice */}
-            <FadeContent delay={0.7} duration={0.4}>
-              <div className="mt-6 p-4 bg-slate-800/40 border border-slate-700/40 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  <strong className="text-slate-300">Modo Demo:</strong> Entre com qualquer email/senha para explorar a plataforma.
                 </p>
               </div>
             </FadeContent>

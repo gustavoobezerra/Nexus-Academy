@@ -102,7 +102,10 @@ studentSchema.index({ name: 'text', email: 'text', phone: 'text' }); // Índice 
 
 // ÍNDICE COMPOSTO CRÍTICO PARA MULTI-TENANT
 // Permite mesmo email em professores diferentes (isolamento total)
-studentSchema.index({ teacher: 1, email: 1 }, { unique: true, sparse: true });
+studentSchema.index(
+  { teacher: 1, email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string', $ne: '' } } }
+);
 
 // Índices compostos para queries frequentes
 studentSchema.index({ teacher: 1, grade: 1, active: 1 });

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
 import { StudentChat } from './StudentChat';
 import BrandLogo from '../BrandLogo';
+import { useTheme } from '../../context/ThemeContext';
 
 interface StudentData {
   _id: string;
@@ -49,13 +50,13 @@ interface Class {
 
 export const StudentDashboard = () => {
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
   const [student, setStudent] = useState<StudentData | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
@@ -96,9 +97,6 @@ export const StudentDashboard = () => {
     navigate('/portal/login');
   };
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-  };
 
   if (loading) {
     return (
