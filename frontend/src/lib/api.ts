@@ -53,8 +53,8 @@ export const portalAPI = {
 };
 
 export const liveClassAPI = {
-  create: (data: { classId: string; className: string }) => apiService.post<{ id: string; url: string }>('/live-classes', data),
-  join: (id: string) => apiService.get<{ url: string }>(`/live-classes/${id}/join`),
+  create: (data: { classId: string; className: string }) => apiService.post<{ id: string; url: string }>('/live-class/start', data),
+  join: (id: string) => apiService.get<{ url: string }>(`/live-class/${id}/join`),
 };
 
 export const dailyAPI = {
