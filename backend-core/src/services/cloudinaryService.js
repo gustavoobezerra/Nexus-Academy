@@ -359,4 +359,4 @@ const cloudinaryService = {
   }
 };
 
-module.exports = cloudinaryService;
+export default cloudinaryService;
