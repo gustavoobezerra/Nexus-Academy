@@ -12,10 +12,6 @@ import {
 
 const router = express.Router();
 
-// Todas as rotas requerem autenticação
-router.use(authenticate);
-router.use(authorize('teacher', 'admin'));
-
 /**
  * @swagger
  * tags:
@@ -64,6 +60,10 @@ router.use(authorize('teacher', 'admin'));
  */
 router.get('/check-slug', checkSlugAvailability);
 router.post('/check-slug', checkSlugAvailability);
+
+// Todas as rotas abaixo requerem autenticação
+router.use(authenticate);
+router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
