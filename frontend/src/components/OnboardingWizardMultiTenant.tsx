@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Check, ChevronRight, ChevronLeft, Link2, DollarSign,
   Rocket, AlertCircle, Loader2, ExternalLink, CheckCircle2,
@@ -13,6 +14,7 @@ interface OnboardingWizardMultiTenantProps {
 }
 
 export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantProps> = ({ onComplete: _onComplete }) => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
   // Step 1 - Slug
@@ -492,17 +494,16 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
 
             {selectedGateway === gateway.id && (
               <div className="space-y-3 mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
-                <a
-                  href={gateway.tutorial}
-                  onClick={(e) => {
-                    e.preventDefault();
+                <button
+                  type="button"
+                  onClick={() => {
                     window.open(gateway.tutorial, '_blank');
                   }}
                   className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
                 >
                   <ExternalLink size={14} />
-                  📚 Ver Tutorial Completo Passo-a-Passo
-                </a>
+                  📚 Ver Tutorial Completo Passo-a-Passo (abre em nova aba)
+                </button>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Abrirá em nova aba com instruções detalhadas de como configurar
                 </p>
