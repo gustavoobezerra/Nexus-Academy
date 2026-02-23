@@ -4,6 +4,9 @@ import {
   getClass,
   createClass,
   updateClass,
+  deleteClass,
+  startClass,
+  endClass,
   generateAISummary,
   getClassStats
 } from '../controllers/classController.js';
@@ -21,11 +24,14 @@ router.route('/')
 
 router.get('/stats', getClassStats);
 
+router.post('/:id/start', startClass);
+router.post('/:id/end', endClass);
 router.post('/:id/generate-summary', generateAISummary);
 
 router.route('/:id')
   .get(getClass)
   .put(updateClass)
-  .patch(updateClass);
+  .patch(updateClass)
+  .delete(deleteClass);
 
 export default router;

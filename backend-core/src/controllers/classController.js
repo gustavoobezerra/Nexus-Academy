@@ -133,6 +133,77 @@ export const generateAISummary = async (req, res) => {
   }
 };
 
+export const startClass = async (req, res) => {
+  try {
+    const classData = await Class.findOneAndUpdate(
+      { _id: req.params.id, teacher: req.user._id },
+      { status: 'in_progress', startedAt: new Date() },
+      { new: true }
+    );
+
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    // Notificar via Socket.IO se disponível
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('class-started', { classId: req.params.id, class: classData });
+    }
+
+    res.json({ success: true, class: classData });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao iniciar aula', error: error.message });
+  }
+};
+
+export const endClass = async (req, res) => {
+  try {
+    const endedAt = new Date();
+
+    const classData = await Class.findOne({ _id: req.params.id, teacher: req.user._id });
+
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    const startedAt = classData.startedAt || classData.scheduledAt || endedAt;
+    const actualDuration = Math.round((endedAt - new Date(startedAt)) / 1000 / 60); // minutos
+
+    classData.status = 'completed';
+    classData.endedAt = endedAt;
+    classData.actualDuration = actualDuration > 0 ? actualDuration : classData.duration;
+    await classData.save();
+
+    // Notificar via Socket.IO se disponível
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('class-ended', { classId: req.params.id });
+    }
+
+    res.json({ success: true, class: classData });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao encerrar aula', error: error.message });
+  }
+};
+
+export const deleteClass = async (req, res) => {
+  try {
+    const classData = await Class.findOneAndDelete({
+      _id: req.params.id,
+      teacher: req.user._id
+    });
+
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    res.json({ success: true, message: 'Aula removida com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao deletar aula', error: error.message });
+  }
+};
+
 export const getClassStats = async (req, res) => {
   try {
     const teacherId = req.user._id;
