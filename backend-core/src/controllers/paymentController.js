@@ -54,7 +54,11 @@ export const updatePayment = async (req, res) => {
       return res.status(404).json({ message: 'Pagamento não encontrado.' });
     }
 
-    if (payment.student.teacher.toString() !== teacherId) {
+    if (!payment.student || !payment.student.teacher) {
+      return res.status(404).json({ message: 'Dados do aluno inválidos ou não encontrados.' });
+    }
+
+    if (payment.student.teacher.toString() !== teacherId.toString()) {
       return res.status(403).json({ message: 'Não autorizado para este pagamento.' });
     }
 

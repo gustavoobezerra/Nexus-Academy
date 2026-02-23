@@ -7,9 +7,13 @@ import Stripe from 'stripe';
  * Inicializa o Stripe com a chave secreta
  * ATENÇÃO: Usar apenas chave de teste (sk_test_) em desenvolvimento
  */
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16'
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' })
+  : null;
+
+if (!stripe) {
+  console.warn('⚠️ STRIPE_SECRET_KEY não configurada. Funcionalidades de pagamento desativadas.');
+}
 
 /**
  * Cria uma intenção de pagamento (Payment Intent)

@@ -518,7 +518,7 @@ function AppWithRouter() {
       {mostrarHangman && (
         <HangmanGame
           isTeacher
-          userId={user?.id || user?._id || 'teacher'}
+          userId={user?.id || 'teacher'}
           userName={user?.name || 'Professor'}
           userAvatar={(user as any)?.avatar}
           onClose={() => setMostrarHangman(false)}

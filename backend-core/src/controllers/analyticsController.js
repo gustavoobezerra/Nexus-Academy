@@ -79,7 +79,9 @@ export const getStudentPaymentAnalytics = async (req, res) => {
         studentName: student.name,
         monthlyFee: student.monthlyFee,
         currentStatus: latestPayment?.status || 'pending',
-        daysOverdue: latestPayment?.status === 'late' ? 15 : 0, // Simplified
+        daysOverdue: latestPayment?.status === 'late' && latestPayment?.dueDate
+          ? Math.max(0, Math.floor((Date.now() - new Date(latestPayment.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
+          : 0,
         lastPaymentDate: latestPayment?.paidDate || null
       };
     }));

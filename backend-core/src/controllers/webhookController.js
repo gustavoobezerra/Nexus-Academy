@@ -1,7 +1,5 @@
-import Stripe from 'stripe';
 import User from '../models/User.js';
-
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+import { stripe } from '../config/stripe.js';
 
 /**
  * Processa webhooks do Stripe
@@ -94,11 +92,13 @@ async function handleCheckoutCompleted(session) {
 
   // Determinar plano baseado no price ID
   let plan = 'basic';
-  if (subscription.items.data[0]) {
-    const priceId = subscription.items.data[0].price.id;
+  const priceId = subscription?.items?.data?.[0]?.price?.id;
+  if (priceId) {
     if (priceId === process.env.STRIPE_PRICE_PRO) {
       plan = 'pro';
     }
+  } else {
+    console.warn('⚠️ Nenhum price ID encontrado na subscription:', subscriptionId);
   }
 
   // Calcular data final do trial
@@ -144,11 +144,11 @@ async function handleSubscriptionUpdated(subscription) {
 
   // Determinar plano
   let plan = user.subscriptionPlan || 'basic';
-  if (subscription.items.data[0]) {
-    const priceId = subscription.items.data[0].price.id;
-    if (priceId === process.env.STRIPE_PRICE_PRO) {
+  const updatedPriceId = subscription?.items?.data?.[0]?.price?.id;
+  if (updatedPriceId) {
+    if (updatedPriceId === process.env.STRIPE_PRICE_PRO) {
       plan = 'pro';
-    } else if (priceId === process.env.STRIPE_PRICE_BASIC) {
+    } else if (updatedPriceId === process.env.STRIPE_PRICE_BASIC) {
       plan = 'basic';
     }
   }

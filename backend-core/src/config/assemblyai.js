@@ -78,7 +78,11 @@ export async function getTranscription(transcriptId) {
   try {
     const pollingEndpoint = `${baseUrl}/v2/transcript/${transcriptId}`;
 
-    for (;;) {
+    const MAX_ATTEMPTS = 200; // ~10 minutos com 3s de intervalo
+    let attempts = 0;
+
+    while (attempts < MAX_ATTEMPTS) {
+      attempts++;
       const pollingResponse = await axios.get(pollingEndpoint, { headers });
       const result = pollingResponse.data;
 
@@ -97,6 +101,8 @@ export async function getTranscription(transcriptId) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }
+
+    throw new Error('Transcrição timeout: excedeu o tempo máximo de espera (10 minutos)');
 
   } catch (error) {
     console.error('❌ Erro na transcrição:', error.message);

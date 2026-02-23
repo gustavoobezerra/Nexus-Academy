@@ -57,8 +57,24 @@ export const TeacherLogin = () => {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
+    if (password.length < 8) {
+      toast.error('A senha deve ter pelo menos 8 caracteres');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      toast.error('A senha deve conter pelo menos uma letra maiúscula');
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      toast.error('A senha deve conter pelo menos uma letra minúscula');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      toast.error('A senha deve conter pelo menos um número');
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
+      toast.error('A senha deve conter pelo menos um símbolo (!@#$%^&*...)');
       return;
     }
 

@@ -133,7 +133,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       const response = await apiService.get<any>('/pronunciation/phrases');
       setPhraseList(response.data || []);
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao carregar frases de pronúncia');
+      toast.error(error instanceof Error ? error.message : 'Erro ao carregar frases de pronúncia');
     } finally {
       setPhraseLoading(false);
     }
@@ -152,7 +152,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       }
       setPhraseForm({ ...phraseForm, phrase });
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao gerar frase');
+      toast.error(error instanceof Error ? error.message : 'Erro ao gerar frase');
     } finally {
       setPhraseGenerating(false);
     }
@@ -175,7 +175,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       setPhraseForm({ phrase: '', difficulty: phraseForm.difficulty });
       fetchPronunciationPhrases();
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao salvar frase');
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar frase');
     } finally {
       setPhraseSaving(false);
     }
@@ -188,7 +188,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       toast.success('Frase ativada');
       fetchPronunciationPhrases();
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao ativar frase');
+      toast.error(error instanceof Error ? error.message : 'Erro ao ativar frase');
     } finally {
       setPhraseSaving(false);
     }
@@ -201,7 +201,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       toast.success('Frase removida');
       fetchPronunciationPhrases();
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao remover frase');
+      toast.error(error instanceof Error ? error.message : 'Erro ao remover frase');
     } finally {
       setPhraseSaving(false);
     }
@@ -220,7 +220,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
 
       toast.success('Perfil atualizado com sucesso!');
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao salvar perfil');
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar perfil');
     } finally {
       setSaving(false);
     }
@@ -241,7 +241,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       await apiService.put('/auth/payment-settings', paymentData);
       toast.success('Configurações de pagamento atualizadas!');
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao salvar configurações de pagamento');
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar configurações de pagamento');
     } finally {
       setSaving(false);
     }
@@ -253,7 +253,7 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
       await apiService.put('/auth/notification-settings', { notifications: notificationSettings });
       toast.success('Preferências de notificação atualizadas!');
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao salvar preferências');
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar preferências');
     } finally {
       setSaving(false);
     }

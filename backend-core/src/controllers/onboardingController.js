@@ -1,6 +1,6 @@
-import Stripe from 'stripe';
 import User from '../models/User.js';
 import { encryptGatewayCredentials } from '../utils/encryption.js';
+import { stripe } from '../config/stripe.js';
 
 // Lista de palavras reservadas para slugs
 const RESERVED_SLUGS = [
@@ -405,8 +405,6 @@ export async function skipPaymentSetup(req, res) {
     });
   }
 }
-
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // IDs dos preços no Stripe (em produção viriam do config ou banco)
 const STRIPE_PRICES = {

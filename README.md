@@ -1,6 +1,6 @@
 # 🎓 Nexus Academy - Plataforma SaaS Educacional
 
-**Nexus Academy** é uma plataforma completa de gestão educacional (LMS) SaaS, projetada para escolas de idiomas, cursos profissionalizantes e professores independentes.
+**Nexus Academy** é uma plataforma completa SaaS de aprendizagem (LMS), projetada para escolas de idiomas, cursos profissionalizantes e professores independentes.
 
 ## 🌟 Principais Funcionalidades
 

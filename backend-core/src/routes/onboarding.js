@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { protect, authorize } from '../middleware/auth.js';
 import {
   checkSlugAvailability,
   setSlug,
@@ -62,7 +62,7 @@ router.get('/check-slug', checkSlugAvailability);
 router.post('/check-slug', checkSlugAvailability);
 
 // Todas as rotas abaixo requerem autenticação
-router.use(authenticate);
+router.use(protect);
 router.use(authorize('teacher', 'admin'));
 
 /**

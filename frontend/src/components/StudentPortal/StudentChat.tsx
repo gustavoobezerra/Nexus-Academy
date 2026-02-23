@@ -118,7 +118,7 @@ export const StudentChat = ({ student, teacher, isDark }: StudentChatProps) => {
       setNewMessage('');
     } catch (error: unknown) {
       console.error('Erro ao enviar mensagem:', error);
-      toast.error(error.message || 'Erro ao enviar mensagem');
+      toast.error(error instanceof Error ? error.message : 'Erro ao enviar mensagem');
     } finally {
       setSending(false);
     }
@@ -167,7 +167,7 @@ export const StudentChat = ({ student, teacher, isDark }: StudentChatProps) => {
       toast.success('Arquivo enviado!');
     } catch (error: unknown) {
       console.error('Erro ao enviar arquivo:', error);
-      toast.error(error.message || 'Erro ao enviar arquivo');
+      toast.error(error instanceof Error ? error.message : 'Erro ao enviar arquivo');
     } finally {
       setSending(false);
     }

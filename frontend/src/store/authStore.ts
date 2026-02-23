@@ -5,12 +5,15 @@ interface User {
   name: string;
   email: string;
   role: string;
+  phone?: string;
   slug?: string;
   subscriptionStatus?: string;
   subscriptionPlan?: string;
   trialEndsAt?: string;
   status?: string;
   onboardingCompletedAt?: string;
+  bio?: string;
+  subjects?: string[];
 }
 
 interface AuthState {

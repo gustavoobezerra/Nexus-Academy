@@ -140,20 +140,20 @@ export const createStudent = async (req, res) => {
 
     const studentData = {
       ...sanitizedBody,
-      teacher: req.user.id
+      teacher: req.user._id
     };
 
     const student = await Student.create(studentData);
 
     // Invalidar cache de alunos do professor
-    await cacheService.delPattern(`students:${req.user.id}:*`);
+    await cacheService.delPattern(`students:${req.user._id}:*`);
 
     const currentDate = new Date();
     const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 10);
 
     await Payment.create({
       student: student._id,
-      teacher: req.user.id,
+      teacher: req.user._id,
       amount: student.monthlyFee,
       month: currentDate.toLocaleString('pt-BR', { month: 'long' }),
       year: currentDate.getFullYear(),
@@ -195,7 +195,7 @@ export const updateStudent = async (req, res) => {
     const sanitizedBody = sanitizeObject(req.body);
     
     const student = await Student.findOneAndUpdate(
-      { _id: req.params.id, teacher: req.user.id },
+      { _id: req.params.id, teacher: req.user._id },
       sanitizedBody,
       { new: true, runValidators: true }
     );
@@ -205,7 +205,7 @@ export const updateStudent = async (req, res) => {
     }
 
     // Invalidar cache de alunos do professor
-    await cacheService.delPattern(`students:${req.user.id}:*`);
+    await cacheService.delPattern(`students:${req.user._id}:*`);
 
     res.json({
       success: true,
@@ -219,7 +219,7 @@ export const updateStudent = async (req, res) => {
 export const deleteStudent = async (req, res) => {
   try {
     const student = await Student.findOneAndUpdate(
-      { _id: req.params.id, teacher: req.user.id },
+      { _id: req.params.id, teacher: req.user._id },
       { active: false },
       { new: true }
     );
@@ -229,7 +229,7 @@ export const deleteStudent = async (req, res) => {
     }
 
     // Invalidar cache de alunos do professor
-    await cacheService.delPattern(`students:${req.user.id}:*`);
+    await cacheService.delPattern(`students:${req.user._id}:*`);
 
     res.json({
       success: true,
@@ -242,7 +242,7 @@ export const deleteStudent = async (req, res) => {
 
 export const getStudentStats = async (req, res) => {
   try {
-    const teacherId = req.user.id;
+    const teacherId = req.user._id;
 
     const totalStudents = await Student.countDocuments({
       teacher: teacherId,

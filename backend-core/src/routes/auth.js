@@ -51,7 +51,7 @@ router.put('/profile', protect, authorize('teacher', 'admin'), async (req, res) 
 
     if (slug) {
       // Verificar se slug já existe (diferente do usuário atual)
-      const existingSlug = await User.findOne({ slug, _id: { $ne: req.user.id } });
+      const existingSlug = await User.findOne({ slug, _id: { $ne: req.user._id } });
       if (existingSlug) {
         return res.status(400).json({ success: false, message: 'Este link já está em uso' });
       }
@@ -65,7 +65,7 @@ router.put('/profile', protect, authorize('teacher', 'admin'), async (req, res) 
     if (subjects !== undefined) updateData.subjects = subjects;
     if (slug) updateData.slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
-    const user = await User.findByIdAndUpdate(req.user.id, updateData, { new: true })
+    const user = await User.findByIdAndUpdate(req.user._id, updateData, { new: true })
       .select('-password -gatewayCredentials');
 
     res.json({
@@ -108,7 +108,7 @@ router.put('/payment-settings', protect, authorize('teacher', 'admin'), async (r
       updateData.pixKeyType = pixKeyType;
     }
 
-    await User.findByIdAndUpdate(req.user.id, updateData);
+    await User.findByIdAndUpdate(req.user._id, updateData);
 
     res.json({
       success: true,
@@ -136,7 +136,7 @@ router.put('/notification-settings', protect, authorize('teacher', 'admin'), asy
       'settings.notifications.push': !!notifications.push
     };
 
-    await User.findByIdAndUpdate(req.user.id, { $set: updateData });
+    await User.findByIdAndUpdate(req.user._id, { $set: updateData });
 
     res.json({
       success: true,

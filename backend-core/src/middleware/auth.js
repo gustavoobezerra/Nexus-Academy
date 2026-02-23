@@ -21,7 +21,7 @@ export const authenticate = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'NÆo autorizado. Token nÆo fornecido.'
+        message: 'Não autorizado. Token não fornecido.'
       });
     }
 
@@ -35,13 +35,13 @@ export const authenticate = async (req, res, next) => {
       if (jwtError.name === 'JsonWebTokenError') {
         return res.status(401).json({
           success: false,
-          message: 'Token inv lido.'
+          message: 'Token inválido.'
         });
       }
       if (jwtError.name === 'TokenExpiredError') {
         return res.status(401).json({
           success: false,
-          message: 'Token expirado. Por favor, fa‡a login novamente.'
+          message: 'Token expirado. Por favor, faça login novamente.'
         });
       }
       throw jwtError;
@@ -54,13 +54,13 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    // Buscar usu rio
+    // Buscar usuário
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Usu rio nÆo encontrado.'
+        message: 'Usuário não encontrado.'
       });
     }
 
@@ -70,8 +70,8 @@ export const authenticate = async (req, res, next) => {
     req.roles = [user.role];
     req.tenantId = user._id.toString();
 
-    // VERIFICA€ÇO DE ASSINATURA ATIVA
-    // NÆo verificar durante onboarding (status: pending_setup)
+    // VERIFICAÇÃO DE ASSINATURA ATIVA
+    // Não verificar durante onboarding (status: pending_setup)
     if (user.status !== 'pending_setup' && !user.canAccess()) {
       return res.status(403).json({
         success: false,
@@ -84,7 +84,7 @@ export const authenticate = async (req, res, next) => {
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: 'Erro de autentica‡Æo.'
+      message: 'Erro de autenticação.'
     });
   }
 };
@@ -147,7 +147,7 @@ export const protect = authenticate;
 
 /**
  * Middleware que exige assinatura ativa para acessar
- * Usar em rotas que requerem plano pago (ap¢s trial)
+ * Usar em rotas que requerem plano pago (após trial)
  */
 export const requireActiveSubscription = (req, res, next) => {
   if (!req.user) {
@@ -175,7 +175,7 @@ export const authorize = (...roles) => {
     if (!req.user && !req.roles) {
       return res.status(401).json({
         success: false,
-        message: 'Usu rio nÆo autenticado.'
+        message: 'Usuário não autenticado.'
       });
     }
 
@@ -183,7 +183,7 @@ export const authorize = (...roles) => {
     if (!roles.some((role) => userRoles.includes(role))) {
       return res.status(403).json({
         success: false,
-        message: 'Acesso negado. PermissÆo insuficiente.'
+        message: 'Acesso negado. Permissão insuficiente.'
       });
     }
     next();
@@ -273,13 +273,13 @@ export const recordLoginAttempt = (ip, success) => {
   const attempts = loginAttempts.get(key) || { count: 0 };
   loginAttempts.set(key, { count: attempts.count + 1 });
 
-  // Limpar ap¢s 1 hora
+  // Limpar após 1 hora
   setTimeout(() => {
     loginAttempts.delete(key);
   }, 60 * 60 * 1000);
 };
 
-// Sanitiza‡Æo de input
+// Sanitização de input
 export const sanitizeInput = (req, res, next) => {
   const sanitize = (obj) => {
     if (!obj || typeof obj !== 'object') return obj;
@@ -294,7 +294,7 @@ export const sanitizeInput = (req, res, next) => {
       if (typeof value === 'string') {
         // Remover caracteres potencialmente perigosos
         sanitized[key] = value
-          .replace(/[<>]/g, '') // XSS b sico
+          .replace(/[<>]/g, '') // XSS básico
           .trim();
       } else if (typeof value === 'object' && value !== null) {
         sanitized[key] = sanitize(value);

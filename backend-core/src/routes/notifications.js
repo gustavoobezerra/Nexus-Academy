@@ -1,10 +1,10 @@
 import express from 'express';
 import { Notification } from '../models/Notification.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(authenticate);
+router.use(protect);
 router.use(authorize('teacher', 'admin'));
 
 /**

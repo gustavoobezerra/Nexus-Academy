@@ -63,7 +63,8 @@ export function StudentRegister() {
         }
       } catch (error: unknown) {
         console.error('Erro ao buscar professor:', error);
-        toast.error(error.message || 'Erro ao buscar professor');
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao buscar professor';
+        toast.error(errorMessage);
         navigate('/');
       } finally {
         setLoading(false);
@@ -150,7 +151,7 @@ export function StudentRegister() {
         navigate('/portal/dashboard');
       }
     } catch (error: unknown) {
-      toast.error(error.message || 'Erro ao criar conta');
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar conta');
     } finally {
       setSubmitting(false);
     }
