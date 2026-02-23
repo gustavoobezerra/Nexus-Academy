@@ -139,7 +139,6 @@ function App() {
             <div className="hidden sm:flex">
               <BrandLogo variant="horizontal" theme="dark" size="md" />
             </div>
-            <p className="text-xs text-gray-400">GestÆo Educacional</p>
           </div>
 
           <nav className="space-y-2 flex-1 overflow-y-auto">

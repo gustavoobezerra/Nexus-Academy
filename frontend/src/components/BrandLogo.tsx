@@ -1,9 +1,9 @@
-import logoHorizontalLight from '../assets/brand/logo_horizontal_primary_ON_WHITE_SAFE.png';
-import logoHorizontalDark from '../assets/brand/logo_horizontal_inverted_ON_DARK_SAFE.png';
-import logoStackedLight from '../assets/brand/logo_wordmark_primary_ON_WHITE.png';
-import logoStackedDark from '../assets/brand/logo_wordmark_inverted_ON_DARK.png';
-import markLight from '../assets/brand/mark_Ndot_primary.png';
-import markDark from '../assets/brand/mark_Ndot_mono_white_ON_DARK.png';
+import logoHorizontalLight from '../assets/brand/logo_horizontal_primary.svg';
+import logoHorizontalDark from '../assets/brand/logo_horizontal_inverted.svg';
+import logoStackedLight from '../assets/brand/logo_wordmark_primary.svg';
+import logoStackedDark from '../assets/brand/logo_wordmark_inverted.svg';
+import markLight from '../assets/brand/mark_Ndot_primary.svg';
+import markDark from '../assets/brand/mark_Ndot_mono_white.svg';
 
 type BrandLogoProps = {
   variant: 'horizontal' | 'stacked' | 'mark';

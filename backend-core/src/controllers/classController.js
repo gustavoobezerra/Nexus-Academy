@@ -20,7 +20,7 @@ export const getClasses = async (req, res) => {
     const [classes, total] = await Promise.all([
       Class.find(query)
         .populate('student', 'name grade')
-        .sort('-date')
+        .sort('-scheduledAt')
         .skip(skip)
         .limit(limit),
       Class.countDocuments(query)
@@ -61,8 +61,10 @@ export const getClass = async (req, res) => {
 
 export const createClass = async (req, res) => {
   try {
+    const { studentId, ...rest } = req.body;
     const classData = {
-      ...req.body,
+      ...rest,
+      student: studentId || req.body.student,
       teacher: req.user._id
     };
 
@@ -143,7 +145,7 @@ export const getClassStats = async (req, res) => {
 
     const upcomingClasses = await Class.countDocuments({
       teacher: teacherId,
-      date: { $gte: today }
+      scheduledAt: { $gte: today }
     });
 
     const completedClasses = await Class.countDocuments({
