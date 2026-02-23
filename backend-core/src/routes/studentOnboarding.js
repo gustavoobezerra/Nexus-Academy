@@ -34,7 +34,7 @@ router.get('/subjects', (req, res) => {
     console.error('Get subjects error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao obter mat‚rias'
+      message: 'Erro ao obter matérias'
     });
   }
 });
@@ -73,7 +73,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
     if (!subject) {
       return res.status(400).json({
         success: false,
-        message: 'Mat‚ria ‚ obrigat¢ria'
+        message: 'Matéria é obrigatória'
       });
     }
 
@@ -102,7 +102,7 @@ router.post('/select-subject', authenticateStudent, async (req, res) => {
     console.error('Select subject error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao selecionar mat‚ria'
+      message: 'Erro ao selecionar matéria'
     });
   }
 });
@@ -135,7 +135,7 @@ router.post('/get-questionnaire', (req, res) => {
     if (!subject) {
       return res.status(400).json({
         success: false,
-        message: 'Mat‚ria ‚ obrigat¢ria'
+        message: 'Matéria é obrigatória'
       });
     }
 
@@ -149,7 +149,7 @@ router.post('/get-questionnaire', (req, res) => {
     console.error('Get questionnaire error:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao obter question rio'
+      message: 'Erro ao obter questionário'
     });
   }
 });
@@ -199,14 +199,14 @@ router.post('/submit', authenticateStudent, async (req, res) => {
     if (!subject) {
       return res.status(400).json({
         success: false,
-        message: 'Mat‚ria ‚ obrigat¢ria'
+        message: 'Matéria é obrigatória'
       });
     }
 
     if (!answers || typeof answers !== 'object') {
       return res.status(400).json({
         success: false,
-        message: 'Respostas sÆo obrigat¢rias'
+        message: 'Respostas são obrigatórias'
       });
     }
 
@@ -283,7 +283,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
           recipientName: student.teacher.name,
           channel: 'in_app',
           subject: '?? Novo aluno completou o onboarding!',
-          body: `O aluno ${student.name} completou o question rio inicial e est  pronto para come‡ar as aulas de ${subject}. N¡vel: ${answers.level || 'NÆo informado'}. Hor rio preferido: ${schedule === 'morning' ? 'ManhÆ' : schedule === 'afternoon' ? 'Tarde' : schedule === 'evening' ? 'Noite' : 'Flex¡vel'}.`,
+          body: `O aluno ${student.name} completou o questionário inicial e está pronto para começar as aulas de ${subject}. Nível: ${answers.level || 'Não informado'}. Horário preferido: ${schedule === 'morning' ? 'Manhã' : schedule === 'afternoon' ? 'Tarde' : schedule === 'evening' ? 'Noite' : 'Flexível'}.`,
           status: 'pending',
           entityType: 'student',
           entityId: student._id
@@ -323,7 +323,7 @@ router.post('/submit', authenticateStudent, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Onboarding conclu¡do com sucesso! ??',
+      message: 'Onboarding concluído com sucesso!',
       data: {
         subject,
         completedAt: new Date()

@@ -17,7 +17,7 @@ export const classesAPI = {
   start: (id: string) => apiService.post<void>(`/classes/${id}/start`),
   end: (id: string) => apiService.post<void>(`/classes/${id}/end`),
   delete: (id: string) => apiService.delete<void>(`/classes/${id}`),
-  generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; summary: string }>('/classes/summary', { classId, transcript }),
+  generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; aiSummary: string }>(`/classes/${classId}/generate-summary`, { transcript }),
 };
 
 export const studentsAPI = {
