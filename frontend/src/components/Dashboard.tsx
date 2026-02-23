@@ -24,11 +24,11 @@ export const Dashboard = ({ onNavegar }: { onNavegar: (tab: string) => void }) =
         classesAPI.getAll()
       ]);
       setStats({
-        students: studentStats.data?.stats || {},
-        payments: paymentStats.data?.stats || {}
+        students: (studentStats as any)?.stats || {},
+        payments: (paymentStats as any)?.stats || {}
       });
-      setAlunos(studentsRes.data?.students || []);
-      setAulas(classesRes.data?.classes || []);
+      setAlunos((studentsRes as any)?.students || []);
+      setAulas((classesRes as any)?.classes || []);
     } catch (error) {
       console.error('Dashboard fetch error', error);
       toast.error('Erro ao carregar dados do dashboard');
