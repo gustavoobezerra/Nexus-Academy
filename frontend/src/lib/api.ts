@@ -53,8 +53,10 @@ export const portalAPI = {
 };
 
 export const liveClassAPI = {
-  create: (data: { classId: string; className: string }) => apiService.post<{ id: string; url: string }>('/live-class/start', data),
-  join: (id: string) => apiService.get<{ url: string }>(`/live-class/${id}/join`),
+  create: (data: { classId: string; className?: string }) => apiService.post<{ success: boolean; session: { sessionId: string; classId: string; status: string } }>('/live-class/start', data),
+  join: (sessionId: string) => apiService.post<{ success: boolean; session: { sessionId: string; classId: string; status: string } }>(`/live-class/${sessionId}/join`),
+  end: (sessionId: string) => apiService.post<{ success: boolean; session: { sessionId: string; classId: string; status: string; duration: number } }>(`/live-class/${sessionId}/end`),
+  getSession: (sessionId: string) => apiService.get<{ success: boolean; session: { sessionId: string; classId: string; teacherId: string; studentId: string; status: string; startTime: string } }>(`/live-class/${sessionId}`),
 };
 
 export const dailyAPI = {
