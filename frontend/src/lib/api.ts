@@ -17,7 +17,7 @@ export const classesAPI = {
   start: (id: string) => apiService.post<void>(`/classes/${id}/start`),
   end: (id: string) => apiService.post<void>(`/classes/${id}/end`),
   delete: (id: string) => apiService.delete<void>(`/classes/${id}`),
-  generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; summary: string }>('/classes/summary', { classId, transcript }),
+  generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; summary: string }>(`/classes/${classId}/generate-summary`, { transcript }),
 };
 
 export const studentsAPI = {
@@ -54,7 +54,10 @@ export const portalAPI = {
 
 export const liveClassAPI = {
   create: (data: { classId: string; className: string }) => apiService.post<{ id: string; url: string }>('/live-class/start', data),
-  join: (id: string) => apiService.get<{ url: string }>(`/live-class/${id}/join`),
+  join: (id: string) => apiService.post<{ url: string }>(`/live-class/${id}/join`, {}),
+  getSession: (sessionId: string) => apiService.get<{ success: boolean; session: import('../types').LiveSession }>(`/live-class/${sessionId}`),
+  end: (sessionId: string) => apiService.post<{ success: boolean }>(`/live-class/${sessionId}/end`, {}),
+  getActiveSessions: () => apiService.get<{ success: boolean; sessions: import('../types').LiveSession[] }>('/live-class/active/list'),
 };
 
 export const dailyAPI = {
