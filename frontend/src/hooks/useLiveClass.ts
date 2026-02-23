@@ -45,24 +45,38 @@ export const useLiveClass = (classId: string) => {
         socketRef.current?.emit('start-live-session', { classId, teacherId: currentUser?.id });
       });
 
-      socketRef.current.on('session-started', async (data: { sessionId: string; classId: string }) => {
-        sessionIdRef.current = data.sessionId;
+      socketRef.current.on('session-started', async (data: { sessionId?: string; id?: string; classId: string; teacherId?: string; studentIds?: string[]; startTime?: string | Date; status?: LiveSession['status'] }) => {
+        const normalizedSessionId = data.sessionId || data.id;
+
+        if (!normalizedSessionId) {
+          return;
+        }
+
+        sessionIdRef.current = normalizedSessionId;
 
         try {
-          const sessionDetails = await liveClassAPI.getSession(data.sessionId) as LiveSession;
-          setSession(sessionDetails);
+          const response = await liveClassAPI.getSession(normalizedSessionId);
+          const sessionDetails = response.session;
+          setSession({
+            id: sessionDetails.sessionId,
+            classId: sessionDetails.classId,
+            teacherId: sessionDetails.teacherId,
+            studentIds: sessionDetails.studentId ? [sessionDetails.studentId] : [],
+            startTime: new Date(sessionDetails.startTime),
+            status: sessionDetails.status as LiveSession['status'],
+          });
         } catch {
           setSession({
-            id: data.sessionId,
+            id: normalizedSessionId,
             classId: data.classId,
-            teacherId: currentUser?.id || 'unknown',
-            studentIds: [],
-            startTime: new Date(),
-            status: 'active'
+            teacherId: data.teacherId || currentUser?.id || 'unknown',
+            studentIds: data.studentIds || [],
+            startTime: data.startTime ? new Date(data.startTime) : new Date(),
+            status: data.status || 'active'
           });
         }
 
-        socketRef.current?.emit('join-live-session', { sessionId: data.sessionId });
+        socketRef.current?.emit('join-live-session', { sessionId: normalizedSessionId, classId: data.classId });
       });
 
       socketRef.current.on('participant-joined', (data: { userId?: string; participantId?: string }) => {
@@ -152,7 +166,7 @@ export const useLiveClass = (classId: string) => {
     }
 
     if (socketRef.current) {
-      socketRef.current.emit('end-live-session', { sessionId });
+      socketRef.current.emit('end-live-session', { sessionId, classId });
       socketRef.current.disconnect();
       setConnected(false);
     }
@@ -169,15 +183,15 @@ export const useLiveClass = (classId: string) => {
     setSession(null);
     setParticipants([]);
     setTranscript('');
-  }, []);
+  }, [classId]);
 
   const sendMessage = useCallback((message: string) => {
     const sessionId = sessionIdRef.current;
     if (socketRef.current && sessionId) {
       const sender = getStoredUser();
-      socketRef.current.emit('class-message', { sessionId, message, sender: sender?.id || 'teacher' });
+      socketRef.current.emit('class-message', { sessionId, classId, message, sender: sender?.id || 'teacher' });
     }
-  }, []);
+  }, [classId]);
 
   const toggleAudio = useCallback((enabled: boolean) => {
     if (localStreamRef.current) {
