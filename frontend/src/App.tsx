@@ -54,7 +54,7 @@ function ItemNavegacao({ icon, label, id, isActive, onNavigate }: ItemNavegacaoP
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
         isActive
           ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg'
-          : 'text-gray-400 hover:bg-slate-700 hover:text-white'
+          : 'text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
       }`}
     >
       {icon}
@@ -127,29 +127,29 @@ function App() {
 
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#1F2937', color: '#fff' } }} />
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: isDark ? '#1F2937' : '#f8fafc', color: isDark ? '#fff' : '#0f172a', border: isDark ? '1px solid #374151' : '1px solid #e2e8f0' } }} />
       <div className={`flex h-screen w-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
-        <aside className={`hidden md:flex fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white p-4 flex-col transform transition-transform duration-300 ${
+        <aside className={`hidden md:flex fixed md:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-r border-slate-200 dark:border-slate-700 p-4 flex-col transform transition-transform duration-300 ${
           menuMobileAberto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}>
           <div className="flex items-center gap-3 mb-8 px-2">
             <div className="sm:hidden">
-              <BrandLogo variant="mark" theme="dark" size="md" />
+              <BrandLogo variant="mark" theme="auto" size="md" />
             </div>
             <div className="hidden sm:flex">
-              <BrandLogo variant="horizontal" theme="dark" size="md" />
+              <BrandLogo variant="horizontal" theme="auto" size="md" />
             </div>
           </div>
 
           <nav className="space-y-2 flex-1 overflow-y-auto">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2">Principal</div>
+            <div className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider px-4 mb-2">Principal</div>
             <ItemNavegacao icon={<Layout size={20} />} label="Dashboard" id="dashboard" isActive={abaAtiva === 'dashboard'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<Brain size={20} />} label="AI Hub" id="ai-hub" isActive={abaAtiva === 'ai-hub'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<Video size={20} />} label="Aulas" id="aulas" isActive={abaAtiva === 'aulas'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<Users size={20} />} label="Alunos" id="students" isActive={abaAtiva === 'students'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<CalendarDays size={20} />} label="Calendário" id="calendar" isActive={abaAtiva === 'calendar'} onNavigate={handleNavegar} />
 
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2 mt-4">Gestão</div>
+            <div className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider px-4 mb-2 mt-4">Gestão</div>
             <ItemNavegacao icon={<Users size={20} />} label="Grupos" id="student-groups" isActive={abaAtiva === 'student-groups'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<Star size={20} />} label="Pontos" id="points" isActive={abaAtiva === 'points'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<Users size={20} />} label="Online" id="online" isActive={abaAtiva === 'online'} onNavigate={handleNavegar} />
@@ -161,14 +161,14 @@ function App() {
             <ItemNavegacao icon={<BookOpen size={20} />} label="Hub" id="hub" isActive={abaAtiva === 'hub'} onNavigate={handleNavegar} />
             <ItemNavegacao icon={<Zap size={20} />} label="Avançados" id="advanced" isActive={abaAtiva === 'advanced'} onNavigate={handleNavegar} />
           </nav>
-          <div className="border-t border-slate-700 pt-4 mt-4 space-y-3">
-            <div className="px-4 py-3 bg-slate-800 rounded-xl">
-              <p className="text-xs text-gray-400">Logado como</p>
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4 space-y-3">
+            <div className="px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              <p className="text-xs text-slate-500 dark:text-gray-400">Logado como</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{user?.name}</p>
             </div>
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
               <span>{isDark ? 'Modo Claro' : 'Modo Escuro'}</span>
@@ -190,7 +190,7 @@ function App() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <button
             onClick={() => setMenuMobileAberto(!menuMobileAberto)}
-            className="md:hidden fixed top-4 left-4 z-50 bg-slate-900 text-white p-2 rounded-lg shadow-lg"
+            className="md:hidden fixed top-4 left-4 z-50 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 p-2 rounded-lg shadow-lg"
           >
             <Menu size={24} />
           </button>

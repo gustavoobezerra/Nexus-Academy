@@ -10,6 +10,10 @@ router.use(authorize('teacher', 'admin'));
 const DAILY_API_KEY = process.env.DAILY_API_KEY;
 const DAILY_API_URL = 'https://api.daily.co/v1';
 
+if (!DAILY_API_KEY) {
+  console.warn('[DailyVideo] DAILY_API_KEY não configurada — endpoints operando em modo simulado. Salas e tokens gerados NÃO são reais.');
+}
+
 /**
  * Helper function to make Daily.co API calls
  */

@@ -71,7 +71,7 @@ html, body {
   --card-bg: var(--white);
 }
 
-.dark :root{
+html.dark{
   --bg: #0f172a; /* dark background */
   --text-main: #FFFFFF;
   --text-muted: #9CA3AF; /* lighter muted in dark */

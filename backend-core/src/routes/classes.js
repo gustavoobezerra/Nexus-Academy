@@ -62,7 +62,6 @@ router.post('/:id/end', async (req, res) => {
 router.route('/:id')
   .get(getClass)
   .put(updateClass)
-  .patch(updateClass)
   .delete(async (req, res) => {
     try {
       const { default: ClassModel } = await import('../models/Class.js');
