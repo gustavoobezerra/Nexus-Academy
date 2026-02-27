@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     const webhooks = await Webhook.find({ teacher: req.user._id });
     res.json({ success: true, webhooks });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -33,7 +33,7 @@ router.get('/:id', async (req, res) => {
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
     res.json({ success: true, webhook });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
     const webhook = await Webhook.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, webhook });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -58,7 +58,7 @@ router.put('/:id', async (req, res) => {
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
     res.json({ success: true, webhook });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -68,7 +68,7 @@ router.delete('/:id', async (req, res) => {
     await Webhook.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Webhook removido' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -81,7 +81,7 @@ router.put('/:id/toggle', async (req, res) => {
     await webhook.save();
     res.json({ success: true, webhook });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -154,7 +154,7 @@ router.post('/:id/test', async (req, res) => {
       res.status(400).json({ success: false, message: 'Webhook test failed', error: error.message });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -174,7 +174,7 @@ router.get('/:id/deliveries', async (req, res) => {
 
     res.json({ success: true, deliveries, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -214,7 +214,7 @@ router.post('/deliveries/:id/retry', async (req, res) => {
       res.status(400).json({ success: false, message: 'Retry failed', error: error.message });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -230,7 +230,7 @@ router.post('/:id/regenerate-secret', async (req, res) => {
 
     res.json({ success: true, secret: webhook.secret });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

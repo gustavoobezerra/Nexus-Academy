@@ -17,11 +17,11 @@ export const getTeacherAnalytics = async (req, res) => {
     });
 
     const monthlyRevenue = paidPayments
-      .filter(p => p.paidDate && new Date(p.paidDate).getMonth() === currentMonth && new Date(p.paidDate).getFullYear() === currentYear)
+      .filter(p => p.paidAt && new Date(p.paidAt).getMonth() === currentMonth && new Date(p.paidAt).getFullYear() === currentYear)
       .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     const expectedMonthlyRevenue = students.reduce((sum, s) => sum + (s.monthlyFee || 0), 0);
-    
+
     const overduePayments = await Payment.countDocuments({
       student: { $in: studentIds },
       status: 'late'
@@ -61,7 +61,8 @@ export const getTeacherAnalytics = async (req, res) => {
 
     res.json(analytics);
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar analytics', error: error.message });
+    console.error('Erro ao buscar analytics:', error);
+    res.status(500).json({ message: 'Erro ao buscar analytics' });
   }
 };
 
@@ -69,11 +70,11 @@ export const getStudentPaymentAnalytics = async (req, res) => {
   try {
     const teacherId = req.user._id;
     const students = await Student.find({ teacher: teacherId, active: true });
-    
+
     const status = await Promise.all(students.map(async (student) => {
       const latestPayment = await Payment.findOne({ student: student._id })
         .sort('-dueDate');
-      
+
       return {
         studentId: student._id,
         studentName: student.name,
@@ -82,12 +83,13 @@ export const getStudentPaymentAnalytics = async (req, res) => {
         daysOverdue: latestPayment?.status === 'late' && latestPayment?.dueDate
           ? Math.max(0, Math.floor((Date.now() - new Date(latestPayment.dueDate).getTime()) / (1000 * 60 * 60 * 24)))
           : 0,
-        lastPaymentDate: latestPayment?.paidDate || null
+        lastPaymentDate: latestPayment?.paidAt || null
       };
     }));
 
     res.json(status);
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar analytics de pagamentos', error: error.message });
+    console.error('Erro ao buscar analytics de pagamentos:', error);
+    res.status(500).json({ message: 'Erro ao buscar analytics de pagamentos' });
   }
 };

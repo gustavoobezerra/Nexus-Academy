@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, goals });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -58,7 +58,7 @@ router.post('/', async (req, res) => {
     const goal = await Goal.create(goalData);
     res.status(201).json({ success: true, goal });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -83,7 +83,7 @@ router.post('/:id/update', async (req, res) => {
     await goal.updateProgress(value, notes);
     res.json({ success: true, goal });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -150,7 +150,7 @@ router.post('/auto-update', async (req, res) => {
       updatedGoals 
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

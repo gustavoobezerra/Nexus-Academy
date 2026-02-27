@@ -28,17 +28,18 @@ export const getStudents = async (req, res) => {
       }
     }
     if (req.query.search) {
-      // Busca por nome, email ou telefone
+      // Escapar caracteres especiais de regex para prevenir ReDoS
+      const escapedSearch = req.query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { name: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } },
-        { phone: { $regex: req.query.search, $options: 'i' } }
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } },
+        { phone: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
     // Criar chave de cache baseada nos filtros
     const cacheKey = `students:${req.user._id}:${JSON.stringify(query)}`;
-    
+
     // Tentar buscar do cache primeiro (TTL de 5 minutos)
     const cached = await cacheService.get(cacheKey);
     if (cached) {
@@ -65,7 +66,8 @@ export const getStudents = async (req, res) => {
       students
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar alunos', error: error.message });
+    console.error('Erro ao buscar alunos:', error);
+    res.status(500).json({ message: 'Erro ao buscar alunos' });
   }
 };
 
@@ -85,14 +87,15 @@ export const getStudent = async (req, res) => {
       student
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar aluno', error: error.message });
+    console.error('Erro ao buscar aluno:', error);
+    res.status(500).json({ message: 'Erro ao buscar aluno' });
   }
 };
 
 // Sanitização de inputs para prevenir XSS
 const sanitizeInput = (input) => {
   if (typeof input !== 'string') return input;
-  
+
   return input
     .replace(/[<>]/g, '') // Remove tags HTML
     .replace(/javascript:/gi, '') // Remove javascript: protocol
@@ -102,18 +105,18 @@ const sanitizeInput = (input) => {
 
 const sanitizeObject = (obj) => {
   if (!obj || typeof obj !== 'object') return obj;
-  
+
   const sanitized = {};
   for (const [key, value] of Object.entries(obj)) {
     // Prevenir NoSQL injection
     if (key.startsWith('$') || key.includes('.')) {
       continue;
     }
-    
+
     if (typeof value === 'string') {
       sanitized[key] = sanitizeInput(value);
     } else if (Array.isArray(value)) {
-      sanitized[key] = value.map(item => 
+      sanitized[key] = value.map(item =>
         typeof item === 'string' ? sanitizeInput(item) : item
       );
     } else if (typeof value === 'object' && value !== null) {
@@ -185,7 +188,8 @@ export const createStudent = async (req, res) => {
       student
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao criar aluno', error: error.message });
+    console.error('Erro ao criar aluno:', error);
+    res.status(500).json({ message: 'Erro ao criar aluno' });
   }
 };
 
@@ -193,7 +197,7 @@ export const updateStudent = async (req, res) => {
   try {
     // Sanitizar inputs
     const sanitizedBody = sanitizeObject(req.body);
-    
+
     const student = await Student.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
       sanitizedBody,
@@ -212,7 +216,8 @@ export const updateStudent = async (req, res) => {
       student
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao atualizar aluno', error: error.message });
+    console.error('Erro ao atualizar aluno:', error);
+    res.status(500).json({ message: 'Erro ao atualizar aluno' });
   }
 };
 
@@ -236,7 +241,8 @@ export const deleteStudent = async (req, res) => {
       message: 'Aluno removido com sucesso.'
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao remover aluno', error: error.message });
+    console.error('Erro ao remover aluno:', error);
+    res.status(500).json({ message: 'Erro ao remover aluno' });
   }
 };
 
@@ -272,6 +278,7 @@ export const getStudentStats = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+    console.error('Erro ao buscar estatísticas de alunos:', error);
+    res.status(500).json({ message: 'Erro ao buscar estatísticas' });
   }
 };

@@ -19,8 +19,13 @@ export const useAudioTranscription = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSupported, setIsSupported] = useState(true);
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const support = !!((window as any).webkitSpeechRecognition || (window as any).SpeechRecognition);
+      return support ? null : 'Reconhecimento de fala não suportado neste navegador';
+    }
+    return 'Reconhecimento de fala não suportado neste navegador';
+  });
 
   const recognitionRef = useRef<any>(null);
   const onTranscriptCallback = useRef<((result: TranscriptionResult) => void) | null>(null);
@@ -93,13 +98,14 @@ export const useAudioTranscription = () => {
   }, []);
 
   // Initialize isSupported based on window
-  useEffect(() => {
-     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-     if (!SpeechRecognition) {
-         setIsSupported(false);
-         setError('Reconhecimento de fala não suportado neste navegador');
-     }
-  }, []);
+  const [isSupported] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!((window as any).webkitSpeechRecognition || (window as any).SpeechRecognition);
+    }
+    return false;
+  });
+
+
 
   const startListening = useCallback(() => {
     if (recognitionRef.current && isSupported) {

@@ -101,17 +101,17 @@ paymentSchema.index({ dueDate: 1, status: 1 }); // Pagamentos vencidos
 paymentSchema.index({ teacher: 1, createdAt: -1 }); // Últimos pagamentos
 
 // Validações e middlewares
-paymentSchema.pre('save', function(next) {
+paymentSchema.pre('save', function (next) {
   // Gerar número de invoice automaticamente
   if (!this.invoiceNumber && this.status === 'paid') {
-    this.invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+    this.invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
   }
 
   // Atualizar status baseado na data de vencimento
   if (this.status === 'pending' && this.dueDate) {
     const now = new Date();
     const daysDiff = Math.floor((now - this.dueDate) / (1000 * 60 * 60 * 24));
-    
+
     if (daysDiff > 30) {
       this.status = 'overdue';
     } else if (daysDiff > 0) {
@@ -131,11 +131,11 @@ paymentSchema.pre('save', function(next) {
   next();
 });
 
-paymentSchema.virtual('isOverdue').get(function() {
+paymentSchema.virtual('isOverdue').get(function () {
   return this.status === 'pending' && new Date() > this.dueDate;
 });
 
-paymentSchema.virtual('daysOverdue').get(function() {
+paymentSchema.virtual('daysOverdue').get(function () {
   if (this.status !== 'late' && this.status !== 'overdue') return 0;
   return Math.floor((new Date() - this.dueDate) / (1000 * 60 * 60 * 24));
 });

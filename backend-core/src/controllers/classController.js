@@ -20,7 +20,7 @@ export const getClasses = async (req, res) => {
     const [classes, total] = await Promise.all([
       Class.find(query)
         .populate('student', 'name grade')
-        .sort('-date')
+        .sort('-scheduledAt')
         .skip(skip)
         .limit(limit),
       Class.countDocuments(query)
@@ -35,7 +35,8 @@ export const getClasses = async (req, res) => {
       classes
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar aulas', error: error.message });
+    console.error('Erro ao buscar aulas:', error);
+    res.status(500).json({ message: 'Erro ao buscar aulas' });
   }
 };
 
@@ -55,14 +56,17 @@ export const getClass = async (req, res) => {
       class: classData
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar aula', error: error.message });
+    console.error('Erro ao buscar aula:', error);
+    res.status(500).json({ message: 'Erro ao buscar aula' });
   }
 };
 
 export const createClass = async (req, res) => {
   try {
+    const { studentId, ...rest } = req.body;
     const classData = {
-      ...req.body,
+      ...rest,
+      student: studentId || req.body.student,
       teacher: req.user._id
     };
 
@@ -73,15 +77,24 @@ export const createClass = async (req, res) => {
       class: newClass
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao criar aula', error: error.message });
+    console.error('Erro ao criar aula:', error);
+    res.status(500).json({ message: 'Erro ao criar aula' });
   }
 };
 
 export const updateClass = async (req, res) => {
   try {
+    const allowedFields = ['title', 'description', 'scheduledAt', 'duration', 'status', 'student', 'subject', 'notes', 'materials', 'homework'];
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
     const classData = await Class.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -94,7 +107,8 @@ export const updateClass = async (req, res) => {
       class: classData
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao atualizar aula', error: error.message });
+    console.error('Erro ao atualizar aula:', error);
+    res.status(500).json({ message: 'Erro ao atualizar aula' });
   }
 };
 
@@ -127,7 +141,82 @@ export const generateAISummary = async (req, res) => {
       aiSummary: response.data.result
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao gerar resumo com IA', error: error.message });
+    console.error('Erro ao gerar resumo com IA:', error);
+    res.status(500).json({ message: 'Erro ao gerar resumo com IA' });
+  }
+};
+
+export const startClass = async (req, res) => {
+  try {
+    const classData = await Class.findOneAndUpdate(
+      { _id: req.params.id, teacher: req.user._id },
+      { status: 'in_progress', startedAt: new Date() },
+      { new: true }
+    );
+
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    // Notificar via Socket.IO se disponível
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('class-started', { classId: req.params.id, class: classData });
+    }
+
+    res.json({ success: true, class: classData });
+  } catch (error) {
+    console.error('Erro ao iniciar aula:', error);
+    res.status(500).json({ success: false, message: 'Erro ao iniciar aula' });
+  }
+};
+
+export const endClass = async (req, res) => {
+  try {
+    const endedAt = new Date();
+
+    const classData = await Class.findOne({ _id: req.params.id, teacher: req.user._id });
+
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    const startedAt = classData.startedAt || classData.scheduledAt || endedAt;
+    const actualDuration = Math.round((endedAt - new Date(startedAt)) / 1000 / 60); // minutos
+
+    classData.status = 'completed';
+    classData.endedAt = endedAt;
+    classData.actualDuration = actualDuration > 0 ? actualDuration : classData.duration;
+    await classData.save();
+
+    // Notificar via Socket.IO se disponível
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('class-ended', { classId: req.params.id });
+    }
+
+    res.json({ success: true, class: classData });
+  } catch (error) {
+    console.error('Erro ao encerrar aula:', error);
+    res.status(500).json({ success: false, message: 'Erro ao encerrar aula' });
+  }
+};
+
+export const deleteClass = async (req, res) => {
+  try {
+    const classData = await Class.findOneAndDelete({
+      _id: req.params.id,
+      teacher: req.user._id
+    });
+
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    res.json({ success: true, message: 'Aula removida com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao deletar aula:', error);
+    res.status(500).json({ success: false, message: 'Erro ao deletar aula' });
   }
 };
 
@@ -143,7 +232,7 @@ export const getClassStats = async (req, res) => {
 
     const upcomingClasses = await Class.countDocuments({
       teacher: teacherId,
-      date: { $gte: today }
+      scheduledAt: { $gte: today }
     });
 
     const completedClasses = await Class.countDocuments({
@@ -160,6 +249,7 @@ export const getClassStats = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+    console.error('Erro ao buscar estatísticas de aulas:', error);
+    res.status(500).json({ message: 'Erro ao buscar estatísticas' });
   }
 };

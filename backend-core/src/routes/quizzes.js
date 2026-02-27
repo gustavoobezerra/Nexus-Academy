@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, quizzes });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -56,7 +56,7 @@ router.post('/', async (req, res) => {
     const quiz = await Quiz.create(quizData);
     res.status(201).json({ success: true, quiz });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -81,7 +81,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({ success: true, quiz });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -132,7 +132,7 @@ router.post('/:id/attempts', async (req, res) => {
 
     res.status(201).json({ success: true, attempt });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -228,7 +228,7 @@ router.post('/attempts/:id/submit', async (req, res) => {
 
     res.json({ success: true, attempt });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -256,7 +256,7 @@ router.get('/attempts/:id', async (req, res) => {
 
     res.json({ success: true, attempt });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

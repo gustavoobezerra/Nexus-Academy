@@ -41,10 +41,10 @@ export const studentOnboardingAPI = {
 export const portalAPI = {
   login: (email: string, password: string) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/login', { email, password }),
   register: (data: Partial<Aluno>) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/register', data),
-  getProfile: () => apiService.get<{ student: any }>('/portal/profile'),
-  updateProfile: (data: unknown) => apiService.put<{ student: any }>('/portal/profile', data),
-  createGoal: (data: unknown) => apiService.post<{ goal: any }>('/portal/goals', data),
-  updateGoal: (id: string, data: any) => apiService.put<{ goal: any }>(`/portal/goals/${id}`, data),
+  getProfile: () => apiService.get<{ student: Aluno }>('/portal/profile'),
+  updateProfile: (data: unknown) => apiService.put<{ student: Aluno }>('/portal/profile', data),
+  createGoal: (data: unknown) => apiService.post<{ goal: Record<string, unknown> }>('/portal/goals', data),
+  updateGoal: (id: string, data: unknown) => apiService.put<{ goal: Record<string, unknown> }>(`/portal/goals/${id}`, data),
   deleteGoal: (id: string) => apiService.delete<void>(`/portal/goals/${id}`),
   getClasses: (params?: { status?: string; limit?: number; page?: number }) =>
     apiService.get<{ classes: Aula[]; pagination?: { total: number; page: number; limit: number; pages: number } }>('/portal/classes', { params }),
@@ -53,8 +53,10 @@ export const portalAPI = {
 };
 
 export const liveClassAPI = {
-  create: (data: { classId: string; className: string }) => apiService.post<{ id: string; url: string }>('/live-class/start', data),
-  join: (id: string) => apiService.get<{ url: string }>(`/live-class/${id}/join`),
+  create: (data: { classId: string; className?: string }) => apiService.post<{ success: boolean; session: { sessionId: string; classId: string; status: string } }>('/live-class/start', data),
+  join: (sessionId: string) => apiService.post<{ success: boolean; session: { sessionId: string; classId: string; status: string } }>(`/live-class/${sessionId}/join`),
+  end: (sessionId: string) => apiService.post<{ success: boolean; session: { sessionId: string; classId: string; status: string; duration: number } }>(`/live-class/${sessionId}/end`),
+  getSession: (sessionId: string) => apiService.get<{ success: boolean; session: { sessionId: string; classId: string; teacherId: string; studentId: string; status: string; startTime: string } }>(`/live-class/${sessionId}`),
 };
 
 export const dailyAPI = {

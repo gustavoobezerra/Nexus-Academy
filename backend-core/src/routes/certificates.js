@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, certificates });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -96,7 +96,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ success: true, certificate });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -137,7 +137,7 @@ router.get('/verify/:code', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

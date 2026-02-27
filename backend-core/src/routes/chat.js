@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, chats: chatsWithLastMessage });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -117,7 +117,7 @@ router.post('/', async (req, res) => {
 
     res.json({ success: true, chat });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -158,7 +158,7 @@ router.get('/:id/messages', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -231,7 +231,7 @@ router.post('/:id/messages', async (req, res) => {
 
     res.json({ success: true, message });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -261,7 +261,7 @@ router.post('/:id/read', async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

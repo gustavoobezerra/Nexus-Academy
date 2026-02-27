@@ -153,7 +153,7 @@ export const requireActiveSubscription = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
-      message: 'Usu rio nÆo autenticado.'
+      message: 'Usuário não autenticado.'
     });
   }
 
@@ -201,7 +201,7 @@ export const requireCompletedOnboarding = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
-      message: 'Usu rio nÆo autenticado.'
+      message: 'Usuário não autenticado.'
     });
   }
 
@@ -270,14 +270,20 @@ export const recordLoginAttempt = (ip, success) => {
     return;
   }
 
-  const attempts = loginAttempts.get(key) || { count: 0 };
-  loginAttempts.set(key, { count: attempts.count + 1 });
-
-  // Limpar após 1 hora
-  setTimeout(() => {
-    loginAttempts.delete(key);
-  }, 60 * 60 * 1000);
+  const attempts = loginAttempts.get(key) || { count: 0, createdAt: Date.now() };
+  loginAttempts.set(key, { count: attempts.count + 1, createdAt: attempts.createdAt || Date.now() });
 };
+
+// Limpeza periódica do Map para evitar memory leak (a cada 10 minutos)
+setInterval(() => {
+  const now = Date.now();
+  const ONE_HOUR = 60 * 60 * 1000;
+  for (const [key, value] of loginAttempts.entries()) {
+    if (now - (value.createdAt || 0) > ONE_HOUR) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
 
 // Sanitização de input
 export const sanitizeInput = (req, res, next) => {

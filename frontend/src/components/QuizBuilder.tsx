@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, Save, CheckCircle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import apiService from '../services/api.service';
 
 interface Question {
   _id?: string;
@@ -37,7 +38,6 @@ export const QuizBuilder = () => {
   });
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [saving, setSaving] = useState(false);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const addQuestion = (type: Question['type']) => {
     const newQuestion: Question = {
@@ -104,17 +104,14 @@ export const QuizBuilder = () => {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/quizzes`, {
-        method: quiz._id ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(quiz)
-      });
+      let data: any;
 
-      const data = await response.json();
+      if (quiz._id) {
+        data = await apiService.put(`/quizzes/${quiz._id}`, quiz);
+      } else {
+        data = await apiService.post('/quizzes', quiz);
+      }
+
       if (data.success) {
         toast.success('Quiz salvo com sucesso!');
         setQuiz({ ...quiz, _id: data.quiz._id });
@@ -229,8 +226,8 @@ export const QuizBuilder = () => {
                   </span>
                   <span className="text-xs px-2 py-1 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded">
                     {q.type === 'multiple_choice' ? 'Múltipla Escolha' :
-                     q.type === 'true_false' ? 'Verdadeiro/Falso' :
-                     q.type === 'fill_blank' ? 'Preencher Lacunas' : 'Dissertativa'}
+                      q.type === 'true_false' ? 'Verdadeiro/Falso' :
+                        q.type === 'fill_blank' ? 'Preencher Lacunas' : 'Dissertativa'}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -328,22 +325,20 @@ export const QuizBuilder = () => {
                   <div className="flex gap-4">
                     <button
                       onClick={() => setEditingQuestion({ ...editingQuestion, correctAnswer: true })}
-                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors ${
-                        editingQuestion.correctAnswer === true
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors ${editingQuestion.correctAnswer === true
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                           : 'border-slate-300 dark:border-slate-600'
-                      }`}
+                        }`}
                     >
                       <CheckCircle className="w-5 h-5 mx-auto mb-1 text-green-500" />
                       <span className="text-sm font-medium">Verdadeiro</span>
                     </button>
                     <button
                       onClick={() => setEditingQuestion({ ...editingQuestion, correctAnswer: false })}
-                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors ${
-                        editingQuestion.correctAnswer === false
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition-colors ${editingQuestion.correctAnswer === false
                           ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
                           : 'border-slate-300 dark:border-slate-600'
-                      }`}
+                        }`}
                     >
                       <XCircle className="w-5 h-5 mx-auto mb-1 text-red-500" />
                       <span className="text-sm font-medium">Falso</span>

@@ -42,7 +42,7 @@ router.post('/start', async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       success: false, 
-      message: error.message 
+      message: "Erro interno do servidor" 
     });
   }
 });
@@ -79,7 +79,7 @@ router.post('/:sessionId/join', async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       success: false, 
-      message: error.message 
+      message: "Erro interno do servidor" 
     });
   }
 });
@@ -112,7 +112,28 @@ router.post('/:sessionId/end', async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       success: false, 
-      message: error.message 
+      message: "Erro interno do servidor" 
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/live-class/active/list:
+ *   get:
+ *     summary: Listar sessões ativas do professor
+ *     tags: [Live Class]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/active/list', async (req, res) => {
+  try {
+    const sessions = liveClassService.getTeacherActiveSessions(req.user._id);
+    res.json({ success: true, sessions });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Erro interno do servidor"
     });
   }
 });
@@ -132,47 +153,26 @@ router.get('/:sessionId', async (req, res) => {
     const session = liveClassService.getSession(sessionId);
 
     if (!session) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Sessão não encontrada' 
+      return res.status(404).json({
+        success: false,
+        message: 'Sessão não encontrada'
       });
     }
 
     // Verificar acesso
-    if (session.teacherId !== req.user._id.toString() && 
+    if (session.teacherId !== req.user._id.toString() &&
         session.studentId !== req.user._id.toString()) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Acesso negado' 
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado'
       });
     }
 
     res.json({ success: true, session });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/live-class/active:
- *   get:
- *     summary: Listar sessões ativas do professor
- *     tags: [Live Class]
- *     security:
- *       - bearerAuth: []
- */
-router.get('/active/list', async (req, res) => {
-  try {
-    const sessions = liveClassService.getTeacherActiveSessions(req.user._id);
-    res.json({ success: true, sessions });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: "Erro interno do servidor"
     });
   }
 });

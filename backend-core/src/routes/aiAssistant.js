@@ -90,7 +90,7 @@ router.get('/history', async (req, res) => {
     const history = aiAssistantService.getHistory(req.user._id.toString());
     res.json({ success: true, history });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -108,7 +108,7 @@ router.delete('/history', async (req, res) => {
     aiAssistantService.clearHistory(req.user._id.toString());
     res.json({ success: true, message: 'Histórico limpo' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

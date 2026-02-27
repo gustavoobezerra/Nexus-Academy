@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, MessageSquare, Users, Search, Paperclip } from 'lucide-react';
 import toast from 'react-hot-toast';
+import apiService from '../services/api.service';
 
 interface Chat {
   _id: string;
@@ -42,7 +43,6 @@ export const ChatSystem = () => {
   const [input, setInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     loadChats();
@@ -60,11 +60,7 @@ export const ChatSystem = () => {
 
   const loadChats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/chat`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiService.get<any>('/chat');
       if (data.success) {
         setChats(data.chats || []);
       }
@@ -75,18 +71,11 @@ export const ChatSystem = () => {
 
   const loadMessages = async (chatId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/chat/${chatId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiService.get<any>(`/chat/${chatId}/messages`);
       if (data.success) {
         setMessages(data.messages || []);
         // Marcar como lida
-        await fetch(`${API_URL}/chat/${chatId}/read`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await apiService.post(`/chat/${chatId}/read`, {});
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -100,17 +89,8 @@ export const ChatSystem = () => {
     setInput('');
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/chat/${selectedChat._id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ content })
-      });
+      const data = await apiService.post<any>(`/chat/${selectedChat._id}/messages`, { content });
 
-      const data = await response.json();
       if (data.success) {
         setMessages(prev => [...prev, data.message]);
         loadChats(); // Atualizar lista de chats
@@ -131,8 +111,8 @@ export const ChatSystem = () => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return chat.participants.some(p => p.name.toLowerCase().includes(search)) ||
-           chat.relatedStudent?.name.toLowerCase().includes(search) ||
-           chat.lastMessage?.content.toLowerCase().includes(search);
+      chat.relatedStudent?.name.toLowerCase().includes(search) ||
+      chat.lastMessage?.content.toLowerCase().includes(search);
   });
 
   return (
@@ -169,9 +149,8 @@ export const ChatSystem = () => {
               <button
                 key={chat._id}
                 onClick={() => setSelectedChat(chat)}
-                className={`w-full p-4 border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left ${
-                  selectedChat?._id === chat._id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
-                }`}
+                className={`w-full p-4 border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left ${selectedChat?._id === chat._id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -235,16 +214,14 @@ export const ChatSystem = () => {
                   className={`flex ${msg.sender.type === 'teacher' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg p-3 ${
-                      msg.sender.type === 'teacher'
+                    className={`max-w-[70%] rounded-lg p-3 ${msg.sender.type === 'teacher'
                         ? 'bg-indigo-500 text-white'
                         : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
-                    }`}
+                      }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      msg.sender.type === 'teacher' ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'
-                    }`}>
+                    <p className={`text-xs mt-1 ${msg.sender.type === 'teacher' ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'
+                      }`}>
                       {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
                         hour: '2-digit',
                         minute: '2-digit'

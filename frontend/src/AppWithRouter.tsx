@@ -68,7 +68,7 @@ function AppWithRouter() {
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [liveClassData, setLiveClassData] = useState<{ id: string; title: string } | null>(null);
-  const [useDaily] = useState(true); // Usar Daily.co como padrão (true) ou Jitsi (false)
+  const [preferDaily] = useState(true); // Usar Daily.co como padrão (true) ou Jitsi (false)
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
   const [mostrarHangman, setMostrarHangman] = useState(false);
 
@@ -80,7 +80,7 @@ function AppWithRouter() {
   const isTutorialPage = location.pathname.startsWith('/tutoriais/');
   const isStudentPortal = location.pathname.startsWith('/portal');
   const isTeacherSlugPage = location.pathname.startsWith('/professor/') &&
-                           location.pathname !== '/professor/login';
+    location.pathname !== '/professor/login';
   const studentToken = localStorage.getItem('studentToken');
   const teacherToken = localStorage.getItem('token');
 
@@ -225,7 +225,7 @@ function AppWithRouter() {
       );
     }
     if (location.pathname === '/portal/live-class' && liveClassData) {
-      return useDaily ? (
+      return preferDaily ? (
         <DailyLiveClass
           classId={liveClassData.id}
           className={liveClassData.title}
@@ -282,7 +282,9 @@ function AppWithRouter() {
         w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium
         ${abaAtiva === id
           ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg'
-          : 'text-gray-400 hover:bg-slate-700 hover:text-white'
+          : isDark
+            ? 'text-gray-400 hover:bg-slate-700 hover:text-white'
+            : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
         }
       `}
     >
@@ -302,9 +304,7 @@ function AppWithRouter() {
     <>
       <div className={`flex h-screen w-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
         {/* Sidebar */}
-        <aside className={`hidden md:flex fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white p-4 flex-col transform transition-transform duration-300 ${
-          menuMobileAberto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}>
+        <aside className={`fixed md:static inset-y-0 left-0 z-40 w-64 p-4 flex flex-col transform transition-transform duration-300 border-r ${isDark ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'} ${menuMobileAberto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
           <div className="flex items-center gap-3 mb-8 px-2">
             <div className="sm:hidden">
               <BrandLogo variant="mark" theme="dark" size="md" />
@@ -315,14 +315,14 @@ function AppWithRouter() {
           </div>
 
           <nav className="space-y-2 flex-1 overflow-y-auto">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2">Principal</div>
+            <div className={`text-xs font-semibold uppercase tracking-wider px-4 mb-2 ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Principal</div>
             <ItemNavegacao icon={<Layout size={20} />} label="Dashboard" id="dashboard" />
             <ItemNavegacao icon={<Brain size={20} />} label="AI Hub" id="ai-hub" />
             <ItemNavegacao icon={<Video size={20} />} label="Aulas" id="aulas" />
             <ItemNavegacao icon={<Users size={20} />} label="Alunos" id="students" />
             <ItemNavegacao icon={<CalendarDays size={20} />} label="Calendário" id="calendar" />
 
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mb-2 mt-4">Gestão</div>
+            <div className={`text-xs font-semibold uppercase tracking-wider px-4 mb-2 mt-4 ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Gestão</div>
             <ItemNavegacao icon={<Users size={20} />} label="Grupos" id="student-groups" />
             <ItemNavegacao icon={<Star size={20} />} label="Pontos" id="points" />
             <ItemNavegacao icon={<Users size={20} />} label="Online" id="online" />
@@ -335,14 +335,14 @@ function AppWithRouter() {
             <ItemNavegacao icon={<Zap size={20} />} label="Avançados" id="advanced" />
           </nav>
 
-          <div className="border-t border-slate-700 pt-4 mt-4 space-y-3">
-            <div className="px-4 py-3 bg-slate-800 rounded-xl">
-              <p className="text-xs text-gray-400">Logado como</p>
-              <p className="text-sm font-medium text-white truncate">{user?.name || 'Professor'}</p>
+          <div className={`border-t pt-4 mt-4 space-y-3 ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <div className={`px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Logado como</p>
+              <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{user?.name || 'Professor'}</p>
             </div>
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300"
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'}`}
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
               <span>{isDark ? 'Modo Claro' : 'Modo Escuro'}</span>
@@ -364,7 +364,7 @@ function AppWithRouter() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <button
             onClick={() => setMenuMobileAberto(!menuMobileAberto)}
-            className="md:hidden fixed top-4 left-4 z-50 bg-slate-900 text-white p-2 rounded-lg shadow-lg"
+            className={`md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg ${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 border border-slate-200'}`}
           >
             <Menu size={24} />
           </button>
@@ -374,36 +374,35 @@ function AppWithRouter() {
               <div>
                 <h2 className={`text-xl md:text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
                   {abaAtiva === 'dashboard' ? 'Painel de Controle' :
-                   abaAtiva === 'aulas' ? 'Gestão de Aulas' :
-                   abaAtiva === 'students' ? 'Gestão de Alunos' :
-                   abaAtiva === 'calendar' ? 'Calendário' :
-                   abaAtiva === 'hour-bank' ? 'Banco de Horas' :
-                   abaAtiva === 'ai-activities' ? 'Gerador de Atividades IA' :
-                   abaAtiva === 'ai-insights' ? 'Dashboard de Insights IA' :
-                   abaAtiva === 'smart-schedule' ? 'Agendamento Inteligente' :
-                   abaAtiva === 'lesson-prep' ? 'Preparação Automática de Aulas' :
-                   abaAtiva === 'contracts' ? 'Gerenciador de Contratos' :
-                   abaAtiva === 'student-groups' ? 'Grupos de Alunos' :
-                   abaAtiva === 'points' ? 'Pontos' :
-                   abaAtiva === 'online' ? 'Alunos Online' :
-                   abaAtiva === 'finance' ? 'Financeiro' :
-                   abaAtiva === 'analytics' ? 'Dashboard de Negócios' :
-                   abaAtiva === 'automation' ? 'Centro de Mensagens' :
-                   abaAtiva === 'templates' ? 'Templates de Mensagens' :
-                   abaAtiva === 'automation-manager' ? 'Motor de Automacao Central' :
-                   abaAtiva === 'ai-hub' ? 'Nexus AI Hub' :
-                   abaAtiva === 'hub' ? 'Hub Educacional' :
-                   abaAtiva === 'advanced' ? 'Recursos Avançados' : 'Nexus Academy'}
+                    abaAtiva === 'aulas' ? 'Gestão de Aulas' :
+                      abaAtiva === 'students' ? 'Gestão de Alunos' :
+                        abaAtiva === 'calendar' ? 'Calendário' :
+                          abaAtiva === 'hour-bank' ? 'Banco de Horas' :
+                            abaAtiva === 'ai-activities' ? 'Gerador de Atividades IA' :
+                              abaAtiva === 'ai-insights' ? 'Dashboard de Insights IA' :
+                                abaAtiva === 'smart-schedule' ? 'Agendamento Inteligente' :
+                                  abaAtiva === 'lesson-prep' ? 'Preparação Automática de Aulas' :
+                                    abaAtiva === 'contracts' ? 'Gerenciador de Contratos' :
+                                      abaAtiva === 'student-groups' ? 'Grupos de Alunos' :
+                                        abaAtiva === 'points' ? 'Pontos' :
+                                          abaAtiva === 'online' ? 'Alunos Online' :
+                                            abaAtiva === 'finance' ? 'Financeiro' :
+                                              abaAtiva === 'analytics' ? 'Dashboard de Negócios' :
+                                                abaAtiva === 'automation' ? 'Centro de Mensagens' :
+                                                  abaAtiva === 'templates' ? 'Templates de Mensagens' :
+                                                    abaAtiva === 'automation-manager' ? 'Motor de Automacao Central' :
+                                                      abaAtiva === 'ai-hub' ? 'Nexus AI Hub' :
+                                                        abaAtiva === 'hub' ? 'Hub Educacional' :
+                                                          abaAtiva === 'advanced' ? 'Recursos Avançados' : 'Nexus Academy'}
                 </h2>
               </div>
               <div className="flex items-center gap-4 relative">
                 <button
                   onClick={() => setMostrarAlertas(!mostrarAlertas)}
-                  className={`p-2 rounded-xl transition-all relative ${
-                    mostrarAlertas
-                      ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
-                      : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
-                  }`}
+                  className={`p-2 rounded-xl transition-all relative ${mostrarAlertas
+                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
+                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                    }`}
                 >
                   <Bell size={22} />
                   {unreadAlerts > 0 && (
@@ -448,7 +447,7 @@ function AppWithRouter() {
                 />
               )}
               {abaAtiva === 'live-class' && liveClassData && (
-                useDaily ? (
+                preferDaily ? (
                   <DailyLiveClass
                     classId={liveClassData.id}
                     className={liveClassData.title}
@@ -495,7 +494,7 @@ function AppWithRouter() {
               {abaAtiva === 'hour-bank' && <HourBankManagement />}
               {abaAtiva === 'ai-activities' && <AIActivityGenerator />}
               {abaAtiva === 'ai-insights' && <AIInsightsDashboard />}
-              {abaAtiva === 'smart-schedule' && <SmartScheduling students={[]} classes={[]} />}
+              {abaAtiva === 'smart-schedule' && <SmartScheduling />}
               {abaAtiva === 'lesson-prep' && <LessonPrepAI />}
               {abaAtiva === 'contracts' && <ContractManager />}
               {abaAtiva === 'student-groups' && <StudentGroupsManager />}

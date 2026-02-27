@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-slate-600 dark:text-slate-400 mb-4">
               Ocorreu um erro ao carregar a aplicação. Por favor, recarregue a página.
             </p>
-            {this.state.error && (
+            {this.state.error && import.meta.env.DEV && (
               <details className="mb-4">
                 <summary className="text-sm text-slate-500 dark:text-slate-400 cursor-pointer mb-2">
                   Detalhes do erro

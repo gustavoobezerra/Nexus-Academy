@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
     const reports = await Report.find({ teacher: req.user._id }).sort({ createdAt: -1 });
     res.json({ success: true, reports });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -28,7 +28,7 @@ router.get('/:id', async (req, res) => {
     if (!report) return res.status(404).json({ success: false, message: 'Relatório não encontrado' });
     res.json({ success: true, report });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -37,7 +37,7 @@ router.post('/', async (req, res) => {
     const report = await Report.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, report });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -50,7 +50,7 @@ router.put('/:id', async (req, res) => {
     );
     res.json({ success: true, report });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -59,7 +59,7 @@ router.delete('/:id', async (req, res) => {
     await Report.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Relatório removido' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -84,7 +84,7 @@ router.post('/:id/generate', async (req, res) => {
 
     res.json({ success: true, data, generation: report.generations[genIndex] });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -176,7 +176,7 @@ router.get('/dashboards', async (req, res) => {
     const dashboards = await DashboardConfig.find({ teacher: req.user._id });
     res.json({ success: true, dashboards });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -185,7 +185,7 @@ router.post('/dashboards', async (req, res) => {
     const dashboard = await DashboardConfig.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, dashboard });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -198,7 +198,7 @@ router.put('/dashboards/:id', async (req, res) => {
     );
     res.json({ success: true, dashboard });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -207,7 +207,7 @@ router.delete('/dashboards/:id', async (req, res) => {
     await DashboardConfig.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Dashboard removido' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -221,7 +221,7 @@ router.get('/snapshots', async (req, res) => {
       .limit(parseInt(limit));
     res.json({ success: true, snapshots });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -267,7 +267,7 @@ router.post('/snapshots/generate', async (req, res) => {
 
     res.json({ success: true, snapshot });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -292,7 +292,7 @@ router.get('/:id/export', async (req, res) => {
       res.status(400).json({ success: false, message: 'Formato não suportado' });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -370,7 +370,7 @@ router.post('/parents/monthly', async (req, res) => {
       report: report.report
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -409,7 +409,7 @@ router.get('/parents/preview', async (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     res.send(report.report.html);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

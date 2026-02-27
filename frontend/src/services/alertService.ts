@@ -30,7 +30,7 @@ export interface Alert {
   status?: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import apiService from './api.service';
 
 // Estado local (cache)
 let cachedAlerts: Alert[] = [];
@@ -68,20 +68,6 @@ const mockAlerts: Alert[] = [
 ];
 
 class AlertService {
-  private token: string | null = null;
-
-  constructor() {
-    this.token = localStorage.getItem('token');
-  }
-
-  private getHeaders() {
-    this.token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.token}`
-    };
-  }
-
   async fetchAlerts(): Promise<Alert[]> {
     // Verificar cache
     if (Date.now() - lastFetch < CACHE_DURATION && cachedAlerts.length > 0) {
@@ -89,15 +75,7 @@ class AlertService {
     }
 
     try {
-      const response = await fetch(`${API_URL}/notifications?status=all&limit=50`, {
-        headers: this.getHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao buscar notificações');
-      }
-
-      const data = await response.json();
+      const data = await apiService.get<any>('/notifications?status=all&limit=50');
 
       if (data.success) {
         cachedAlerts = data.notifications.map((n: Alert & { id: string }) => ({
@@ -139,19 +117,14 @@ class AlertService {
 
   async dismissAlert(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_URL}/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: this.getHeaders()
-      });
+      await apiService.put(`/notifications/${id}/read`);
 
-      if (response.ok) {
-        const alert = cachedAlerts.find(a => a.id === id);
-        if (alert) {
-          alert.dismissedAt = new Date().toISOString();
-          alert.readAt = new Date().toISOString();
-          alert.status = 'read';
-          cachedUnreadCount = Math.max(0, cachedUnreadCount - 1);
-        }
+      const alert = cachedAlerts.find(a => a.id === id);
+      if (alert) {
+        alert.dismissedAt = new Date().toISOString();
+        alert.readAt = new Date().toISOString();
+        alert.status = 'read';
+        cachedUnreadCount = Math.max(0, cachedUnreadCount - 1);
       }
     } catch (error) {
       console.error('Erro ao dispensar alerta:', error);
@@ -165,18 +138,13 @@ class AlertService {
 
   async markAllAsRead(): Promise<void> {
     try {
-      const response = await fetch(`${API_URL}/notifications/read-all`, {
-        method: 'PUT',
-        headers: this.getHeaders()
-      });
+      await apiService.put('/notifications/read-all');
 
-      if (response.ok) {
-        cachedAlerts.forEach(alert => {
-          alert.readAt = new Date().toISOString();
-          alert.status = 'read';
-        });
-        cachedUnreadCount = 0;
-      }
+      cachedAlerts.forEach(alert => {
+        alert.readAt = new Date().toISOString();
+        alert.status = 'read';
+      });
+      cachedUnreadCount = 0;
     } catch (error) {
       console.error('Erro ao marcar todas como lidas:', error);
     }
@@ -195,15 +163,8 @@ class AlertService {
 
   async fetchUnreadCount(): Promise<number> {
     try {
-      const response = await fetch(`${API_URL}/notifications/unread-count`, {
-        headers: this.getHeaders()
-      });
+      const data = await apiService.get<any>('/notifications/unread-count');
 
-      if (!response.ok) {
-        throw new Error('Erro ao buscar contagem');
-      }
-
-      const data = await response.json();
       if (data.success) {
         cachedUnreadCount = data.count;
         return data.count;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Bot, User, Sparkles, Trash2, Lightbulb } from 'lucide-react';
 import toast from 'react-hot-toast';
+import apiService from '../services/api.service';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -22,37 +23,28 @@ export const AIAssistant = () => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const loadHistory = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/ai-assistant/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiService.get<any>('/ai-assistant/history');
       if (data.success && data.history) {
         setMessages(data.history);
       }
     } catch (error) {
       console.error('Error loading history:', error);
     }
-  }, [API_URL]);
+  }, []);
 
   const loadSuggestions = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/ai-assistant/suggestions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await apiService.get<any>('/ai-assistant/suggestions');
       if (data.success) {
         setSuggestions(data.suggestions || []);
       }
     } catch (error) {
       console.error('Error loading suggestions:', error);
     }
-  }, [API_URL]);
+  }, []);
 
   useEffect(() => {
     loadHistory();
@@ -80,17 +72,7 @@ export const AIAssistant = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/ai-assistant/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ message: text })
-      });
-
-      const data = await response.json();
+      const data = await apiService.post<any>('/ai-assistant/chat', { message: text });
 
       if (data.success) {
         const aiMessage: Message = {
@@ -112,11 +94,7 @@ export const AIAssistant = () => {
 
   const clearHistory = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/ai-assistant/history`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await apiService.delete('/ai-assistant/history');
       setMessages([]);
       toast.success('Histórico limpo');
     } catch (error) {
@@ -204,16 +182,14 @@ export const AIAssistant = () => {
               </div>
             )}
             <div
-              className={`max-w-[80%] rounded-lg p-4 ${
-                msg.role === 'user'
-                  ? 'bg-indigo-500 text-white'
-                  : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
-              }`}
+              className={`max-w-[80%] rounded-lg p-4 ${msg.role === 'user'
+                ? 'bg-indigo-500 text-white'
+                : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
+                }`}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
-              <p className={`text-xs mt-2 ${
-                msg.role === 'user' ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'
-              }`}>
+              <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'
+                }`}>
                 {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
                   hour: '2-digit',
                   minute: '2-digit'

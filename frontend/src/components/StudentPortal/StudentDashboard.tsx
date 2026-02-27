@@ -92,6 +92,7 @@ export const StudentDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('studentToken');
+    localStorage.removeItem('student');
     localStorage.removeItem('studentData');
     toast.success('Logout realizado com sucesso!');
     navigate('/portal/login');
@@ -137,9 +138,8 @@ export const StudentDashboard = () => {
   return (
     <div className={`flex h-screen w-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
       {/* Sidebar */}
-      <aside className={`hidden md:flex fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white p-4 flex-col transform transition-transform duration-300 ${
-        menuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}>
+      <aside className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white p-4 flex flex-col transform transition-transform duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}>
         <div className="flex items-center gap-3 mb-8 px-2">
           <div className="sm:hidden">
             <BrandLogo variant="mark" theme="dark" size="md" />
@@ -161,11 +161,10 @@ export const StudentDashboard = () => {
                   setActiveTab(item.id);
                   setMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-                  isActive
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg'
                     : 'text-gray-400 hover:bg-slate-700 hover:text-white'
-                }`}
+                  }`}
               >
                 <Icon size={20} />
                 <span>{item.label}</span>
@@ -223,11 +222,11 @@ export const StudentDashboard = () => {
             <div>
               <h2 className={`text-xl md:text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
                 {activeTab === 'dashboard' ? 'Meu Painel' :
-                 activeTab === 'classes' ? 'Minhas Aulas' :
-                 activeTab === 'activities' ? 'Atividades' :
-                 activeTab === 'calendar' ? 'Calendário' :
-                 activeTab === 'performance' ? 'Meu Desempenho' :
-                 activeTab === 'chat' ? 'Chat com Professor' : 'Portal do Aluno'}
+                  activeTab === 'classes' ? 'Minhas Aulas' :
+                    activeTab === 'activities' ? 'Atividades' :
+                      activeTab === 'calendar' ? 'Calendário' :
+                        activeTab === 'performance' ? 'Meu Desempenho' :
+                          activeTab === 'chat' ? 'Chat com Professor' : 'Portal do Aluno'}
               </h2>
               <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 Olá, {student.name}! 👋
@@ -251,12 +250,113 @@ export const StudentDashboard = () => {
         <main className="flex-1 overflow-auto">
           <div className={`min-h-full p-6 ${isDark ? 'bg-slate-950' : 'bg-slate-50'}`}>
             {activeTab === 'dashboard' && (
-              <DashboardContent student={student} activities={activities} classes={classes} isDark={isDark} onOpenChat={() => setActiveTab('chat')} />
+              <DashboardContent student={student} activities={activities} classes={classes} isDark={isDark} onOpenChat={() => setActiveTab('chat')} onNavigate={(path: string) => navigate(path)} />
+            )}
+            {activeTab === 'classes' && (
+              <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+                <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Minhas Aulas</h3>
+                {classes.length === 0 ? (
+                  <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>Nenhuma aula agendada</p>
+                ) : (
+                  <div className="space-y-3">
+                    {classes.map((cls: Class) => (
+                      <div key={cls._id} className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{cls.title}</p>
+                            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {new Date(cls.date).toLocaleDateString('pt-BR')} • {cls.duration}min
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${cls.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                              cls.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                'bg-blue-500/20 text-blue-400'
+                            }`}>
+                            {cls.status === 'completed' ? 'Concluída' : cls.status === 'cancelled' ? 'Cancelada' : 'Agendada'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'activities' && (
+              <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+                <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Todas as Atividades</h3>
+                {activities.length === 0 ? (
+                  <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>Nenhuma atividade encontrada</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activities.map((activity: Activity) => (
+                      <div key={activity._id} className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{activity.title}</p>
+                            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tipo: {activity.type}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${activity.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                              activity.status === 'late' ? 'bg-red-500/20 text-red-400' :
+                                'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                            {activity.status === 'completed' ? 'Concluída' : activity.status === 'late' ? 'Atrasada' : 'Pendente'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'calendar' && (
+              <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+                <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Calendário</h3>
+                {classes.length === 0 ? (
+                  <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>Nenhum evento no calendário</p>
+                ) : (
+                  <div className="space-y-3">
+                    {classes.filter((c: Class) => c.status === 'scheduled').map((cls: Class) => (
+                      <div key={cls._id} className={`p-4 rounded-lg border-l-4 border-indigo-500 ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                        <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{cls.title}</p>
+                        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {new Date(cls.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'performance' && (
+              <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+                <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Meu Desempenho</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-50'} text-center`}>
+                    <p className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{student.performance?.overall || 0}%</p>
+                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Desempenho Geral</p>
+                  </div>
+                  <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-50'} text-center`}>
+                    <p className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{student.points || 0}</p>
+                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Pontos Totais</p>
+                  </div>
+                  <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-50'} text-center`}>
+                    <p className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Nível {student.level || 1}</p>
+                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nível Atual</p>
+                  </div>
+                </div>
+                <div className={`mt-4 p-4 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                  <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Tendência</p>
+                  <p className={`text-lg font-bold ${student.performance?.trend === 'up' ? 'text-green-500' :
+                      student.performance?.trend === 'down' ? 'text-red-500' : isDark ? 'text-slate-400' : 'text-slate-600'
+                    }`}>
+                    {student.performance?.trend === 'up' ? '↑ Em alta' : student.performance?.trend === 'down' ? '↓ Em queda' : '→ Estável'}
+                  </p>
+                </div>
+              </div>
             )}
             {activeTab === 'chat' && (
               <ChatContent student={student} teacher={student.teacher} isDark={isDark} />
             )}
-            {/* Outros tabs serão implementados */}
           </div>
         </main>
       </div>
@@ -265,7 +365,16 @@ export const StudentDashboard = () => {
 };
 
 // Dashboard Content Component
-const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: unknown) => (
+interface DashboardContentProps {
+  student: StudentData;
+  activities: Activity[];
+  classes: Class[];
+  isDark: boolean;
+  onOpenChat: () => void;
+  onNavigate: (path: string) => void;
+}
+
+const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, onNavigate }: DashboardContentProps) => (
   <div className="space-y-6">
     {/* Stats Cards */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -303,7 +412,7 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <button
-          onClick={() => window.location.href = '/portal/pronunciation-test'}
+          onClick={() => onNavigate('/portal/pronunciation-test')}
           className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
         >
           <Mic size={20} />
@@ -313,7 +422,7 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
           </div>
         </button>
         <button
-          onClick={() => window.location.href = '/portal/hangman'}
+          onClick={() => onNavigate('/portal/hangman')}
           className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
         >
           <Gamepad2 size={20} />
@@ -378,13 +487,12 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
                     Tipo: {activity.type}
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  activity.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                  activity.status === 'late' ? 'bg-red-500/20 text-red-400' :
-                  'bg-yellow-500/20 text-yellow-400'
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${activity.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                    activity.status === 'late' ? 'bg-red-500/20 text-red-400' :
+                      'bg-yellow-500/20 text-yellow-400'
+                  }`}>
                   {activity.status === 'completed' ? 'Concluída' :
-                   activity.status === 'late' ? 'Atrasada' : 'Pendente'}
+                    activity.status === 'late' ? 'Atrasada' : 'Pendente'}
                 </span>
               </div>
             </div>
@@ -396,14 +504,28 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat }: 
 );
 
 // Chat Content Component
-const ChatContent = ({ student, teacher, isDark }: unknown) => (
+interface ChatContentProps {
+  student: StudentData;
+  teacher: StudentData['teacher'];
+  isDark: boolean;
+}
+
+const ChatContent = ({ student, teacher, isDark }: ChatContentProps) => (
   <div className="h-[calc(100vh-12rem)]">
     <StudentChat student={student} teacher={teacher} isDark={isDark} />
   </div>
 );
 
 // Stat Card Component
-const StatCard = ({ icon, label, value, isDark, small = false }: unknown) => (
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  isDark: boolean;
+  small?: boolean;
+}
+
+const StatCard = ({ icon, label, value, isDark, small = false }: StatCardProps) => (
   <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
     <div className="flex items-center gap-4">
       <div className={`w-12 h-12 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-100'} flex items-center justify-center`}>

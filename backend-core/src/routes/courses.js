@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     const courses = await Course.find({ teacher: req.user._id }).populate('enrollments.student', 'name email');
     res.json({ success: true, courses });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -24,7 +24,7 @@ router.get('/:id', async (req, res) => {
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
     res.json({ success: true, course });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
     const course = await Course.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, course });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -49,7 +49,7 @@ router.put('/:id', async (req, res) => {
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
     res.json({ success: true, course });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -60,7 +60,7 @@ router.delete('/:id', async (req, res) => {
     if (!course) return res.status(404).json({ success: false, message: 'Curso não encontrado' });
     res.json({ success: true, message: 'Curso removido' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -78,7 +78,7 @@ router.post('/:id/enroll', async (req, res) => {
 
     res.json({ success: true, course });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -96,7 +96,7 @@ router.put('/:id/progress/:studentId', async (req, res) => {
 
     res.json({ success: true, enrollment });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -121,7 +121,7 @@ router.post('/:id/complete-lesson', async (req, res) => {
     await course.save();
     res.json({ success: true, enrollment });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

@@ -25,7 +25,7 @@ router.get('/status', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -53,7 +53,7 @@ router.get('/stripe/connect', async (req, res) => {
 
     res.json({ success: true, url: accountLink.url });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -62,7 +62,7 @@ router.post('/stripe/disconnect', async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.stripe': { connected: false } });
     res.json({ success: true, message: 'Stripe desconectado' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -76,7 +76,7 @@ router.get('/google/auth-url', (req, res) => {
     const url = googleCalendarService.getAuthUrl();
     res.json({ success: true, url });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -95,7 +95,7 @@ router.post('/google/callback', async (req, res) => {
 
     res.json({ success: true, message: 'Google Calendar conectado' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -113,7 +113,7 @@ router.get('/google/calendars', async (req, res) => {
 
     res.json({ success: true, calendars });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -123,7 +123,7 @@ router.post('/google/set-calendar', async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.google.calendarId': calendarId });
     res.json({ success: true, message: 'Calendário definido' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -132,7 +132,7 @@ router.post('/google/disconnect', async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.google': { connected: false } });
     res.json({ success: true, message: 'Google desconectado' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -147,7 +147,7 @@ router.get('/zoom/auth-url', (req, res) => {
     const url = zoomService.getAuthUrl(`${process.env.API_URL}/api/integrations/zoom/callback`, state);
     res.json({ success: true, url });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -167,7 +167,7 @@ router.post('/zoom/callback', async (req, res) => {
 
     res.json({ success: true, message: 'Zoom conectado' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -176,7 +176,7 @@ router.post('/zoom/disconnect', async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.zoom': { connected: false } });
     res.json({ success: true, message: 'Zoom desconectado' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -190,7 +190,7 @@ router.post('/zoom/create-meeting', async (req, res) => {
     const meeting = await zoomService.createMeeting(user.integrations.zoom.accessToken, req.body);
     res.json({ success: true, meeting });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -294,7 +294,7 @@ router.post('/whatsapp/disconnect', async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { 'integrations.whatsapp': { verified: false } });
     res.json({ success: true, message: 'WhatsApp desconectado' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

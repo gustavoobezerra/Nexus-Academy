@@ -1,4 +1,5 @@
 import type { Aluno, Aula, LessonPreparation } from '../types';
+import axios from 'axios';
 
 interface AIServiceConfig {
   useMock: boolean;
@@ -22,23 +23,17 @@ async function requestAI<T>(endpoint: string, payload: Record<string, unknown>, 
   }
 
   try {
-    const response = await fetch(`${AI_SERVICE_URL}${endpoint}`, {
-      method: 'POST',
+    const response = await axios.post<T>(`${AI_SERVICE_URL}${endpoint}`, {
+      model: config.model,
+      ...payload,
+    }, {
       headers: {
         'Content-Type': 'application/json',
         ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        model: config.model,
-        ...payload,
-      }),
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
-
-    return response.json() as Promise<T>;
+    return response.data;
   } catch (error) {
     console.error('AI service request failed:', error);
     return fallback();

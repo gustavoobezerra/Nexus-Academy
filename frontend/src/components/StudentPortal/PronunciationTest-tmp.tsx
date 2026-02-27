@@ -4,7 +4,6 @@ import { Mic, StopCircle, Volume2, RefreshCw, Loader2, Sparkles, CheckCircle2 } 
 import toast from 'react-hot-toast';
 import { DifficultySelector } from './DifficultySelector';
 import { WordFeedback } from './WordFeedback';
-import apiService from '../../services/api.service';
 
 // Importar a API do portal
 // Assumindo que existe um arquivo api.ts ou similar
@@ -28,7 +27,9 @@ type AnalysisResult = {
 };
 
 // Funções de API (você pode mover para um arquivo separado)
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+import apiService from '../../services/api.service';
+
+const API_URL = (import.meta.env.VITE_API_URL || ''http://localhost:5000/api'')
   .replace(/\/+$/, '')
   .replace(/\/api$/, '');
 
@@ -482,8 +483,6 @@ function ScoreCard({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
-
-
 
 
 

@@ -59,6 +59,7 @@ export const StudentProtectedRoute = ({ children }: { children: ReactNode }) => 
   if (isTokenExpired(studentToken)) {
     localStorage.removeItem('studentToken');
     localStorage.removeItem('studentData');
+    localStorage.removeItem('student');
     return <Navigate to="/portal/login" state={{ from: location }} replace />;
   }
 

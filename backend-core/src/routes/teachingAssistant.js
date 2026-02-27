@@ -41,7 +41,7 @@ router.get('/student-report/:studentId', protect, authorize('teacher', 'admin'),
     console.error('Error generating student report:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Error generating student report'
+      message: "Erro interno do servidor" || 'Error generating student report'
     });
   }
 });

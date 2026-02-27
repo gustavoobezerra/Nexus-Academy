@@ -18,14 +18,15 @@ export const getPayments = async (req, res) => {
       payments
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar pagamentos', error: error.message });
+    console.error('Erro ao buscar pagamentos:', error);
+    res.status(500).json({ message: 'Erro ao buscar pagamentos' });
   }
 };
 
 export const createPayment = async (req, res) => {
   try {
     const teacherId = req.user._id;
-    const { student: studentId } = req.body;
+    const { student: studentId, amount, month, year, dueDate, paymentMethod, notes, type } = req.body;
 
     // Verify student belongs to teacher
     const student = await Student.findOne({ _id: studentId, teacher: teacherId });
@@ -33,21 +34,33 @@ export const createPayment = async (req, res) => {
       return res.status(403).json({ message: 'Não autorizado para este aluno.' });
     }
 
-    const payment = await Payment.create(req.body);
+    const payment = await Payment.create({
+      student: studentId,
+      teacher: teacherId,
+      amount,
+      month,
+      year,
+      dueDate,
+      paymentMethod: paymentMethod || null,
+      notes: notes || '',
+      type: type || 'manual',
+      status: 'pending'
+    });
 
     res.status(201).json({
       success: true,
       payment
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao criar pagamento', error: error.message });
+    console.error('Erro ao criar pagamento:', error);
+    res.status(500).json({ message: 'Erro ao criar pagamento' });
   }
 };
 
 export const updatePayment = async (req, res) => {
   try {
     const teacherId = req.user._id;
-    
+
     // Find payment and check if it belongs to teacher's student
     const payment = await Payment.findById(req.params.id).populate('student');
     if (!payment) {
@@ -62,12 +75,17 @@ export const updatePayment = async (req, res) => {
       return res.status(403).json({ message: 'Não autorizado para este pagamento.' });
     }
 
-    Object.assign(payment, req.body);
-
-    if (req.body.status === 'paid' && !payment.paidDate) {
-      payment.paidDate = new Date();
+    const allowedFields = ['status', 'amount', 'paymentMethod', 'notes', 'dueDate', 'discount', 'lateFee', 'proofOfPayment'];
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        payment[field] = req.body[field];
+      }
     }
-    
+
+    if (req.body.status === 'paid' && !payment.paidAt) {
+      payment.paidAt = new Date();
+    }
+
     await payment.save();
 
     res.json({
@@ -75,7 +93,8 @@ export const updatePayment = async (req, res) => {
       payment
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao atualizar pagamento', error: error.message });
+    console.error('Erro ao atualizar pagamento:', error);
+    res.status(500).json({ message: 'Erro ao atualizar pagamento' });
   }
 };
 
@@ -125,6 +144,7 @@ export const getFinancialStats = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+    console.error('Erro ao buscar estatísticas financeiras:', error);
+    res.status(500).json({ message: 'Erro ao buscar estatísticas' });
   }
 };

@@ -16,23 +16,23 @@ const validateStrongPassword = (password) => {
   if (!password || password.length < 8) {
     return { valid: false, message: 'Senha deve ter no mínimo 8 caracteres' };
   }
-  
+
   if (!/[A-Z]/.test(password)) {
     return { valid: false, message: 'Senha deve conter pelo menos uma letra maiúscula' };
   }
-  
+
   if (!/[a-z]/.test(password)) {
     return { valid: false, message: 'Senha deve conter pelo menos uma letra minúscula' };
   }
-  
+
   if (!/[0-9]/.test(password)) {
     return { valid: false, message: 'Senha deve conter pelo menos um número' };
   }
-  
+
   if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     return { valid: false, message: 'Senha deve conter pelo menos um símbolo (!@#$%^&*...)' };
   }
-  
+
   return { valid: true };
 };
 
@@ -51,9 +51,9 @@ export const register = async (req, res) => {
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email já cadastrado.' 
+        message: 'Email já cadastrado.'
       });
     }
 
@@ -87,10 +87,10 @@ export const register = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ 
+    console.error('Erro ao criar usuário:', error);
+    res.status(500).json({
       success: false,
-      message: 'Erro ao criar usuário', 
-      error: error.message 
+      message: 'Erro ao criar usuário'
     });
   }
 };
@@ -100,9 +100,9 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email e senha são obrigatórios.' 
+        message: 'Email e senha são obrigatórios.'
       });
     }
 
@@ -114,9 +114,9 @@ export const login = async (req, res) => {
       if (typeof recordLoginAttempt === 'function') {
         recordLoginAttempt(ip, false);
       }
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Email ou senha incorretos.' 
+        message: 'Email ou senha incorretos.'
       });
     }
 
@@ -146,10 +146,10 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ 
+    console.error('Erro ao fazer login:', error);
+    res.status(500).json({
       success: false,
-      message: 'Erro ao fazer login', 
-      error: error.message 
+      message: 'Erro ao fazer login'
     });
   }
 };
@@ -162,10 +162,10 @@ export const getMe = async (req, res) => {
       user
     });
   } catch (error) {
-    res.status(500).json({ 
+    console.error('Erro ao buscar usuário:', error);
+    res.status(500).json({
       success: false,
-      message: 'Erro ao buscar usuário', 
-      error: error.message 
+      message: 'Erro ao buscar usuário'
     });
   }
 };

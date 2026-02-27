@@ -77,7 +77,7 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -100,7 +100,7 @@ router.post('/', async (req, res) => {
     const content = await ContentLibrary.create(contentData);
     res.status(201).json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -125,7 +125,7 @@ router.post('/:id/review', async (req, res) => {
     await content.addReview(req.user._id, rating, comment);
     res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -148,7 +148,7 @@ router.post('/:id/favorite', async (req, res) => {
     await content.toggleFavorite(req.user._id);
     res.json({ success: true, content });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 

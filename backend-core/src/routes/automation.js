@@ -17,7 +17,7 @@ router.get('/rules', async (req, res) => {
     const rules = await AutomationRule.find({ teacher: req.user._id });
     res.json({ success: true, rules });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -28,7 +28,7 @@ router.get('/rules/:id', async (req, res) => {
     if (!rule) return res.status(404).json({ success: false, message: 'Regra não encontrada' });
     res.json({ success: true, rule });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -38,7 +38,7 @@ router.post('/rules', async (req, res) => {
     const rule = await AutomationRule.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, rule });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -53,7 +53,7 @@ router.put('/rules/:id', async (req, res) => {
     if (!rule) return res.status(404).json({ success: false, message: 'Regra não encontrada' });
     res.json({ success: true, rule });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -63,7 +63,7 @@ router.delete('/rules/:id', async (req, res) => {
     await AutomationRule.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Regra removida' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -76,7 +76,7 @@ router.put('/rules/:id/toggle', async (req, res) => {
     await rule.save();
     res.json({ success: true, rule });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -96,7 +96,7 @@ router.post('/rules/:id/test', async (req, res) => {
 
     res.json({ success: true, result });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -107,7 +107,7 @@ router.get('/sequences', async (req, res) => {
     const sequences = await AutomationSequence.find({ teacher: req.user._id });
     res.json({ success: true, sequences });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -116,7 +116,7 @@ router.post('/sequences', async (req, res) => {
     const sequence = await AutomationSequence.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, sequence });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -129,7 +129,7 @@ router.put('/sequences/:id', async (req, res) => {
     );
     res.json({ success: true, sequence });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -138,7 +138,7 @@ router.delete('/sequences/:id', async (req, res) => {
     await AutomationSequence.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Sequência removida' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -149,7 +149,7 @@ router.get('/templates', async (req, res) => {
     const templates = await NotificationTemplate.find({ teacher: req.user._id });
     res.json({ success: true, templates });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -158,7 +158,7 @@ router.post('/templates', async (req, res) => {
     const template = await NotificationTemplate.create({ ...req.body, teacher: req.user._id });
     res.status(201).json({ success: true, template });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -171,7 +171,7 @@ router.put('/templates/:id', async (req, res) => {
     );
     res.json({ success: true, template });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -180,7 +180,7 @@ router.delete('/templates/:id', async (req, res) => {
     await NotificationTemplate.findOneAndDelete({ _id: req.params.id, teacher: req.user._id });
     res.json({ success: true, message: 'Template removido' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -197,7 +197,7 @@ router.get('/logs', async (req, res) => {
     const total = await AutomationLog.countDocuments({ teacher: req.user._id });
     res.json({ success: true, logs, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -219,7 +219,7 @@ router.get('/stats', async (req, res) => {
       recentActivity: recentLogs
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
@@ -230,7 +230,7 @@ router.post('/trigger', async (req, res) => {
     const results = await automationEngine.fireTrigger(trigger, entityType, entityId, metadata, req.user._id);
     res.json({ success: true, results });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Erro interno do servidor" });
   }
 });
 
