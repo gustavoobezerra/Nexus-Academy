@@ -95,13 +95,12 @@ const AutomationManager: React.FC = () => {
 
   const handleEditRule = (ruleId: string) => {
     // TODO: Implement edit modal
-    toast('Funcao de edicao em desenvolvimento', { icon: '🔧' });
-    console.log('Edit rule:', ruleId);
+    toast('Funcao de edicao em desenvolvimento');
   };
 
   const handleNewRule = () => {
     // TODO: Implement create modal
-    toast('Funcao de criacao em desenvolvimento', { icon: '🔧' });
+    toast('Funcao de criacao em desenvolvimento');
   };
 
   const getTriggerIcon = (trigger: AutomationTrigger) => {

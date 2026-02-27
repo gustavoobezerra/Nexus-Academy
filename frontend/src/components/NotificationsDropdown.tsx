@@ -42,15 +42,15 @@ export function NotificationsDropdown({
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
       case 'payment':
-        return '💰';
+        return 'R$';
       case 'reminder':
-        return '⏰';
+        return '!';
       case 'confirmation':
-        return '✅';
+        return 'OK';
       case 'feedback':
-        return '💬';
+        return '';
       default:
-        return '🔔';
+        return '';
     }
   };
 

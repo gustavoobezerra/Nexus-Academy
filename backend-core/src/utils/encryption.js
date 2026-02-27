@@ -8,7 +8,7 @@ if (!keyFromEnv) {
   if (isProduction) {
     throw new Error(message);
   }
-  console.warn(`⚠️ ${message} Usando chave padrão apenas para desenvolvimento.`);
+  console.warn(`[WARN] ${message} Usando chave padrão apenas para desenvolvimento.`);
 }
 
 // Em desenvolvimento, ainda fornecemos fallback para não quebrar o fluxo,

@@ -120,13 +120,13 @@ const AdvancedFeatures: React.FC = () => {
               </div>
 
               <div className="bg-indigo-900/20 border border-indigo-700 rounded-lg p-4">
-                <p className="font-semibold text-indigo-300 mb-2">💡 Insight</p>
+                <p className="font-semibold text-indigo-300 mb-2">Insight</p>
                 <p className="text-sm text-gray-300 dark:text-gray-200">3 alunos têm dificuldade em Interpretação</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-2">→ Crie exercício compartilhado para grupo</p>
               </div>
 
               <div className="bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
-                <p className="font-semibold text-emerald-300 mb-2">📊 Economia</p>
+                <p className="font-semibold text-emerald-300 mb-2">Economia</p>
                 <p className="text-sm text-gray-300 dark:text-gray-200">Agrupe 3 alunos similares 1x/semana</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-2">→ Economize 50% de tempo, mantenha qualidade</p>
               </div>
@@ -218,7 +218,7 @@ const AdvancedFeatures: React.FC = () => {
             <h2 className="text-2xl font-bold mb-6">🛍️ Marketplace de Aulas Extras (Sistema de Pontos)</h2>
 
             <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4 mb-6">
-              <p className="font-semibold text-amber-300 mb-2">⭐ Sistema de Pontuação</p>
+              <p className="font-semibold text-amber-300 mb-2">Sistema de Pontuação</p>
               <p className="text-sm text-gray-300 dark:text-gray-200">Os alunos ganham pontos completando aulas e exercícios, e podem trocar por aulas extras no marketplace!</p>
             </div>
 
@@ -247,7 +247,7 @@ const AdvancedFeatures: React.FC = () => {
               </div>
 
               <div className="bg-slate-700/50 rounded-lg p-4">
-                <h4 className="font-semibold mb-2 text-sm">💡 Sugestões de Preços:</h4>
+                <h4 className="font-semibold mb-2 text-sm">Sugestões de Preços:</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { label: '30min', points: 300 },
@@ -277,12 +277,12 @@ const AdvancedFeatures: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-indigo-700 p-4 rounded-lg">
-                <p className="text-xs text-gray-300 dark:text-gray-200 mb-2">📊 Suas Aulas</p>
+                <p className="text-xs text-gray-300 dark:text-gray-200 mb-2">Suas Aulas</p>
                 <p className="text-3xl font-bold text-indigo-300">3</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">Ativas no Marketplace</p>
               </div>
               <div className="bg-gradient-to-br from-emerald-900/50 to-green-900/50 border border-emerald-700 p-4 rounded-lg">
-                <p className="text-xs text-gray-300 dark:text-gray-200 mb-2">⭐ Pontos Gerados</p>
+                <p className="text-xs text-gray-300 dark:text-gray-200 mb-2">Pontos Gerados</p>
                 <p className="text-3xl font-bold text-emerald-300">2,450</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">Em resgates este mês</p>
               </div>

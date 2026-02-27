@@ -41,19 +41,15 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
     if (!slug || slug.length < 3) {
       // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setSlugAvailable(null);
-      console.log('[ONBOARDING] Slug muito curto ou vazio');
       return;
     }
 
     const timeoutId = setTimeout(async () => {
       setCheckingSlug(true);
-      console.log('[ONBOARDING] Verificando slug:', slug);
       try {
         const response = await onboardingAPI.checkSlug(slug) as any;
-        console.log('[ONBOARDING] Resposta da API:', response);
         // apiService já retorna response.data, então acessamos diretamente
         setSlugAvailable(response.available);
-        console.log('[ONBOARDING] Slug disponível:', response.available);
       } catch (error: unknown) {
         console.error('[ONBOARDING] Erro ao verificar slug:', error);
         setSlugAvailable(false);
@@ -254,7 +250,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
       </div>
 
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-900/30">
-        <p className="text-sm text-blue-900 dark:text-blue-300 font-medium mb-2">💡 Dicas:</p>
+        <p className="text-sm text-blue-900 dark:text-blue-300 font-medium mb-2">Dicas:</p>
         <ul className="text-xs text-blue-800/80 dark:text-blue-400/80 space-y-1">
           <li>• Apenas letras minúsculas, números e hífen</li>
           <li>• Entre 3 e 30 caracteres</li>

@@ -128,7 +128,8 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
-  
+  const [wordGuess, setWordGuess] = useState('');
+
   // Whiteboard state
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -161,7 +162,6 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     setSocket(socketInstance);
     
     socketInstance.on('connect', () => {
-      console.log('Conectado ao servidor Hangman');
       setJoinError('');
       
       // Se já tem gameId, entrar no jogo
@@ -208,8 +208,8 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       setSelectedLetter(null);
       
       const message = correct
-        ? `${player.name} acertou a letra ${letter}! 🎉`
-        : `${player.name} errou... A letra ${letter} não está na palavra ❌`;
+        ? `${player.name} acertou a letra ${letter}!`
+        : `${player.name} errou. A letra ${letter} não está na palavra.`;
       
       setChatMessages(prev => [...prev, {
         type: correct ? 'success' : 'error',
@@ -218,10 +218,25 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       }]);
     });
     
+    socketInstance.on('word-guessed', ({ word, correct, wrongGuesses, revealedWord, status, gameState: state, player }) => {
+      setGameState(state);
+      setWordGuess('');
+
+      const message = correct
+        ? `${player.name} adivinhou a palavra "${word}"!`
+        : `${player.name} tentou "${word}", mas errou`;
+
+      setChatMessages(prev => [...prev, {
+        type: correct ? 'success' : 'error',
+        message,
+        timestamp: new Date()
+      }]);
+    });
+
     socketInstance.on('game-ended', ({ status, word, players }) => {
       const message = status === 'won'
-        ? `🎉 Parabéns! A palavra era: ${word}`
-        : `😢 Que pena! A palavra era: ${word}`;
+        ? `Parabéns! A palavra era: ${word}`
+        : `Que pena! A palavra era: ${word}`;
       
       setChatMessages(prev => [...prev, {
         type: 'system',
@@ -349,6 +364,19 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     });
   };
   
+  // Tentar palavra completa
+  const handleWordGuess = () => {
+    if (!socket || !gameId || !gameState || gameState.status !== 'active') return;
+    const wordLength = gameState.revealedWord.length;
+    if (!wordGuess.trim() || wordGuess.length !== wordLength) return;
+
+    socket.emit('guess-word', {
+      gameId,
+      word: wordGuess.toUpperCase(),
+      studentId: userId
+    });
+  };
+
   // Enviar mensagem de chat
   const handleSendChat = () => {
     if (!socket || !gameId || !chatInput.trim()) return;
@@ -721,7 +749,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 shadow-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">🎮 Jogo da Forca</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Jogo da Forca</h1>
           {gameState && (
             <span className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-slate-800 dark:text-slate-200 rounded-full text-sm font-semibold">
               {gameState.category}
@@ -812,26 +840,33 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
             </svg>
           </div>
           
-          {/* Palavra revelada */}
+          {/* Palavra revelada — estilo quadro negro */}
           {gameState && (
-            <div className="mb-8">
-              <div className="flex gap-2 justify-center">
+            <div className="mb-8 w-full">
+              <div className="bg-gray-900 border-2 border-gray-600 rounded-xl px-6 py-5 flex flex-wrap gap-3 justify-center items-end shadow-inner min-h-[90px]">
                 {gameState.revealedWord.split('').map((char, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="w-12 h-16 flex items-center justify-center border-b-4 border-blue-600 text-3xl font-bold"
-                  >
-                    {char === '_' ? '' : char}
-                  </motion.div>
+                  char === ' ' ? (
+                    <div key={index} className="w-6" />
+                  ) : (
+                    <motion.div
+                      key={index}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: index * 0.04 }}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <span className="text-2xl font-bold text-yellow-100 font-mono w-8 text-center tracking-wide">
+                        {char !== '_' ? char : ''}
+                      </span>
+                      <div className="w-8 h-0.5 bg-yellow-300/70" />
+                    </motion.div>
+                  )
                 ))}
               </div>
-              
+
               {gameState.hint && (
-                <p className="text-center mt-4 text-slate-600 dark:text-slate-300">
-                  💡 Dica: {gameState.hint}
+                <p className="text-center mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  Dica: {gameState.hint}
                 </p>
               )}
             </div>
@@ -869,6 +904,28 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
             </div>
           )}
           
+          {/* Campo para tentar a palavra inteira */}
+          {gameState && gameState.status === 'active' && (
+            <div className="mt-5 flex gap-2 items-center w-full max-w-md">
+              <input
+                type="text"
+                value={wordGuess}
+                onChange={(e) => setWordGuess(e.target.value.toUpperCase().replace(/[^A-Z\s]/g, ''))}
+                maxLength={gameState.revealedWord.length}
+                placeholder={`Tente a palavra (${gameState.revealedWord.length} letras)`}
+                className="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-yellow-100 placeholder-gray-500 font-mono uppercase tracking-widest focus:outline-none focus:border-indigo-400 text-sm"
+                onKeyDown={(e) => e.key === 'Enter' && handleWordGuess()}
+              />
+              <button
+                onClick={handleWordGuess}
+                disabled={wordGuess.length !== gameState.revealedWord.length}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors"
+              >
+                Tentar
+              </button>
+            </div>
+          )}
+
           {/* Status do jogo */}
           {gameState && (gameState.status === 'won' || gameState.status === 'lost') && (
             <motion.div
@@ -881,7 +938,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               <h2 className={`text-3xl font-bold mb-2 ${
                 gameState.status === 'won' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
               }`}>
-                {gameState.status === 'won' ? '🎉 Vitória!' : '😢 Derrota!'}
+                {gameState.status === 'won' ? 'Vitória!' : 'Derrota!'}
               </h2>
               <p className="text-lg">
                 A palavra era: <strong>{gameState.revealedWord.replace(/_/g, '')}</strong>

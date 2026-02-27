@@ -125,7 +125,7 @@ api.interceptors.response.use(
     // ========================================================================
     if (!error.response) {
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        toast.error('⏱️ A requisição demorou muito. Tente novamente.');
+        toast.error('A requisição demorou muito. Tente novamente.');
         return Promise.reject({
           type: 'timeout',
           message: 'Timeout da requisição',
@@ -133,7 +133,7 @@ api.interceptors.response.use(
         } as ApiError);
       }
 
-      toast.error('🌐 Sem conexão com o servidor. Verifique sua internet.');
+      toast.error('Sem conexão com o servidor. Verifique sua internet.');
       return Promise.reject({
         type: 'network',
         message: 'Erro de conexão com o servidor',
@@ -179,14 +179,14 @@ api.interceptors.response.use(
 
         if (data.field) {
           const fieldName = translateFieldName(data.field);
-          toast.error(`❌ ${fieldName}: ${errorMessage}`);
+          toast.error(`${fieldName}: ${errorMessage}`);
         } else if (Array.isArray(data.errors)) {
           data.errors.forEach((err) => {
             const fieldLabel = err.field ? `${translateFieldName(err.field)}: ` : '';
-            toast.error(`❌ ${fieldLabel}${err.message}`);
+            toast.error(`${fieldLabel}${err.message}`);
           });
         } else {
-          toast.error(`❌ ${errorMessage}`);
+          toast.error(errorMessage);
         }
 
         return Promise.reject({
@@ -199,7 +199,7 @@ api.interceptors.response.use(
 
       // ====== 401: NÃO AUTENTICADO ======
       case 401: {
-        toast.error('🔒 Sessão expirada. Faça login novamente.');
+        toast.error('Sessão expirada. Faça login novamente.');
 
         // Limpar tokens e dados do usuário
         localStorage.removeItem('token');
@@ -224,7 +224,7 @@ api.interceptors.response.use(
       // ====== 403: NÃO AUTORIZADO ======
       case 403: {
         const forbiddenMessage = data.message || 'Você não tem permissão para realizar esta ação.';
-        toast.error(`🚫 ${forbiddenMessage}`);
+        toast.error(forbiddenMessage);
 
         return Promise.reject({
           type: 'forbidden',
@@ -236,7 +236,7 @@ api.interceptors.response.use(
       // ====== 404: RECURSO NÃO ENCONTRADO ======
       case 404: {
         const notFoundMessage = data.message || 'Recurso não encontrado.';
-        toast.error(`🔍 ${notFoundMessage}`);
+        toast.error(notFoundMessage);
 
         return Promise.reject({
           type: 'notfound',
@@ -249,7 +249,7 @@ api.interceptors.response.use(
       case 500:
       case 502:
       case 503: {
-        toast.error('⚠️ Erro no servidor. Nossa equipe foi notificada. Tente novamente em instantes.');
+        toast.error('Erro no servidor. Nossa equipe foi notificada. Tente novamente em instantes.');
 
         // Em produção, aqui você enviaria para serviço de monitoramento (Sentry, etc)
         if (import.meta.env.PROD) {
@@ -266,7 +266,7 @@ api.interceptors.response.use(
       // ====== OUTROS ERROS ======
       default: {
         const genericMessage = data.message || 'Algo deu errado. Tente novamente.';
-        toast.error(`❌ ${genericMessage}`);
+        toast.error(genericMessage);
 
         return Promise.reject({
           type: 'unknown',

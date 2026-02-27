@@ -317,14 +317,14 @@ export const SmartScheduling: React.FC<SmartSchedulingProps> = ({ students = [],
 
                 <div className="space-y-2">
                   <div className="bg-slate-700/50 rounded-lg p-3">
-                    <p className="text-sm font-semibold text-gray-300 mb-1">💡 Por que este horário?</p>
+                    <p className="text-sm font-semibold text-gray-300 mb-1">Por que este horário?</p>
                     <p className="text-xs text-gray-400">{suggestion.reason}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {suggestion.studentPreference && (
                       <span className="px-2 py-1 text-xs bg-purple-900/50 border border-purple-700 rounded text-purple-300">
-                        ⭐ Preferência do Aluno
+                        Preferência do Aluno
                       </span>
                     )}
                     {suggestion.teacherAvailability && (

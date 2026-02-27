@@ -106,22 +106,22 @@ export const SmartOnboarding = () => {
         // Fallback com dados mockados
         setSubjectsByCategory({
           'Idiomas': [
-            { name: 'Inglês', icon: '🇬🇧', category: 'Idiomas', description: 'Aprenda inglês do básico ao avançado' },
-            { name: 'Espanhol', icon: '🇪🇸', category: 'Idiomas', description: 'Domine o espanhol para viagens e negócios' },
-            { name: 'Francês', icon: '🇫🇷', category: 'Idiomas', description: 'Aprenda o idioma da cultura francesa' },
+            { name: 'Inglês', icon: 'EN', category: 'Idiomas', description: 'Aprenda inglês do básico ao avançado' },
+            { name: 'Espanhol', icon: 'ES', category: 'Idiomas', description: 'Domine o espanhol para viagens e negócios' },
+            { name: 'Francês', icon: 'FR', category: 'Idiomas', description: 'Aprenda o idioma da cultura francesa' },
           ],
           'Exatas': [
-            { name: 'Matemática', icon: '📐', category: 'Exatas', description: 'Álgebra, geometria e cálculo' },
-            { name: 'Física', icon: '⚛️', category: 'Exatas', description: 'Mecânica, termodinâmica e mais' },
+            { name: 'Matemática', icon: 'MT', category: 'Exatas', description: 'Álgebra, geometria e cálculo' },
+            { name: 'Física', icon: 'FI', category: 'Exatas', description: 'Mecânica, termodinâmica e mais' },
           ],
           'Programação e Tecnologia': [
-            { name: 'Programação', icon: '💻', category: 'Programação e Tecnologia', description: 'Python, JavaScript, Java e mais' },
+            { name: 'Programação', icon: 'PR', category: 'Programação e Tecnologia', description: 'Python, JavaScript, Java e mais' },
           ],
           'Preparação para Provas': [
-            { name: 'ENEM', icon: '🎓', category: 'Preparação para Provas', description: 'Preparação completa para o ENEM' },
+            { name: 'ENEM', icon: 'EN', category: 'Preparação para Provas', description: 'Preparação completa para o ENEM' },
           ],
           'Outros': [
-            { name: 'Outros', icon: '❓', category: 'Outros', description: 'Outra matéria ou objetivo específico' },
+            { name: 'Outros', icon: '?', category: 'Outros', description: 'Outra matéria ou objetivo específico' },
           ]
         });
       } finally {
@@ -254,7 +254,7 @@ export const SmartOnboarding = () => {
         preferredSchedule
       });
 
-      toast.success('Perfil configurado com sucesso! 🎉');
+      toast.success('Perfil configurado com sucesso!');
       navigate('/portal/dashboard');
     } catch (error) {
       console.error('Erro no submit:', error);
@@ -501,10 +501,10 @@ export const SmartOnboarding = () => {
         </label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { id: 'morning', label: 'Manhã', icon: '🌅', description: '6h às 12h' },
-            { id: 'afternoon', label: 'Tarde', icon: '☀️', description: '12h às 18h' },
-            { id: 'evening', label: 'Noite', icon: '🌙', description: '18h às 23h' },
-            { id: 'flexible', label: 'Flexível', icon: '⏰', description: 'Qualquer horário' }
+            { id: 'morning', label: 'Manhã', icon: 'AM', description: '6h às 12h' },
+            { id: 'afternoon', label: 'Tarde', icon: 'PM', description: '12h às 18h' },
+            { id: 'evening', label: 'Noite', icon: 'NO', description: '18h às 23h' },
+            { id: 'flexible', label: 'Flexível', icon: '--', description: 'Qualquer horário' }
           ].map((schedule) => (
             <button
               key={schedule.id}

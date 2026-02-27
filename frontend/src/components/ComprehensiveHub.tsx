@@ -80,20 +80,20 @@ const ComprehensiveHub: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-6">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-indigo-400 mb-2">🎓 Hub Educacional Completo</h1>
+        <h1 className="text-4xl font-bold text-indigo-400 mb-2">Hub Educacional Completo</h1>
         <p className="text-gray-400">Notas, Materiais, Templates, Referência, Preços, Cursos e mais</p>
       </div>
 
       <div className="flex gap-2 mb-8 flex-wrap text-sm">
         {[
-          { id: 'grades', label: '📊 Notas', icon: BarChart3 },
-          { id: 'materials', label: '📚 Materiais', icon: BookOpen },
-          { id: 'templates', label: '🎨 Templates', icon: Zap },
-          { id: 'referral', label: '🔗 Referência', icon: Share2 },
-          { id: 'pricing', label: '💰 Preços', icon: TrendingUp },
-          { id: 'courses', label: '🎓 Cursos', icon: Award },
-          { id: 'reminders', label: '⏰ Lembretes', icon: Clock },
-          { id: 'schedule', label: '📅 Agendamento', icon: Shield }
+          { id: 'grades', label: 'Notas', icon: BarChart3 },
+          { id: 'materials', label: 'Materiais', icon: BookOpen },
+          { id: 'templates', label: 'Templates', icon: Zap },
+          { id: 'referral', label: 'Referência', icon: Share2 },
+          { id: 'pricing', label: 'Preços', icon: TrendingUp },
+          { id: 'courses', label: 'Cursos', icon: Award },
+          { id: 'reminders', label: 'Lembretes', icon: Clock },
+          { id: 'schedule', label: 'Agendamento', icon: Shield }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -320,15 +320,15 @@ const ComprehensiveHub: React.FC = () => {
             <h2 className="text-2xl font-bold mb-6">Análise de Horários</h2>
             <div className="space-y-4">
               <div className="bg-emerald-900/20 border border-emerald-700 p-4 rounded-lg">
-                <p className="font-semibold text-white">📈 Seu melhor engagement</p>
+                <p className="font-semibold text-white">Seu melhor engagement</p>
                 <p className="text-sm text-emerald-300 mt-2">Sexta-feira: 95% de presença e engajamento alto</p>
               </div>
               <div className="bg-emerald-900/20 border border-emerald-700 p-4 rounded-lg">
-                <p className="font-semibold text-white">📊 Comparação por período</p>
+                <p className="font-semibold text-white">Comparação por período</p>
                 <p className="text-sm text-emerald-300 mt-2">Alunos da manhã: 20% melhor desempenho vs à noite</p>
               </div>
               <div className="bg-indigo-900/20 border border-indigo-700 p-4 rounded-lg">
-                <p className="font-semibold text-white">💡 Sugestão</p>
+                <p className="font-semibold text-white">Sugestão</p>
                 <p className="text-sm text-indigo-300 mt-2">Abra mais vagas segunda à noite - 3 solicitações em fila</p>
               </div>
             </div>

@@ -371,7 +371,7 @@ ${student.parentName}                   Professor(a) Responsável
                       <span>•</span>
                       <span>⏱️ {contract.contractData.hoursPerMonth}h/mês</span>
                       <span>•</span>
-                      <span>📅 Início: {new Date(contract.contractData.startDate).toLocaleDateString('pt-BR')}</span>
+                      <span>Início: {new Date(contract.contractData.startDate).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
 

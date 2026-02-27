@@ -28,9 +28,11 @@ type AnalysisResult = {
 };
 
 // Funções de API (você pode mover para um arquivo separado)
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
-  .replace(/\/+$/, '')
-  .replace(/\/api$/, '');
+const API_BASE = (() => {
+  const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const trimmed = raw.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+})();
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('studentToken');
@@ -41,7 +43,7 @@ const getAuthHeaders = () => {
 };
 
 const generatePronunciationPhrase = async (difficulty: string) => {
-  const response = await fetch(`${API_URL}/api/portal/pronunciation/generate`, {
+  const response = await fetch(`${API_BASE}/api/portal/pronunciation/generate`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ difficulty })
@@ -56,7 +58,7 @@ const generatePronunciationPhrase = async (difficulty: string) => {
 
 const analyzePronunciation = async (formData: FormData) => {
   const token = localStorage.getItem('studentToken');
-  const response = await fetch(`${API_URL}/api/portal/pronunciation/analyze`, {
+  const response = await fetch(`${API_BASE}/api/portal/pronunciation/analyze`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -72,7 +74,7 @@ const analyzePronunciation = async (formData: FormData) => {
 };
 
 const savePronunciationHistory = async (data: unknown) => {
-  const response = await fetch(`${API_URL}/api/portal/pronunciation/history`, {
+  const response = await fetch(`${API_BASE}/api/portal/pronunciation/history`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)

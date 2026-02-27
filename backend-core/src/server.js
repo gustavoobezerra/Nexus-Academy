@@ -2102,9 +2102,9 @@ const iniciar = async () => {
     console.log('   - GET    /api/classes');
     console.log('   - POST   /api/classes');
     console.log('   - GET    /api/health');
-    console.log('\nâš ï¸  ATENÃ‡ÃƒO: Dados sÃ£o perdidos ao reiniciar o servidor!');
-    console.log('ðŸ’¡ Para persistÃªncia, instale MongoDB ou use MongoDB Atlas');
-    console.log('\nðŸŽ‰ Backend pronto para uso!\n');
+    console.log('\n[WARN] ATENCAO: Dados sao perdidos ao reiniciar o servidor!');
+    console.log('[INFO] Para persistencia, instale MongoDB ou use MongoDB Atlas');
+    console.log('\n[OK] Backend pronto para uso!\n');
   });
 };
 

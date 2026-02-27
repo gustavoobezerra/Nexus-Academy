@@ -26,12 +26,12 @@ export const ActivitiesCard = ({
 
   const getActivityIcon = (type: Activity['type']) => {
     const icons = {
-      homework: '📝',
-      exercise: '✍️',
-      reading: '📖',
-      quiz: '🎯'
+      homework: 'Tarefa',
+      exercise: 'Exercício',
+      reading: 'Leitura',
+      quiz: 'Quiz'
     };
-    return icons[type] || '📌';
+    return icons[type] || type;
   };
 
   const getActivityTypeLabel = (type: Activity['type']) => {
@@ -125,9 +125,9 @@ export const ActivitiesCard = ({
                         activity.priority
                       )}`}
                     >
-                      {activity.priority === 'high' && '🔥'}
-                      {activity.priority === 'medium' && '⚠️'}
-                      {activity.priority === 'low' && '📌'}
+                      {activity.priority === 'high' && 'Alta'}
+                      {activity.priority === 'medium' && 'Média'}
+                      {activity.priority === 'low' && 'Baixa'}
                     </span>
                   )}
                 </div>

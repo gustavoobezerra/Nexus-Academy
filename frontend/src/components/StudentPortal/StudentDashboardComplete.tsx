@@ -231,7 +231,7 @@ export const StudentDashboardComplete = ({ onJoinClass }: StudentDashboardComple
 
           {/* Card Gamificação */}
           <button
-            onClick={() => toast('🎮 Sistema de pontos integrado no card de Progresso!', { duration: 3000 })}
+            onClick={() => toast('Sistema de pontos integrado no card de Progresso!', { duration: 3000 })}
             className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 group"
           >
             <div className="flex items-center justify-between mb-4">

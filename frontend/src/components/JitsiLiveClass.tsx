@@ -80,7 +80,7 @@ export const JitsiLiveClass = ({
         });
       } catch (e) {
         // Recording might not be enabled
-        console.log('Recording not available');
+        // Gravação não disponível neste contexto
       }
     }
   };

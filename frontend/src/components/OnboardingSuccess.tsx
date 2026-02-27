@@ -46,7 +46,7 @@ export const OnboardingSuccess: React.FC = () => {
 
   const shareViaWhatsApp = () => {
     const message = encodeURIComponent(
-      `🎓 Estou usando o Nexus Academy para gerenciar minhas aulas!\n\nAcesse meu link exclusivo:\n${publicUrl}`
+      `Estou usando o Nexus Academy para gerenciar minhas aulas!\n\nAcesse meu link exclusivo:\n${publicUrl}`
     );
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
@@ -158,7 +158,7 @@ export const OnboardingSuccess: React.FC = () => {
         {/* Next Steps */}
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl mb-6">
           <h2 className="text-2xl font-bold text-white mb-6">
-            🚀 Próximos Passos
+            Próximos Passos
           </h2>
 
           <div className="space-y-4">

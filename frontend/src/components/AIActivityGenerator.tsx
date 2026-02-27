@@ -62,7 +62,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
       : selectedClassData?.subject || 'Matéria';
 
     setIsGenerating(true);
-    toast.loading('🤖 IA analisando e gerando atividades...', { id: 'generating' });
+    toast.loading('IA analisando e gerando atividades...', { id: 'generating' });
 
     // Simular chamada de IA - em produção seria integrado com GPT/Claude
     setTimeout(() => {
@@ -171,7 +171,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
 
       setGeneratedActivity(activity);
       setIsGenerating(false);
-      toast.success('✅ Atividade gerada com sucesso! Revise e escolha para quem enviar.', { id: 'generating' });
+      toast.success('Atividade gerada com sucesso! Revise e escolha para quem enviar.', { id: 'generating' });
       setActiveTab('review');
     }, 2500);
   };
@@ -233,7 +233,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
     setActivityHistory([publishedActivity, ...activityHistory]);
     if (onActivityCreated) onActivityCreated(publishedActivity);
 
-    toast.success(`🎉 Atividade publicada e enviada para: ${getRecipientsText()}!`, { duration: 4000 });
+    toast.success(`Atividade publicada e enviada para: ${getRecipientsText()}!`, { duration: 4000 });
     setGeneratedActivity(null);
     setSelectedClass('');
     setManualDescription('');
@@ -388,7 +388,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
                   className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
                 <p className="mt-2 text-sm text-gray-400 dark:text-gray-300">
-                  💡 Dica: Quanto mais detalhes, melhor a qualidade das questões geradas
+                  Dica: Quanto mais detalhes, melhor a qualidade das questões geradas
                 </p>
               </div>
             )}
@@ -602,7 +602,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
 
                       {question.type === 'fill_blank' && (
                         <div className="mt-4 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
-                          <p className="font-semibold">💡 Resposta esperada: {question.correctAnswer}</p>
+                          <p className="font-semibold">Resposta esperada: {question.correctAnswer}</p>
                         </div>
                       )}
 

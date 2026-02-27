@@ -12,7 +12,7 @@ export const Step4_Success = ({ slug, onFinish }: Step4Props) => {
 
   const publicUrl = `https://nexusacademy.com/professor/${slug}`;
   const whatsappMessage = encodeURIComponent(
-    `🎓 Oi! Confira minha página de professor no Nexus Academy: ${publicUrl}`
+    `Oi! Confira minha página de professor no Nexus Academy: ${publicUrl}`
   );
   const whatsappUrl = `https://wa.me/?text=${whatsappMessage}`;
 
@@ -58,7 +58,7 @@ export const Step4_Success = ({ slug, onFinish }: Step4Props) => {
       {/* Link único */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border-2 border-indigo-200 dark:border-indigo-800">
         <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-          ✨ Seu link único:
+          Seu link único:
         </p>
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
           <ExternalLink size={18} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />

@@ -91,7 +91,7 @@ export const ProgressCard = ({
         )}
         {hoursStudied >= hoursGoal && (
           <p className="text-xs text-emerald-600 mt-2 font-semibold">
-            ✨ Meta atingida! Parabéns!
+            Meta atingida! Parabéns!
           </p>
         )}
       </div>
@@ -127,8 +127,8 @@ export const ProgressCard = ({
       <div className="mt-6 p-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white text-center">
         <p className="text-sm font-medium">
           {currentProgress >= goalProgress
-            ? '🎉 Você está no caminho certo!'
-            : '💪 Continue assim! Você consegue!'}
+            ? 'Você está no caminho certo!'
+            : 'Continue assim! Você consegue!'}
         </p>
       </div>
     </div>

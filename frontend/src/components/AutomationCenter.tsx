@@ -167,7 +167,7 @@ const AutomationCenter: React.FC = () => {
                         <p className="text-sm text-gray-300 mb-2">{notif.message}</p>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span>📧 {notif.channel}</span>
-                          <span>👤 {notif.recipientName}</span>
+                          <span>{notif.recipientName}</span>
                           {notif.scheduledFor && <span>🕐 {notif.scheduledFor}</span>}
                         </div>
                       </div>
@@ -263,10 +263,10 @@ const AutomationCenter: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-white">{template.name}</h4>
                     <p className="text-xs text-gray-400 mt-1">
-                      {template.type === 'reminder' && '🔔 Lembrete'}
-                      {template.type === 'payment' && '💳 Pagamento'}
-                      {template.type === 'confirmation' && '✅ Confirmação'}
-                      {template.type === 'feedback' && '⭐ Feedback'}
+                      {template.type === 'reminder' && 'Lembrete'}
+                      {template.type === 'payment' && 'Pagamento'}
+                      {template.type === 'confirmation' && 'Confirmação'}
+                      {template.type === 'feedback' && 'Feedback'}
                     </p>
                   </div>
                   <button

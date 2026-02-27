@@ -57,7 +57,6 @@ export const StudentChat = ({ student, teacher, isDark }: StudentChatProps) => {
     });
 
     newSocket.on('connect', () => {
-      console.log('Socket conectado');
       // Entrar na sala de chat com o professor
       newSocket.emit('join-chat-room', {
         studentId: student._id,

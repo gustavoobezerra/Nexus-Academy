@@ -206,7 +206,7 @@ export const StudentProfilePage = () => {
       }
 
       if (progress >= 100) {
-        toast.success('🎉 Meta concluída! Parabéns!');
+        toast.success('Meta concluída! Parabéns!');
       }
     } catch (error) {
       // Erro tratado pelo interceptor, fallback demo
@@ -219,7 +219,7 @@ export const StudentProfilePage = () => {
           )
         });
         if (progress >= 100) {
-          toast.success('🎉 Meta concluída! Parabéns!');
+          toast.success('Meta concluída! Parabéns!');
         }
       }
     }

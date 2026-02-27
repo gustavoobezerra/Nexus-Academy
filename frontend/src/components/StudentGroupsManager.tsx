@@ -89,7 +89,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
     if (mediumHoursStudents.length >= 2) {
       suggestions.push({
         id: 'ai_medium_hours',
-        name: '📊 Banco de Horas Médio',
+        name: 'Banco de Horas Médio',
         studentIds: mediumHoursStudents,
         color: '#f97316',
         description: 'Alunos com 5-15 horas. Perfil estável de consumo.',
@@ -106,7 +106,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
     if (highHoursStudents.length >= 2) {
       suggestions.push({
         id: 'ai_high_hours',
-        name: '✨ Banco de Horas Alto',
+        name: 'Banco de Horas Alto',
         studentIds: highHoursStudents,
         color: '#22c55e',
         description: 'Alunos com mais de 15 horas. Comprometimento alto.',
@@ -209,7 +209,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
 
     setGroups([...groups, newGroup]);
     setAiSuggestions(aiSuggestions.filter(s => s.id !== suggestion.id));
-    toast.success(`✨ Grupo "${suggestion.name}" adicionado aos seus grupos!`);
+    toast.success(`Grupo "${suggestion.name}" adicionado aos seus grupos!`);
   };
 
   const handleDeleteGroup = (groupId: string) => {

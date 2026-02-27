@@ -53,7 +53,6 @@ export const OnboardingSuccess = () => {
 
           // Se não completou ainda e já tentou 10 vezes (10 segundos), completar manualmente
           if (attempts >= 10) {
-            console.log('Webhook não processou a tempo, completando manualmente...');
             await completeOnboardingManually();
             return;
           }

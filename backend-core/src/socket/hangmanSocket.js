@@ -211,7 +211,7 @@ export const setupHangmanSocket = (io) => {
           timestamp: new Date().toISOString()
         });
 
-        console.log(`▶️ Game started: ${gameId} by ${user.name}`);
+        console.log(`[GAME] Game started: ${gameId} by ${user.name}`);
       } catch (error) {
         console.error('Error starting game:', error);
         socket.emit('error', createSocketError('SERVER_ERROR', 'Failed to start game'));
@@ -312,13 +312,98 @@ export const setupHangmanSocket = (io) => {
           }, 5 * 60 * 1000);
         }
 
-        console.log(`🔤 Letter guessed: ${letter} - Correct: ${result.correct} - Player: ${user.name}`);
+        console.log(`[GAME] Letter guessed: ${letter} - Correct: ${result.correct} - Player: ${user.name}`);
       } catch (error) {
         console.error('Error guessing letter:', error);
         socket.emit('error', createSocketError('SERVER_ERROR', 'Failed to process guess'));
       }
     });
-    
+
+    // Tentar palavra completa
+    socket.on('guess-word', async (data) => {
+      try {
+        const sanitizedData = sanitizeEventData(data);
+        const { gameId, word } = sanitizedData;
+
+        if (!checkRateLimit(socket, 'event')) {
+          socket.emit('error', createSocketError('RATE_LIMIT_EXCEEDED', 'Guessing too fast'));
+          return;
+        }
+
+        if (!word || typeof word !== 'string' || word.trim().length === 0) {
+          socket.emit('error', createSocketError('INVALID_WORD', 'Word must be a non-empty string'));
+          return;
+        }
+
+        const game = activeGames.get(gameId);
+
+        if (!game) {
+          socket.emit('error', createSocketError('GAME_NOT_FOUND', 'Game does not exist'));
+          return;
+        }
+
+        if (game.status !== 'active') {
+          socket.emit('error', createSocketError('GAME_NOT_ACTIVE', 'Game is not active'));
+          return;
+        }
+
+        const validation = await validateGameAccess(game, user);
+        if (!validation.allowed) {
+          socket.emit('error', createSocketError('UNAUTHORIZED', 'Cannot guess in this game'));
+          logSecurityEvent('UNAUTHORIZED_GAME_GUESS', socket, { gameId });
+          return;
+        }
+
+        const result = game.guessWord(word, user.id);
+
+        if (!result.success) {
+          socket.emit('error', createSocketError('INVALID_WORD', result.message));
+          return;
+        }
+
+        await game.save();
+
+        hangmanNamespace.to(gameId).emit('word-guessed', {
+          word: word.toUpperCase(),
+          correct: result.correct,
+          wrongGuesses: result.wrongGuesses,
+          revealedWord: result.revealedWord,
+          status: result.status,
+          gameState: game.getGameState(),
+          player: {
+            id: user.id,
+            name: game.players.find(p => p.studentId.toString() === user.id.toString())?.name
+          },
+          timestamp: new Date().toISOString()
+        });
+
+        if (result.status === 'won' || result.status === 'lost') {
+          hangmanNamespace.to(gameId).emit('game-ended', {
+            status: result.status,
+            word: game.word,
+            players: game.players.map(p => ({
+              id: p.studentId,
+              name: p.name,
+              avatar: p.avatar,
+              score: p.score
+            })).sort((a, b) => b.score - a.score),
+            duration: game.duration,
+            timestamp: new Date().toISOString()
+          });
+
+          setTimeout(() => {
+            activeGames.delete(gameId);
+            gamePlayers.delete(gameId);
+          }, 5 * 60 * 1000);
+        }
+
+        console.log(`Word guessed: ${word} - Correct: ${result.correct} - Player: ${user.name}`);
+      } catch (error) {
+        console.error('Error guessing word:', error);
+        socket.emit('error', createSocketError('SERVER_ERROR', 'Failed to process word guess'));
+      }
+    });
+
     // Desenhar no quadro branco
     socket.on('draw-whiteboard', (data) => {
       const sanitizedData = sanitizeEventData(data);

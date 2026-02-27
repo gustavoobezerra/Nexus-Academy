@@ -3,7 +3,11 @@ import { io } from 'socket.io-client';
 import { liveClassAPI } from '../lib/api';
 import type { LiveSession } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const SOCKET_URL = (() => {
+  const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const trimmed = raw.replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+})();
 
 const getStoredUser = (): { id?: string; name?: string } | null => {
   if (typeof window === 'undefined') {
@@ -34,7 +38,7 @@ export const useLiveClass = (classId: string) => {
       const token = localStorage.getItem('token');
       const currentUser = getStoredUser();
 
-      socketRef.current = io(API_URL, {
+      socketRef.current = io(SOCKET_URL, {
         auth: { token },
         transports: ['websocket'],
       });
@@ -106,7 +110,7 @@ export const useLiveClass = (classId: string) => {
         peerConnection.ondatachannel = (event) => {
           const dataChannel = event.channel;
           dataChannel.onmessage = (msg) => {
-            console.log('Data from peer:', msg.data);
+            // Dados recebidos do peer
           };
         };
 

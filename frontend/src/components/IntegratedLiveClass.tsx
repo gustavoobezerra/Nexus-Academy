@@ -34,11 +34,15 @@ export const IntegratedLiveClass = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const { transcript: audioTranscript, startListening } = useAudioTranscription();
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'; // Para Socket.IO
+  const SOCKET_URL = (() => {
+    const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const trimmed = raw.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+  })();
 
   useEffect(() => {
     // Conectar Socket.IO
-    const newSocket = io(API_URL, {
+    const newSocket = io(SOCKET_URL, {
       auth: { userId, userType }
     });
 

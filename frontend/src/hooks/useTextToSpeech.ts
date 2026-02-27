@@ -69,7 +69,9 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}): UseTextTo
 
   const speak = useCallback((text: string) => {
     if (!isSupported) {
-      console.warn('Speech synthesis not supported');
+      if (import.meta.env.DEV) {
+        console.warn('Speech synthesis not supported');
+      }
       return;
     }
 

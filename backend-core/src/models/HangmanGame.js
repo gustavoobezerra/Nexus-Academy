@@ -205,6 +205,79 @@ HangmanGameSchema.methods.guessLetter = function(letter, playerId = null) {
   };
 };
 
+// Método para processar tentativa de palavra completa
+HangmanGameSchema.methods.guessWord = function(word, playerId = null) {
+  const normalized = word.toUpperCase().trim();
+
+  if (this.status !== 'active') {
+    return { success: false, message: 'Jogo não está ativo' };
+  }
+
+  if (normalized.length !== this.word.length) {
+    return { success: false, message: 'Palavra com tamanho incorreto' };
+  }
+
+  // Adicionar ao histórico
+  this.gameHistory.push({
+    action: 'word-guess',
+    player: playerId ? playerId.toString() : 'unknown',
+    letter: normalized,
+    correct: normalized === this.word,
+    timestamp: new Date()
+  });
+
+  if (normalized === this.word) {
+    // Revelar todas as letras
+    this.guessedLetters = [...new Set([...this.guessedLetters, ...this.word.split('')])];
+    this.status = 'won';
+    this.finishedAt = new Date();
+    this.duration = Math.floor((this.finishedAt - this.startedAt) / 1000);
+
+    // Pontuar o jogador com bônus por adivinhar a palavra inteira
+    if (playerId) {
+      const player = this.players.find(p => p.studentId.toString() === playerId.toString());
+      if (player) {
+        player.score += 50;
+      }
+    }
+
+    this.gameHistory.push({ action: 'win', timestamp: new Date() });
+
+    return {
+      success: true,
+      correct: true,
+      wrongGuesses: this.wrongGuesses,
+      status: 'won',
+      revealedWord: this.word
+    };
+  } else {
+    this.wrongGuesses += 1;
+
+    // Penalizar o jogador
+    if (playerId) {
+      const player = this.players.find(p => p.studentId.toString() === playerId.toString());
+      if (player) {
+        player.score = Math.max(0, player.score - 10);
+      }
+    }
+
+    if (this.wrongGuesses >= this.maxWrongGuesses) {
+      this.status = 'lost';
+      this.finishedAt = new Date();
+      this.duration = Math.floor((this.finishedAt - this.startedAt) / 1000);
+      this.gameHistory.push({ action: 'lose', timestamp: new Date() });
+    }
+
+    return {
+      success: true,
+      correct: false,
+      wrongGuesses: this.wrongGuesses,
+      status: this.status,
+      revealedWord: this.getRevealedWord()
+    };
+  }
+};
+
 // Método para obter palavra com letras reveladas
 HangmanGameSchema.methods.getRevealedWord = function() {
   return this.word.split('').map(letter => {

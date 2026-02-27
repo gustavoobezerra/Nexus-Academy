@@ -107,28 +107,28 @@ export const StudentPortalLogin = () => {
 
     // Validações no frontend
     if (!name.trim() || !email.trim() || !age.trim() || !grade.trim() || !parentName.trim() || !parentPhone.trim() || !parentEmail.trim()) {
-      toast.error('📝 Preencha todos os campos obrigatórios');
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
     const ageNumber = parseInt(age, 10);
     if (Number.isNaN(ageNumber) || ageNumber < 5 || ageNumber > 99) {
-      toast.error('🎂 Idade deve estar entre 5 e 99 anos');
+      toast.error('Idade deve estar entre 5 e 99 anos');
       return;
     }
 
     if (!parentEmail.includes('@')) {
-      toast.error('📧 Email do responsável inválido');
+      toast.error('Email do responsável inválido');
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error('🔑 As senhas não coincidem');
+      toast.error('As senhas não coincidem');
       return;
     }
 
     if (password.length < 6) {
-      toast.error('🔒 Senha deve ter pelo menos 6 caracteres');
+      toast.error('Senha deve ter pelo menos 6 caracteres');
       return;
     }
 
@@ -156,7 +156,7 @@ export const StudentPortalLogin = () => {
         grade: data.student.grade
       }));
 
-      toast.success(`🎉 Bem-vindo ao Nexus Academy, ${data.student.name.split(' ')[0]}!`);
+      toast.success(`Bem-vindo ao Nexus Academy, ${data.student.name.split(' ')[0]}!`);
 
       // Always go to onboarding after registration
       navigate('/portal/onboarding');

@@ -328,7 +328,7 @@ export const MessageTemplatesManager = () => {
 
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">
-                  💡 Variáveis disponíveis:
+                  Variáveis disponíveis:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {['studentName', 'parentName', 'className', 'classDate', 'classTime', 'amount', 'dueDate', 'teacherName', 'pixKey'].map(v => (

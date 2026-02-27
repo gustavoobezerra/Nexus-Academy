@@ -298,7 +298,7 @@ const TeacherAnalyticsDashboard: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-amber-300 mb-3">💡 {student.recommendation}</p>
+                    <p className="text-sm text-amber-300 mb-3">{student.recommendation}</p>
                     {student.lastActivityDate && (
                       <p className="text-xs text-gray-400">Última atividade: {student.daysInactive} dias atrás</p>
                     )}
@@ -342,7 +342,7 @@ const TeacherAnalyticsDashboard: React.FC = () => {
 
           {analytics.timeManagement.suggestedSlots.length > 0 && (
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-              <h3 className="text-xl font-bold text-white mb-4">💡 Horários Sugeridos para Aulas</h3>
+              <h3 className="text-xl font-bold text-white mb-4">Horários Sugeridos para Aulas</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {analytics.timeManagement.suggestedSlots.map((slot, idx) => (
                   <button
@@ -418,9 +418,9 @@ const TeacherAnalyticsDashboard: React.FC = () => {
                       {student.score.toFixed(0)}/100
                     </span>
                     <span className="text-xs">
-                      {student.trend === 'up' && '📈 Subindo'}
-                      {student.trend === 'down' && '📉 Caindo'}
-                      {student.trend === 'stable' && '➡️ Estável'}
+                      {student.trend === 'up' && 'Subindo'}
+                      {student.trend === 'down' && 'Caindo'}
+                      {student.trend === 'stable' && 'Estável'}
                     </span>
                   </div>
                 </div>

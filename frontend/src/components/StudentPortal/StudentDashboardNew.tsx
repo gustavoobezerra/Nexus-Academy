@@ -187,7 +187,7 @@ export const StudentDashboardNew = ({ onJoinClass }: StudentDashboardNewProps) =
           {/* Placeholder - Calendário */}
           <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border-2 border-dashed border-gray-300 flex items-center justify-center min-h-[200px]">
             <div className="text-center">
-              <p className="text-gray-500 font-medium">📅 Calendário</p>
+              <p className="text-gray-500 font-medium">Calendário</p>
               <p className="text-sm text-gray-400 mt-2">Em desenvolvimento</p>
             </div>
           </div>
@@ -195,7 +195,7 @@ export const StudentDashboardNew = ({ onJoinClass }: StudentDashboardNewProps) =
           {/* Placeholder - Materiais */}
           <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border-2 border-dashed border-gray-300 flex items-center justify-center min-h-[200px]">
             <div className="text-center">
-              <p className="text-gray-500 font-medium">📚 Materiais</p>
+              <p className="text-gray-500 font-medium">Materiais</p>
               <p className="text-sm text-gray-400 mt-2">Em desenvolvimento</p>
             </div>
           </div>
@@ -203,7 +203,7 @@ export const StudentDashboardNew = ({ onJoinClass }: StudentDashboardNewProps) =
           {/* Placeholder - Conquistas */}
           <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-6 border-2 border-dashed border-gray-300 flex items-center justify-center min-h-[200px]">
             <div className="text-center">
-              <p className="text-gray-500 font-medium">🏆 Conquistas</p>
+              <p className="text-gray-500 font-medium">Conquistas</p>
               <p className="text-sm text-gray-400 mt-2">Em desenvolvimento</p>
             </div>
           </div>

@@ -151,13 +151,10 @@ export const StudentOnboarding = () => {
     };
 
     try {
-      console.log('[Onboarding] Enviando dados:', finalData);
-
       // Usar a nova API centralizada com tratamento de erros automático
       await portalAPI.completeOnboarding(finalData);
 
-      console.log('[Onboarding] ✅ Sucesso!');
-      toast.success('Perfil configurado com sucesso! 🎉');
+      toast.success('Perfil configurado com sucesso!');
 
       // Marcar onboarding como completo no localStorage também
       localStorage.setItem('onboarding_completed', 'true');
@@ -170,16 +167,15 @@ export const StudentOnboarding = () => {
 
       // Se for erro de rede, oferecer modo offline
       if (error?.type === 'network' || error?.code === 'NETWORK_ERROR') {
-        toast.error('⚠️ Sem conexão com o servidor. Verifique se o backend está rodando.', {
+        toast.error('Sem conexão com o servidor. Verifique se o backend está rodando.', {
           duration: 6000
         });
 
         // Fallback: Salvar localmente e permitir continuar
-        console.log('[Onboarding] Salvando localmente como fallback...');
         localStorage.setItem('onboarding_data', JSON.stringify(finalData));
         localStorage.setItem('onboarding_completed', 'true');
 
-        toast.success('✅ Dados salvos localmente. Você pode continuar!', {
+        toast.success('Dados salvos localmente. Você pode continuar!', {
           duration: 4000
         });
 

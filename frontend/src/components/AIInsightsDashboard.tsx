@@ -507,7 +507,7 @@ export const AIInsightsDashboard: React.FC<AIInsightsDashboardProps> = ({ studen
                             </div>
                             {insight.suggestedAction && (
                               <p className="text-xs text-gray-400 ml-7">
-                                💡 {insight.suggestedAction}
+                                {insight.suggestedAction}
                               </p>
                             )}
                           </div>
@@ -569,11 +569,11 @@ export const AIInsightsDashboard: React.FC<AIInsightsDashboardProps> = ({ studen
                     <p className="text-sm text-gray-400">{rec.rationale}</p>
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-xs px-2 py-1 bg-violet-900/50 rounded text-violet-300">
-                        {rec.category === 'content' ? '📚 Conteúdo' :
-                         rec.category === 'methodology' ? '🎯 Metodologia' :
-                         rec.category === 'pacing' ? '⏱️ Ritmo' :
-                         rec.category === 'material' ? '📄 Material' :
-                         '📅 Agendamento'}
+                        {rec.category === 'content' ? 'Conteúdo' :
+                         rec.category === 'methodology' ? 'Metodologia' :
+                         rec.category === 'pacing' ? 'Ritmo' :
+                         rec.category === 'material' ? 'Material' :
+                         'Agendamento'}
                       </span>
                     </div>
                   </div>
