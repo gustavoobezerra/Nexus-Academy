@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, BookOpen, Calendar, Trophy, MessageCircle,
   Bell, User, LogOut, Menu, Sun, Moon, Video, FileText,
-  TrendingUp, Clock, Target, Award, Mic, Gamepad2
+  TrendingUp, Clock, Target, Award, Mic, Gamepad2, Link, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -24,12 +24,12 @@ interface StudentData {
   points: number;
   level: number;
   nextClass?: string;
-  teacher: {
-    _id: string;
+  teacher?: {
+    _id?: string;
     name: string;
     email: string;
     avatar?: string;
-  };
+  } | null;
 }
 
 interface Activity {
@@ -58,6 +58,8 @@ export const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [teacherLinkInput, setTeacherLinkInput] = useState('');
+  const [joiningTeacher, setJoiningTeacher] = useState(false);
 
   useEffect(() => {
     fetchStudentData();
@@ -87,6 +89,36 @@ export const StudentDashboard = () => {
       toast.error('Erro ao carregar dados do painel');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const parseSlugFromInput = (input: string): string | null => {
+    const trimmed = input.trim();
+    const urlMatch = trimmed.match(/\/professor\/([a-z0-9-]+)/i);
+    if (urlMatch) return urlMatch[1].toLowerCase();
+    if (/^[a-z0-9-]+$/.test(trimmed.toLowerCase()) && trimmed.length >= 2) return trimmed.toLowerCase();
+    return null;
+  };
+
+  const handleJoinTeacher = async () => {
+    const slug = parseSlugFromInput(teacherLinkInput);
+    if (!slug) {
+      toast.error('Link inválido. Cole o link do professor (ex: nexus.app/professor/nome-professor)');
+      return;
+    }
+    setJoiningTeacher(true);
+    try {
+      const result = await apiService.post('/portal/join-teacher', { slug }) as any;
+      if (result.success) {
+        toast.success(result.message || 'Vinculado ao professor com sucesso!');
+        setTeacherLinkInput('');
+        await fetchStudentData();
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Erro ao vincular ao professor. Verifique o link.';
+      toast.error(msg);
+    } finally {
+      setJoiningTeacher(false);
     }
   };
 
@@ -250,7 +282,18 @@ export const StudentDashboard = () => {
         <main className="flex-1 overflow-auto">
           <div className={`min-h-full p-6 ${isDark ? 'bg-slate-950' : 'bg-slate-50'}`}>
             {activeTab === 'dashboard' && (
-              <DashboardContent student={student} activities={activities} classes={classes} isDark={isDark} onOpenChat={() => setActiveTab('chat')} onNavigate={(path: string) => navigate(path)} />
+              <DashboardContent
+                student={student}
+                activities={activities}
+                classes={classes}
+                isDark={isDark}
+                onOpenChat={() => setActiveTab('chat')}
+                onNavigate={(path: string) => navigate(path)}
+                teacherLinkInput={teacherLinkInput}
+                onTeacherLinkChange={setTeacherLinkInput}
+                onJoinTeacher={handleJoinTeacher}
+                joiningTeacher={joiningTeacher}
+              />
             )}
             {activeTab === 'classes' && (
               <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
@@ -355,7 +398,7 @@ export const StudentDashboard = () => {
               </div>
             )}
             {activeTab === 'chat' && (
-              <ChatContent student={student} teacher={student.teacher} isDark={isDark} />
+              <ChatContent student={student} teacher={student.teacher ?? null} isDark={isDark} />
             )}
           </div>
         </main>
@@ -372,10 +415,53 @@ interface DashboardContentProps {
   isDark: boolean;
   onOpenChat: () => void;
   onNavigate: (path: string) => void;
+  teacherLinkInput: string;
+  onTeacherLinkChange: (v: string) => void;
+  onJoinTeacher: () => void;
+  joiningTeacher: boolean;
 }
 
-const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, onNavigate }: DashboardContentProps) => (
+const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, onNavigate, teacherLinkInput, onTeacherLinkChange, onJoinTeacher, joiningTeacher }: DashboardContentProps) => (
   <div className="space-y-6">
+    {/* Aviso: aluno sem professor vinculado */}
+    {!student.teacher && (
+      <div className="bg-amber-900/30 border border-amber-600 rounded-xl p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <AlertTriangle className="text-amber-400 flex-shrink-0 mt-0.5" size={22} />
+          <div>
+            <h3 className="font-bold text-amber-300 text-lg">Você não está vinculado a nenhum professor</h3>
+            <p className="text-amber-200/80 text-sm mt-1">
+              Peça o link do seu professor e cole abaixo para entrar na turma dele e ter acesso às aulas, atividades e muito mais.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Link className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400" size={16} />
+            <input
+              type="text"
+              value={teacherLinkInput}
+              onChange={(e) => onTeacherLinkChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !joiningTeacher && onJoinTeacher()}
+              placeholder="Cole o link do professor (ex: nexus.app/professor/joao-silva)"
+              className="w-full pl-9 pr-4 py-2.5 bg-amber-950/50 border border-amber-600 rounded-lg text-white placeholder-amber-400/50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+          <button
+            onClick={onJoinTeacher}
+            disabled={joiningTeacher || !teacherLinkInput.trim()}
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+          >
+            {joiningTeacher ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Link size={16} />
+            )}
+            {joiningTeacher ? 'Entrando...' : 'Entrar na turma'}
+          </button>
+        </div>
+      </div>
+    )}
     {/* Stats Cards */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <StatCard
@@ -445,25 +531,26 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
     </div>
 
     {/* Teacher Info */}
-    <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
-      <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
-        Seu Professor
-      </h3>
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-          <User className="text-white" size={32} />
+    {student.teacher && (
+      <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+        <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+          Seu Professor
+        </h3>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <User className="text-white" size={32} />
+          </div>
+          <div>
+            <p className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+              {student.teacher.name}
+            </p>
+            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              {student.teacher.email}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-            {student.teacher?.name || 'Professor'}
-          </p>
-          <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            {student.teacher?.email || ''}
-          </p>
-        </div>
-
       </div>
-    </div>
+    )}
 
     {/* Recent Activities */}
     <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
@@ -506,7 +593,7 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
 // Chat Content Component
 interface ChatContentProps {
   student: StudentData;
-  teacher: StudentData['teacher'];
+  teacher: StudentData['teacher'] | null;
   isDark: boolean;
 }
 

@@ -8,6 +8,7 @@ import Student from '../models/Student.js';
 import HourBank from '../models/HourBank.js';
 import emailService from './emailService.js';
 import automationEngine from './automationEngine.js';
+import { transcribeAudio } from './transcriptionService.js';
 
 class LiveClassService {
   constructor() {
@@ -153,6 +154,17 @@ class LiveClassService {
         await classData.save();
       }
 
+      // Transcrição AssemblyAI — dispara em background se houver URL de gravação
+      if (session.recording.videoUrl) {
+        const classId = session.classId;
+        transcribeAudio(session.recording.videoUrl).then(async (result) => {
+          if (result.success && result.text && !result.isMock) {
+            await Class.findByIdAndUpdate(classId, { transcript: result.text });
+            console.log(`✅ Transcrição salva para aula ${classId}`);
+          }
+        }).catch(err => console.error('Transcription error:', err));
+      }
+
       // Descontar horas do banco de horas
       await this.deductHoursFromBank(session.studentId, session.teacherId, duration);
 
@@ -259,11 +271,15 @@ class LiveClassService {
         createdAt: new Date()
       };
 
+      // Persistir URL de gravação na aula (MongoDB)
+      await Class.findByIdAndUpdate(session.classId, {
+        recordingUrl: session.recording.videoUrl
+      });
+
+      // Cache em memória como backup
       this.recordings.set(sessionId, recording);
 
-      // TODO: Salvar no banco de dados (criar modelo Recording)
-      // TODO: Upload para cloud storage (S3/Google Drive)
-
+      console.log(`✅ Gravação salva para aula ${session.classId}: ${session.recording.videoUrl}`);
       return { success: true, recording };
     } catch (error) {
       console.error('Error saving recording:', error);

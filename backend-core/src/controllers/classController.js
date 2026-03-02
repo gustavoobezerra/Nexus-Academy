@@ -1,5 +1,6 @@
 import Class from '../models/Class.js';
 import axios from 'axios';
+import emailService from '../services/emailService.js';
 
 export const getClasses = async (req, res) => {
   try {
@@ -217,6 +218,34 @@ export const deleteClass = async (req, res) => {
   } catch (error) {
     console.error('Erro ao deletar aula:', error);
     res.status(500).json({ success: false, message: 'Erro ao deletar aula' });
+  }
+};
+
+export const sendClassSummary = async (req, res) => {
+  try {
+    const { parentEmail, studentName, summary, keyPoints, homework, className } = req.body;
+
+    const classData = await Class.findOne({ _id: req.params.id, teacher: req.user._id });
+    if (!classData) {
+      return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
+    }
+
+    if (!parentEmail) {
+      return res.status(400).json({ success: false, message: 'Email do responsável não informado.' });
+    }
+
+    const result = await emailService.sendClassSummary(parentEmail, {
+      studentName: studentName || 'Aluno',
+      className: className || classData.title,
+      summary: summary || '',
+      topics: Array.isArray(keyPoints) ? keyPoints : [],
+      homework: Array.isArray(homework) ? homework.join('\n') : (homework || '')
+    });
+
+    res.json({ success: true, message: 'Resumo enviado com sucesso!', email: result });
+  } catch (error) {
+    console.error('Erro ao enviar resumo:', error);
+    res.status(500).json({ success: false, message: 'Erro ao enviar resumo.' });
   }
 };
 

@@ -1,21 +1,14 @@
 /**
- * Transcription Service using Assembly AI (FREE tier: 3 hours/month)
- *
- * To activate:
- * 1. Sign up at https://www.assemblyai.com/ (FREE forever)
- * 2. Get your API key from dashboard
- * 3. Add to .env file: ASSEMBLYAI_API_KEY=your_key_here
- * 4. Install package: npm install assemblyai
- * 5. Uncomment the code below
+ * Transcription Service using AssemblyAI
+ * FREE tier: 3 hours/month
+ * Docs: https://www.assemblyai.com/docs
  */
 
-// Uncomment after getting API key:
-// const { AssemblyAI } = require('assemblyai');
+import { AssemblyAI } from 'assemblyai';
 
-// Initialize client (only if API key is available)
-// const client = process.env.ASSEMBLYAI_API_KEY
-//   ? new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY })
-//   : null;
+const client = process.env.ASSEMBLYAI_API_KEY
+  ? new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY })
+  : null;
 
 /**
  * Transcribe audio file to text in Portuguese
@@ -24,22 +17,26 @@
  * @returns {Promise<Object>} Transcription result
  */
 async function transcribeAudio(audioUrl, options = {}) {
-  // Uncomment when ready to use:
-  /*
   if (!client) {
-    throw new Error('Assembly AI not configured. Please add ASSEMBLYAI_API_KEY to .env file');
+    console.log('⚠️ AssemblyAI not configured. Using mock transcription.');
+    return {
+      success: true,
+      text: '[Mock transcription] Configure ASSEMBLYAI_API_KEY para transcrição real.',
+      confidence: 0.95,
+      audio_duration: 60,
+      isMock: true
+    };
   }
 
   try {
     const transcript = await client.transcripts.transcribe({
       audio_url: audioUrl,
-      language_code: 'pt', // Portuguese
-      speaker_labels: true, // Identify different speakers
-      format_text: true, // Auto-format punctuation
+      language_code: 'pt',
+      speaker_labels: true,
+      format_text: true,
       ...options
     });
 
-    // Wait for transcription to complete
     if (transcript.status === 'error') {
       throw new Error(`Transcription failed: ${transcript.error}`);
     }
@@ -48,28 +45,17 @@ async function transcribeAudio(audioUrl, options = {}) {
       success: true,
       text: transcript.text,
       words: transcript.words,
-      speakers: transcript.utterances, // Who said what
+      speakers: transcript.utterances,
       confidence: transcript.confidence,
       audio_duration: transcript.audio_duration
     };
   } catch (error) {
-    console.error('Assembly AI transcription error:', error);
+    console.error('AssemblyAI transcription error:', error);
     return {
       success: false,
       error: error.message
     };
   }
-  */
-
-  // Mock response for now (until API key is configured)
-  // DEBUG: console.log('⚠️ Assembly AI not configured. Using mock transcription.');
-  return {
-    success: true,
-    text: '[Mock transcription] Olá, esta é uma transcrição de exemplo. Configure Assembly AI para transcrição real.',
-    confidence: 0.95,
-    audio_duration: 60,
-    isMock: true
-  };
 }
 
 /**
@@ -78,10 +64,13 @@ async function transcribeAudio(audioUrl, options = {}) {
  * @returns {AsyncGenerator} Transcription chunks
  */
 async function* transcribeRealtime(audioStream) {
-  // Uncomment when ready to use:
-  /*
   if (!client) {
-    throw new Error('Assembly AI not configured');
+    yield {
+      text: '[Real-time transcription não configurada. Adicione ASSEMBLYAI_API_KEY]',
+      isFinal: true,
+      isMock: true
+    };
+    return;
   }
 
   const realtimeTranscriber = client.realtime.transcriber({
@@ -102,43 +91,35 @@ async function* transcribeRealtime(audioStream) {
   audioStream.pipe(realtimeTranscriber);
 
   yield* realtimeTranscriber;
-  */
-
-  // Mock for now
-  yield {
-    text: '[Real-time transcription não configurada. Adicione ASSEMBLYAI_API_KEY]',
-    isFinal: true,
-    isMock: true
-  };
 }
 
 /**
  * Get transcription by ID (for checking status)
  */
 async function getTranscription(transcriptId) {
-  // Uncomment when ready:
-  /*
   if (!client) {
-    throw new Error('Assembly AI not configured');
+    return {
+      success: false,
+      error: 'AssemblyAI not configured. Add ASSEMBLYAI_API_KEY to .env',
+      isMock: true
+    };
   }
 
-  const transcript = await client.transcripts.get(transcriptId);
-  return {
-    success: true,
-    status: transcript.status,
-    text: transcript.text,
-    ...transcript
-  };
-  */
-
-  return {
-    success: false,
-    error: 'Assembly AI not configured',
-    isMock: true
-  };
+  try {
+    const transcript = await client.transcripts.get(transcriptId);
+    return {
+      success: true,
+      status: transcript.status,
+      text: transcript.text,
+      ...transcript
+    };
+  } catch (error) {
+    console.error('AssemblyAI getTranscription error:', error);
+    return { success: false, error: error.message };
+  }
 }
 
-module.exports = {
+export {
   transcribeAudio,
   transcribeRealtime,
   getTranscription

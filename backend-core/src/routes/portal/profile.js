@@ -2,7 +2,9 @@ import express from 'express';
 import Student from '../../models/Student.js';
 import Class from '../../models/Class.js';
 import Activity from '../../models/Activity.js';
+import User from '../../models/User.js';
 import { authenticateStudent } from '../../middleware/studentAuth.js';
+import emailService from '../../services/emailService.js';
 
 const router = express.Router();
 
@@ -208,6 +210,68 @@ router.get('/activities', authenticateStudent, async (req, res) => {
   } catch (error) {
     console.error('[StudentPortal] Error fetching activities:', error);
     res.status(500).json({ success: false, message: 'Erro ao carregar atividades' });
+  }
+});
+
+// POST /api/portal/join-teacher
+// Vincula um aluno existente a um professor via slug do link único
+router.post('/join-teacher', authenticateStudent, async (req, res) => {
+  try {
+    const { slug } = req.body;
+
+    if (!slug || typeof slug !== 'string' || slug.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Slug do professor é obrigatório' });
+    }
+
+    const cleanSlug = slug.trim().toLowerCase();
+
+    const teacher = await User.findOne({ slug: cleanSlug, role: 'teacher' })
+      .select('name email subscriptionStatus status');
+
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: 'Professor não encontrado. Verifique o link.' });
+    }
+
+    const allowedStatuses = ['active', 'trialing', 'incomplete', null, undefined];
+    if (!allowedStatuses.includes(teacher.subscriptionStatus)) {
+      return res.status(403).json({ success: false, message: 'Este professor não está aceitando novos alunos no momento.' });
+    }
+
+    const student = await Student.findById(req.studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado' });
+    }
+
+    if (student.teacher?.toString() === teacher._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Você já está vinculado a este professor.' });
+    }
+
+    await Student.findByIdAndUpdate(req.studentId, { teacher: teacher._id });
+
+    // Notificar professor por email (fire-and-forget)
+    emailService.sendEmail({
+      to: teacher.email,
+      subject: `Novo aluno vinculado: ${student.name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">Novo Aluno na Sua Turma!</h2>
+          <p>O aluno <strong>${student.name}</strong> acabou de se vincular à sua conta pelo link de cadastro.</p>
+          <div style="background: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Nome:</strong> ${student.name}</p>
+            ${student.email ? `<p><strong>Email:</strong> ${student.email}</p>` : ''}
+          </div>
+          <p>Acesse a plataforma para gerenciar o novo aluno.</p>
+        </div>
+      `
+    }).catch(err => console.error('Error notifying teacher:', err));
+
+    res.json({
+      success: true,
+      message: `Vinculado ao professor ${teacher.name} com sucesso!`,
+      teacher: { name: teacher.name, email: teacher.email }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erro ao vincular ao professor' });
   }
 });
 

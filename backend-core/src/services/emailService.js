@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import resendService from './resendService.js';
 
 let transporter = null;
 
@@ -18,7 +19,11 @@ export const emailService = {
 
   async sendEmail(options) {
     if (!this.isConfigured()) {
-      // DEBUG: console.log(`[Email Mock] To: ${options.to}, Subject: ${options.subject}`);
+      // Use Resend as fallback when SMTP is not configured
+      if (resendService.isConfigured()) {
+        return await resendService.sendEmail(options);
+      }
+      console.log(`[Email Mock] To: ${options.to}, Subject: ${options.subject}`);
       return { success: true, mock: true, messageId: `mock_${Date.now()}` };
     }
 

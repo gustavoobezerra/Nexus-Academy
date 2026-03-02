@@ -3,6 +3,7 @@ import { FileText, Send, CheckCircle, Copy, Download, MessageSquare, Mail, X, Sp
 import toast from 'react-hot-toast';
 import aiService from '../services/aiService';
 import { automationEngine } from '../services/automationEngine';
+import { classesAPI } from '../lib/api';
 import type { Aula, Aluno } from '../types';
 
 interface PostClassSummaryProps {
@@ -55,14 +56,41 @@ export const PostClassSummary: React.FC<PostClassSummaryProps> = ({
     }
   };
 
-  const handleSendToParent = async () => {
-    toast.loading('Enviando para responsavel...', { id: 'sending' });
-
-    // Simular envio
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
+  const handleSendWhatsApp = () => {
+    if (!summary) return;
+    const phone = student.parentPhone?.replace(/\D/g, '');
+    const message = encodeURIComponent(summary.parentReport);
+    const url = phone
+      ? `https://wa.me/55${phone}?text=${message}`
+      : `https://wa.me/?text=${message}`;
+    window.open(url, '_blank');
     setSentToParent(true);
-    toast.success('Relatorio enviado para o responsavel!', { id: 'sending' });
+    toast.success('WhatsApp aberto com o relatório!');
+  };
+
+  const handleSendEmail = async () => {
+    if (!summary) return;
+    if (!student.parentEmail) {
+      toast.error('Email do responsável não cadastrado.');
+      return;
+    }
+    toast.loading('Enviando por email...', { id: 'sending' });
+    try {
+      const classId = classData._id || classData.id;
+      if (!classId) throw new Error('ID da aula não encontrado');
+      await classesAPI.sendSummary(classId, {
+        parentEmail: student.parentEmail,
+        studentName: student.name,
+        summary: summary.summary,
+        keyPoints: summary.keyPoints,
+        homework: summary.homework,
+        className: classData.title
+      });
+      setSentToParent(true);
+      toast.success('Resumo enviado por email para os responsáveis!', { id: 'sending' });
+    } catch (error) {
+      toast.error('Erro ao enviar email.', { id: 'sending' });
+    }
   };
 
   const handleCopy = (text: string, what: string) => {
@@ -229,14 +257,14 @@ export const PostClassSummary: React.FC<PostClassSummaryProps> = ({
                 {!sentToParent ? (
                   <div className="flex flex-col sm:flex-row gap-4 relative">
                     <button
-                      onClick={handleSendToParent}
+                      onClick={handleSendWhatsApp}
                       className="flex-1 px-8 py-4 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-lg shadow-[#25D366]/20 active:scale-95"
                     >
                       <MessageSquare size={20} />
                       Enviar via WhatsApp
                     </button>
                     <button
-                      onClick={handleSendToParent}
+                      onClick={handleSendEmail}
                       className="flex-1 px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                     >
                       <Mail size={20} />

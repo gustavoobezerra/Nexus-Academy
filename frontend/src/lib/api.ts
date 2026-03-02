@@ -18,6 +18,8 @@ export const classesAPI = {
   end: (id: string) => apiService.post<void>(`/classes/${id}/end`),
   delete: (id: string) => apiService.delete<void>(`/classes/${id}`),
   generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; aiSummary: string }>(`/classes/${classId}/generate-summary`, { transcript }),
+  sendSummary: (classId: string, data: { parentEmail: string; studentName: string; summary: string; keyPoints: string[]; homework: string[]; className: string }) =>
+    apiService.post<{ success: boolean; message: string }>(`/classes/${classId}/send-summary`, data),
 };
 
 export const studentsAPI = {
@@ -72,6 +74,11 @@ export const onboardingAPI = {
   createSubscriptionSession: (plan: string) => apiService.post<{ checkoutUrl: string }>('/onboarding/create-subscription-session', { plan }),
   skipPayment: () => apiService.post<void>('/onboarding/skip-payment'),
   complete: () => apiService.post<{ user: { id: string; name: string; email: string; slug: string; subscriptionStatus?: string; subscriptionPlan?: string; trialEndsAt?: string; status?: string; publicUrl?: string } }>('/onboarding/complete')
+};
+
+export const aiAPI = {
+  generateActivity: (data: { lessonTopic: string; lessonSubject: string; lessonDescription?: string }) =>
+    apiService.post<{ success: boolean; questions: import('../types').Question[] }>('/ai/generate-activity', data),
 };
 
 // ============================================================================

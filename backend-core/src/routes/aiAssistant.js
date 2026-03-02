@@ -77,6 +77,41 @@ router.get('/suggestions', async (req, res) => {
 });
 
 /**
+ * POST /api/ai/generate-activity
+ * Gera atividade pedagógica com questões reais usando Gemini
+ */
+router.post('/generate-activity', async (req, res) => {
+  try {
+    const { lessonTopic, lessonSubject, lessonDescription } = req.body;
+
+    if (!lessonTopic || !lessonSubject) {
+      return res.status(400).json({
+        success: false,
+        message: 'lessonTopic e lessonSubject são obrigatórios'
+      });
+    }
+
+    const result = await aiAssistantService.generateActivity(
+      lessonTopic,
+      lessonSubject,
+      lessonDescription || ''
+    );
+
+    if (!result) {
+      return res.status(503).json({
+        success: false,
+        message: 'IA não configurada - configure GEMINI_API_KEY no .env'
+      });
+    }
+
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('generate-activity error:', error);
+    return res.status(500).json({ success: false, message: 'Erro ao gerar atividade' });
+  }
+});
+
+/**
  * @swagger
  * /api/ai-assistant/history:
  *   get:

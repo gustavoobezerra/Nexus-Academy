@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Wand2, CheckCircle, Send, Eye, Trash2, Sparkles, FileText, Brain, Users, User, Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Activity, Question, Aula, Aluno } from '../types';
+import { aiAPI } from '../lib/api';
 
 interface AIActivityGeneratorProps {
   classes?: Aula[];
@@ -64,103 +65,37 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
     setIsGenerating(true);
     toast.loading('IA analisando e gerando atividades...', { id: 'generating' });
 
-    // Simular chamada de IA - em produção seria integrado com GPT/Claude
-    setTimeout(() => {
-      const mockQuestions: Question[] = [
-        {
-          questionNumber: 1,
-          type: 'multiple_choice',
-          question: `Com base no tópico "${lessonTopic}", qual é o conceito principal abordado?`,
-          difficulty: 'easy',
-          points: 10,
-          options: [
-            { letter: 'A', text: 'Conceito fundamental que foi explicado', isCorrect: true },
-            { letter: 'B', text: 'Conceito secundário', isCorrect: false },
-            { letter: 'C', text: 'Conceito não relacionado', isCorrect: false },
-            { letter: 'D', text: 'Conceito avançado', isCorrect: false }
-          ],
-          explanation: 'A resposta correta é A porque representa o conceito fundamental abordado na aula.',
-          topics: [lessonSubject]
-        },
-        {
-          questionNumber: 2,
-          type: 'multiple_choice',
-          question: `Qual das seguintes afirmações sobre ${lessonSubject} está CORRETA?`,
-          difficulty: 'medium',
-          points: 15,
-          options: [
-            { letter: 'A', text: 'Afirmação incorreta baseada em conceito errado', isCorrect: false },
-            { letter: 'B', text: 'Afirmação correta que resume o conceito principal', isCorrect: true },
-            { letter: 'C', text: 'Afirmação parcialmente correta', isCorrect: false },
-            { letter: 'D', text: 'Afirmação que contradiz o conteúdo', isCorrect: false }
-          ],
-          explanation: 'B é correto pois descreve com precisão o conceito estudado.',
-          topics: [lessonSubject]
-        },
-        {
-          questionNumber: 3,
-          type: 'essay',
-          question: `Explique com suas próprias palavras: ${lessonTopic}`,
-          difficulty: 'medium',
-          points: 20,
-          correctAnswer: '',
-          explanation: 'Avalie: compreensão do conceito (40%), clareza da explicação (30%), exemplos práticos (30%).',
-          topics: [lessonSubject]
-        },
-        {
-          questionNumber: 4,
-          type: 'true_false',
-          question: `O conceito de "${lessonTopic}" pode ser aplicado em situações do cotidiano.`,
-          difficulty: 'easy',
-          points: 10,
-          correctAnswer: 'Verdadeiro',
-          explanation: 'Verdadeiro - o conceito tem diversas aplicações práticas no dia a dia.',
-          topics: [lessonSubject]
-        },
-        {
-          questionNumber: 5,
-          type: 'multiple_choice',
-          question: `Qual seria a melhor estratégia para resolver problemas envolvendo ${lessonSubject}?`,
-          difficulty: 'hard',
-          points: 25,
-          options: [
-            { letter: 'A', text: 'Aplicar apenas fórmulas decoradas', isCorrect: false },
-            { letter: 'B', text: 'Tentar resolver sem entender o conceito', isCorrect: false },
-            { letter: 'C', text: 'Compreender o conceito, identificar o padrão e aplicar sistematicamente', isCorrect: true },
-            { letter: 'D', text: 'Buscar apenas a resposta final', isCorrect: false }
-          ],
-          explanation: 'C é a resposta correta pois apresenta uma abordagem completa: compreensão → identificação → aplicação.',
-          topics: [lessonSubject]
-        },
-        {
-          questionNumber: 6,
-          type: 'fill_blank',
-          question: `Complete: A principal aplicação de ${lessonSubject} é _____ porque _____.`,
-          difficulty: 'medium',
-          points: 15,
-          correctAnswer: 'resolver problemas práticos / facilita o entendimento',
-          explanation: 'Respostas válidas devem incluir uma aplicação concreta e sua justificativa.',
-          topics: [lessonSubject]
-        }
-      ];
+    try {
+      const lessonDescription = inputMode === 'manual'
+        ? ''
+        : (selectedClassData as any)?.notes || (selectedClassData as any)?.description || '';
+
+      const result = await aiAPI.generateActivity({ lessonTopic, lessonSubject, lessonDescription });
+
+      if (!result || !result.questions || result.questions.length === 0) {
+        toast.error('IA não configurada ou sem resposta. Configure GEMINI_API_KEY no servidor.', { id: 'generating' });
+        return;
+      }
+
+      const questions: Question[] = result.questions;
 
       const activity: Activity = {
         _id: `activity_${Date.now()}`,
         class: selectedClass || 'manual_' + Date.now(),
         student: selectedStudents[0] || '',
-        teacher: 'teacher_demo',
+        teacher: '',
         title: `Atividade: ${lessonTopic}`,
         description: inputMode === 'manual'
           ? `Atividade gerada a partir da descrição: "${manualDescription}"`
-          : `Atividade gerada automaticamente pela IA com base na transcrição da aula.`,
+          : `Atividade gerada automaticamente pela IA com base na aula.`,
         type: 'exercise',
-        questions: mockQuestions,
-        totalPoints: mockQuestions.reduce((sum, q) => sum + q.points, 0),
+        questions,
+        totalPoints: questions.reduce((sum, q) => sum + q.points, 0),
         status: 'draft',
         submissions: [],
         generatedByAI: true,
         aiMetadata: {
-          sourceTranscript: inputMode === 'manual' ? manualDescription : 'Transcrição completa da aula...',
+          sourceTranscript: inputMode === 'manual' ? manualDescription : 'Transcrição da aula',
           topics: [lessonSubject],
           generatedAt: new Date().toISOString(),
           reviewed: false
@@ -170,10 +105,16 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
       };
 
       setGeneratedActivity(activity);
-      setIsGenerating(false);
       toast.success('Atividade gerada com sucesso! Revise e escolha para quem enviar.', { id: 'generating' });
       setActiveTab('review');
-    }, 2500);
+    } catch (error: unknown) {
+      const msg = error instanceof Error && error.message
+        ? error.message
+        : 'Erro ao gerar atividade. Verifique a configuração da IA.';
+      toast.error(msg, { id: 'generating' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDeleteQuestion = (questionNumber: number) => {

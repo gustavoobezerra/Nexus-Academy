@@ -196,6 +196,110 @@ INSTRUÇÕES:
   }
 
   /**
+   * Gerar atividade pedagógica com questões reais usando Gemini
+   */
+  async generateActivity(lessonTopic, lessonSubject, lessonDescription) {
+    if (!this.isConfigured()) {
+      return null;
+    }
+
+    const descriptionPart = lessonDescription
+      ? `\n- Descrição da aula: ${lessonDescription}`
+      : '';
+
+    const prompt = `Você é um professor especialista e criador de provas pedagógicas de alta qualidade.
+
+Crie exatamente 6 questões de estudo variadas sobre:
+- Tópico: ${lessonTopic}
+- Matéria: ${lessonSubject}${descriptionPart}
+
+RETORNE APENAS JSON VÁLIDO sem nenhum texto antes ou depois, sem markdown, sem blocos de código:
+
+{
+  "questions": [
+    {
+      "type": "multiple_choice",
+      "question": "Texto da pergunta específica sobre o tópico?",
+      "difficulty": "easy",
+      "points": 10,
+      "options": [
+        { "letter": "A", "text": "Texto real e substantivo da opção A" },
+        { "letter": "B", "text": "Texto real e substantivo da opção B" },
+        { "letter": "C", "text": "Texto real e substantivo da opção C" },
+        { "letter": "D", "text": "Texto real e substantivo da opção D" }
+      ],
+      "correctLetter": "B",
+      "explanation": "Explicação detalhada de por que B é a correta e as outras não"
+    }
+  ]
+}
+
+REGRAS OBRIGATÓRIAS (violação invalida a resposta):
+1. Questões devem ser ESPECÍFICAS sobre "${lessonTopic}" - nunca genéricas ou sobre outro assunto
+2. O texto de cada opção deve ser CONTEÚDO REAL sobre o tema - jamais use "opção A", "alternativa correta", "placeholder", "conceito principal", ou qualquer descrição do tipo de opção
+3. Todas as opções incorretas devem ser plausíveis e enganosas para quem não estudou
+4. Distribua os 6 tipos assim: 3 multiple_choice, 1 true_false, 1 essay, 1 fill_blank
+5. Para true_false: options = [{"letter":"A","text":"Verdadeiro"},{"letter":"B","text":"Falso"}], defina correctLetter como A ou B
+6. Para essay: sem campo "options", adicione "correctAnswer" com os critérios de avaliação da resposta ideal
+7. Para fill_blank: sem campo "options", adicione "correctAnswer" com a resposta esperada para completar o espaço
+8. Distribuição de dificuldade: 2 easy (10pts), 3 medium (15pts), 1 hard (25pts)
+9. NUNCA coloque palavras como "correta", "incorreta", "errada", "certa", "melhor resposta" dentro do texto das alternativas
+10. A pergunta da questão deve estar completa e ser autoexplicativa`;
+
+    try {
+      const response = await axios.post(
+        `${GEMINI_API_URL}/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 4096
+          }
+        },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      const rawText = response.data.candidates[0].content.parts[0].text;
+      // Remove possíveis blocos de markdown ao redor do JSON
+      const jsonText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(jsonText);
+
+      // Mapear correctLetter para isCorrect em cada opção
+      const questions = (parsed.questions || []).map((q, index) => {
+        const base = {
+          questionNumber: index + 1,
+          type: q.type,
+          question: q.question,
+          difficulty: q.difficulty || 'medium',
+          points: q.points || 10,
+          explanation: q.explanation || '',
+          topics: [lessonSubject]
+        };
+
+        if (q.type === 'multiple_choice' || q.type === 'true_false') {
+          return {
+            ...base,
+            options: (q.options || []).map(opt => ({
+              letter: opt.letter,
+              text: opt.text,
+              isCorrect: opt.letter === q.correctLetter
+            }))
+          };
+        }
+
+        return { ...base, correctAnswer: q.correctAnswer || '' };
+      });
+
+      return { questions };
+    } catch (error) {
+      console.error('generateActivity error:', error.response?.data || error.message);
+      return null;
+    }
+  }
+
+  /**
    * Limpar histórico de conversa
    */
   clearHistory(teacherId) {

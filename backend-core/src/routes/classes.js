@@ -8,6 +8,7 @@ import {
   startClass,
   endClass,
   generateAISummary,
+  sendClassSummary,
   getClassStats
 } from '../controllers/classController.js';
 import { authorize, protect, requireCompletedOnboarding } from '../middleware/auth.js';
@@ -27,6 +28,7 @@ router.get('/stats', getClassStats);
 router.post('/:id/start', startClass);
 router.post('/:id/end', endClass);
 router.post('/:id/generate-summary', generateAISummary);
+router.post('/:id/send-summary', sendClassSummary);
 
 router.route('/:id')
   .get(getClass)
