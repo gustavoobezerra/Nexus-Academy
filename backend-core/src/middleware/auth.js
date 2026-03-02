@@ -228,62 +228,6 @@ export const requireCompletedOnboarding = (req, res, next) => {
   next();
 };
 
-// Rate limiter para tentativas de login
-const loginAttempts = new Map();
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
-
-export const loginRateLimiter = (req, res, next) => {
-  const ip = req.ip || req.connection.remoteAddress;
-  const key = `login:${ip}`;
-
-  const attempts = loginAttempts.get(key);
-
-  if (attempts) {
-    const { count, lockedUntil } = attempts;
-
-    if (lockedUntil && Date.now() < lockedUntil) {
-      const minutesLeft = Math.ceil((lockedUntil - Date.now()) / 60000);
-      return res.status(429).json({
-        success: false,
-        message: `Muitas tentativas de login. Tente novamente em ${minutesLeft} minutos.`
-      });
-    }
-
-    if (count >= MAX_LOGIN_ATTEMPTS) {
-      loginAttempts.set(key, { count, lockedUntil: Date.now() + LOCKOUT_TIME });
-      return res.status(429).json({
-        success: false,
-        message: 'Muitas tentativas de login. Conta temporariamente bloqueada.'
-      });
-    }
-  }
-
-  next();
-};
-
-export const recordLoginAttempt = (ip, success) => {
-  const key = `login:${ip}`;
-
-  if (success) {
-    loginAttempts.delete(key);
-    return;
-  }
-
-  const attempts = loginAttempts.get(key) || { count: 0, createdAt: Date.now() };
-  loginAttempts.set(key, { count: attempts.count + 1, createdAt: attempts.createdAt || Date.now() });
-};
-
-// Limpeza periódica do Map para evitar memory leak (a cada 10 minutos)
-setInterval(() => {
-  const now = Date.now();
-  const ONE_HOUR = 60 * 60 * 1000;
-  for (const [key, value] of loginAttempts.entries()) {
-    if (now - (value.createdAt || 0) > ONE_HOUR) {
-      loginAttempts.delete(key);
-    }
-  }
-}, 10 * 60 * 1000);
 
 // Sanitização de input
 export const sanitizeInput = (req, res, next) => {

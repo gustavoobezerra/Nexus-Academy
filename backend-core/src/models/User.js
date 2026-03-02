@@ -151,7 +151,7 @@ userSchema.pre('save', async function(next) {
 
 userSchema.pre('save', function(next) {
   if (!this.referralCode) {
-    this.referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    this.referralCode = require("crypto").randomBytes(4).toString("hex").toUpperCase();
   }
   next();
 });

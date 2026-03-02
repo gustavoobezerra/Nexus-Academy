@@ -11,14 +11,21 @@ export const getTeacherAnalytics = async (req, res) => {
     const students = await Student.find({ teacher: teacherId, active: true });
     const studentIds = students.map(s => s._id);
 
-    const paidPayments = await Payment.find({
-      student: { $in: studentIds },
-      status: 'paid'
-    });
+    const revenueAgg = await Payment.aggregate([
+      { $match: { student: { $in: studentIds }, status: 'paid' } },
+      { $facet: {
+        monthly: [
+          { $match: { paidAt: { $gte: new Date(currentYear, currentMonth, 1), $lt: new Date(currentYear, currentMonth + 1, 1) } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ],
+        total: [
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]
+      } }
+    ]);
 
-    const monthlyRevenue = paidPayments
-      .filter(p => p.paidAt && new Date(p.paidAt).getMonth() === currentMonth && new Date(p.paidAt).getFullYear() === currentYear)
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    const monthlyRevenue = revenueAgg[0]?.monthly[0]?.total || 0;
+    const totalRevenue = revenueAgg[0]?.total[0]?.total || 0;
 
     const expectedMonthlyRevenue = students.reduce((sum, s) => sum + (s.monthlyFee || 0), 0);
 
@@ -31,7 +38,7 @@ export const getTeacherAnalytics = async (req, res) => {
       lastUpdated: new Date(),
       financial: {
         monthlyRevenue,
-        totalRevenue: paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        totalRevenue,
         expectedMonthlyRevenue,
         paymentRate: expectedMonthlyRevenue > 0 ? (monthlyRevenue / expectedMonthlyRevenue) * 100 : 0,
         activeStudents: students.length,
@@ -71,10 +78,17 @@ export const getStudentPaymentAnalytics = async (req, res) => {
     const teacherId = req.user._id;
     const students = await Student.find({ teacher: teacherId, active: true });
 
-    const status = await Promise.all(students.map(async (student) => {
-      const latestPayment = await Payment.findOne({ student: student._id })
-        .sort('-dueDate');
+    const studentIds = students.map(s => s._id);
+    const latestPayments = await Payment.aggregate([
+      { $match: { student: { $in: studentIds } } },
+      { $sort: { dueDate: -1 } },
+      { $group: { _id: "$student", status: { $first: "$status" }, dueDate: { $first: "$dueDate" }, paidAt: { $first: "$paidAt" } } }
+    ]);
+    const paymentMap = {};
+    latestPayments.forEach(p => { paymentMap[p._id.toString()] = p; });
 
+    const status = students.map(student => {
+      const latestPayment = paymentMap[student._id.toString()];
       return {
         studentId: student._id,
         studentName: student.name,
@@ -85,7 +99,7 @@ export const getStudentPaymentAnalytics = async (req, res) => {
           : 0,
         lastPaymentDate: latestPayment?.paidAt || null
       };
-    }));
+    });
 
     res.json(status);
   } catch (error) {

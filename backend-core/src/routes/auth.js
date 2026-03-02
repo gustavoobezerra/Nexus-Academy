@@ -1,6 +1,6 @@
 import express from 'express';
 import { register, login, getMe } from '../controllers/authController.js';
-import { authorize, protect, loginRateLimiter, recordLoginAttempt } from '../middleware/auth.js';
+import { authorize, protect } from '../middleware/auth.js';
 import User from '../models/User.js';
 import rateLimit from 'express-rate-limit';
 

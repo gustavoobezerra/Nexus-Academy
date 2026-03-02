@@ -104,7 +104,7 @@ paymentSchema.index({ teacher: 1, createdAt: -1 }); // Últimos pagamentos
 paymentSchema.pre('save', function (next) {
   // Gerar número de invoice automaticamente
   if (!this.invoiceNumber && this.status === 'paid') {
-    this.invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    this.invoiceNumber = `INV-${Date.now()}-${require("crypto").randomBytes(3).toString("hex").toUpperCase()}`;
   }
 
   // Atualizar status baseado na data de vencimento

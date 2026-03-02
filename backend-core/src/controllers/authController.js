@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { recordLoginAttempt } from '../middleware/auth.js';
 
 const signToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -109,22 +108,12 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (!user || !(await user.comparePassword(password))) {
-      // Registrar tentativa falha de login
-      const ip = req.ip || req.connection.remoteAddress;
-      if (typeof recordLoginAttempt === 'function') {
-        recordLoginAttempt(ip, false);
-      }
       return res.status(401).json({
         success: false,
         message: 'Email ou senha incorretos.'
       });
     }
 
-    // Registrar tentativa bem-sucedida
-    const ip = req.ip || req.connection.remoteAddress;
-    if (typeof recordLoginAttempt === 'function') {
-      recordLoginAttempt(ip, true);
-    }
 
     const token = signToken(user._id);
 
@@ -156,7 +145,7 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).select("-password -gatewayCredentials");
     res.json({
       success: true,
       user

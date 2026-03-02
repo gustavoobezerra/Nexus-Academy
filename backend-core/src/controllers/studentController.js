@@ -250,11 +250,6 @@ export const getStudentStats = async (req, res) => {
   try {
     const teacherId = req.user._id;
 
-    const totalStudents = await Student.countDocuments({
-      teacher: teacherId,
-      active: true
-    });
-
     const students = await Student.find({
       teacher: teacherId,
       active: true
@@ -272,7 +267,7 @@ export const getStudentStats = async (req, res) => {
     res.json({
       success: true,
       stats: {
-        totalStudents,
+        totalStudents: students.length,
         totalMonthlyRevenue,
         pendingPayments
       }

@@ -4,13 +4,10 @@ import Student from '../models/Student.js';
 export const getPayments = async (req, res) => {
   try {
     const teacherId = req.user._id;
-    // Get students of this teacher first
-    const students = await Student.find({ teacher: teacherId }).select('_id');
-    const studentIds = students.map(s => s._id);
-
-    const payments = await Payment.find({ student: { $in: studentIds } })
+    const payments = await Payment.find({ teacher: teacherId })
       .populate('student', 'name parentName')
       .sort('-createdAt');
+
 
     res.json({
       success: true,
@@ -124,7 +121,7 @@ export const getFinancialStats = async (req, res) => {
     }).populate('student', 'name monthlyFee');
 
     const monthlyRevenue = paidPayments
-      .filter(p => p.paidDate && new Date(p.paidDate).getMonth() === currentMonth)
+      .filter(p => p.paidAt && new Date(p.paidAt).getMonth() === currentMonth)
       .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     const yearlyRevenue = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
