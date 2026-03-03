@@ -12,6 +12,8 @@ import { authenticateOptional, sanitizeInput } from './middleware/auth.js';
 import { setupHangmanSocket } from './socket/hangmanSocket.js';
 import liveClassService from './services/liveClassService.js';
 import { tenantContextMiddleware } from './middleware/tenantAware.js';
+import correlationId from './middleware/correlationId.js';
+import logger from './utils/logger.js';
 import {
   authenticateSocket,
   validateClassRoomAccess,
@@ -95,6 +97,7 @@ app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(sanitizeInput);
+app.use(correlationId);
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 const apiLimiter = rateLimit({
@@ -130,7 +133,7 @@ io.on('connection', (socket) => {
     return;
   }
 
-  console.log(`✅ Socket connected: ${socket.id} | User: ${user.name} (${user.role})`);
+  logger.info('Socket connected', { socketId: socket.id, userId: user.id, userName: user.name, role: user.role });
 
   // Auto-join user-specific rooms
   socket.join(`user:${user.id}`);
@@ -176,7 +179,7 @@ io.on('connection', (socket) => {
       timestamp: new Date().toISOString()
     });
 
-    console.log(`👤 ${user.name} joined class ${classId}`);
+    logger.info('User joined class', { userId: user.id, userName: user.name, classId });
   });
 
   // === JOIN LIVE SESSION ===
@@ -213,7 +216,7 @@ io.on('connection', (socket) => {
       timestamp: new Date().toISOString()
     });
 
-    console.log(`🎥 ${user.name} joined live session ${sessionId}`);
+    logger.info('User joined live session', { userId: user.id, userName: user.name, sessionId });
   });
 
   // === WEBRTC SIGNALING (with validation) ===
@@ -334,13 +337,13 @@ io.on('connection', (socket) => {
 
   // === DISCONNECT ===
   socket.on('disconnect', (reason) => {
-    console.log(`❌ Socket disconnected: ${socket.id} | Reason: ${reason}`);
+    logger.info('Socket disconnected', { socketId: socket.id, reason });
     cleanupRateLimit(socket.id);
   });
 
   // === ERROR HANDLER ===
   socket.on('error', (error) => {
-    console.error(`Socket error for ${socket.id}:`, error);
+    logger.error('Socket error', { socketId: socket.id, error: error.message });
     logSecurityEvent('SOCKET_ERROR', socket, { error: error.message });
   });
 });
@@ -391,8 +394,18 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Erro interno do servidor' });
+  logger.error('Unhandled error', {
+    correlationId: req.correlationId,
+    method: req.method,
+    url: req.originalUrl,
+    error: err.message,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+  });
+  res.status(err.status || 500).json({
+    success: false,
+    message: process.env.NODE_ENV === 'production' ? 'Erro interno do servidor' : err.message,
+    correlationId: req.correlationId
+  });
 });
 
 const PORT = process.env.PORT || 5000;
@@ -400,7 +413,7 @@ const PORT = process.env.PORT || 5000;
 const start = async () => {
   await connectDB();
   httpServer.listen(PORT, () => {
-    console.log(`✅ API rodando na porta ${PORT}`);
+    logger.info(`API rodando na porta ${PORT}`);
   });
 };
 
