@@ -121,6 +121,36 @@ describe('Auth API', () => {
       expect(res.body.user.email).toBe('token@test.com');
     });
 
+    it('should not expose integration access tokens', async () => {
+      const user = await User.create({
+        name: 'Token Safe User',
+        email: 'token-safe@test.com',
+        password: 'password123',
+        integrations: {
+          google: {
+            connected: true,
+            accessToken: 'google-access-token',
+            refreshToken: 'google-refresh-token'
+          },
+          zoom: {
+            connected: true,
+            accessToken: 'zoom-access-token'
+          }
+        }
+      });
+
+      const token = global.generateAuthToken(jwt, user._id);
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.integrations.google.accessToken).toBeUndefined();
+      expect(res.body.user.integrations.google.refreshToken).toBeUndefined();
+      expect(res.body.user.integrations.zoom.accessToken).toBeUndefined();
+    });
+
     it('should reject request without token', async () => {
       const res = await request(app).get('/api/auth/me');
 

@@ -125,6 +125,7 @@ router.post('/:id/test', async (req, res) => {
 
       await WebhookDelivery.create({
         webhook: webhook._id,
+        teacher: req.user._id,
         event: 'test',
         payload: testPayload,
         requestUrl: webhook.url,
@@ -143,6 +144,7 @@ router.post('/:id/test', async (req, res) => {
 
       await WebhookDelivery.create({
         webhook: webhook._id,
+        teacher: req.user._id,
         event: 'test',
         payload: testPayload,
         requestUrl: webhook.url,
@@ -165,12 +167,12 @@ router.get('/:id/deliveries', async (req, res) => {
     const webhook = await Webhook.findOne({ _id: req.params.id, teacher: req.user._id });
     if (!webhook) return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
 
-    const deliveries = await WebhookDelivery.find({ webhook: webhook._id })
+    const deliveries = await WebhookDelivery.find({ webhook: webhook._id, teacher: req.user._id })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await WebhookDelivery.countDocuments({ webhook: webhook._id });
+    const total = await WebhookDelivery.countDocuments({ webhook: webhook._id, teacher: req.user._id });
 
     res.json({ success: true, deliveries, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (error) {
@@ -181,10 +183,18 @@ router.get('/:id/deliveries', async (req, res) => {
 // Retry delivery
 router.post('/deliveries/:id/retry', async (req, res) => {
   try {
-    const delivery = await WebhookDelivery.findById(req.params.id).populate('webhook');
+    const delivery = await WebhookDelivery.findOne({ _id: req.params.id, teacher: req.user._id })
+      .populate({
+        path: 'webhook',
+        match: { teacher: req.user._id },
+        select: '+secret'
+      });
     if (!delivery) return res.status(404).json({ success: false, message: 'Entrega não encontrada' });
 
     const webhook = delivery.webhook;
+    if (!webhook) {
+      return res.status(404).json({ success: false, message: 'Webhook não encontrado' });
+    }
     const signature = webhook.signPayload(delivery.payload);
     const startTime = Date.now();
 

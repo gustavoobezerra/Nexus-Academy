@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import Student from '../models/Student.js';
 import { tenantContext } from './tenantAware.js';
 
 const getJWTSecret = () => {
@@ -9,7 +10,7 @@ const getJWTSecret = () => {
   return secret;
 };
 
-export const authenticateStudent = (req, res, next) => {
+export const authenticateStudent = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -59,13 +60,33 @@ export const authenticateStudent = (req, res, next) => {
       });
     }
 
-    req.userId = decoded.studentId;
-    req.studentId = decoded.studentId;
-    req.teacherId = decoded.teacherId;
-    req.roles = ['student'];
-    req.tenantId = decoded.teacherId || null;
+    const student = await Student.findById(decoded.studentId)
+      .select('active teacher portalAccess.enabled');
 
-    return tenantContext.run({ teacherId: decoded.teacherId?.toString() }, () => next());
+    if (!student) {
+      return res.status(401).json({
+        success: false,
+        message: 'Aluno não encontrado'
+      });
+    }
+
+    if (!student.active || !student.portalAccess?.enabled) {
+      return res.status(401).json({
+        success: false,
+        message: 'Acesso ao portal desativado'
+      });
+    }
+
+    const teacherId = student.teacher ? student.teacher.toString() : null;
+
+    req.userId = student._id.toString();
+    req.studentId = student._id.toString();
+    req.teacherId = teacherId;
+    req.student = student;
+    req.roles = ['student'];
+    req.tenantId = teacherId;
+
+    return tenantContext.run({ teacherId }, () => next());
   } catch (error) {
     return res.status(401).json({
       success: false,

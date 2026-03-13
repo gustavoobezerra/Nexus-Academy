@@ -45,6 +45,7 @@ export const portalAPI = {
   register: (data: Partial<Aluno>) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/register', data),
   getProfile: () => apiService.get<{ student: Aluno }>('/portal/profile'),
   updateProfile: (data: unknown) => apiService.put<{ student: Aluno }>('/portal/profile', data),
+  completeOnboarding: (data: unknown) => apiService.post<void>('/portal/onboarding', data),
   createGoal: (data: unknown) => apiService.post<{ goal: Record<string, unknown> }>('/portal/goals', data),
   updateGoal: (id: string, data: unknown) => apiService.put<{ goal: Record<string, unknown> }>(`/portal/goals/${id}`, data),
   deleteGoal: (id: string) => apiService.delete<void>(`/portal/goals/${id}`),

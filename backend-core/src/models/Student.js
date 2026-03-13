@@ -9,9 +9,28 @@ const studentSchema = new mongoose.Schema({
   subject: { type: String, trim: true },
 
   // Parent/Guardian
-  parentName: { type: String, required: true, trim: true },
-  parentEmail: { type: String, required: true, lowercase: true, trim: true },
-  parentPhone: { type: String, required: true, trim: true },
+  parentName: {
+    type: String,
+    trim: true,
+    required() {
+      return this.age < 18;
+    }
+  },
+  parentEmail: {
+    type: String,
+    lowercase: true,
+    trim: true,
+    required() {
+      return this.age < 18;
+    }
+  },
+  parentPhone: {
+    type: String,
+    trim: true,
+    required() {
+      return this.age < 18;
+    }
+  },
   parentCPF: { type: String, trim: true },
 
   // Financial

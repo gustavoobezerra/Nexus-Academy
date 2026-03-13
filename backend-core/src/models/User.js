@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -26,10 +27,19 @@ const userSchema = new mongoose.Schema({
 
   // Integrations
   integrations: {
-    google: { connected: { type: Boolean, default: false }, accessToken: String, refreshToken: String, calendarId: String },
+    google: {
+      connected: { type: Boolean, default: false },
+      accessToken: { type: String, select: false },
+      refreshToken: { type: String, select: false },
+      calendarId: String
+    },
     stripe: { customerId: String, accountId: String, connected: { type: Boolean, default: false } },
     whatsapp: { phoneNumber: String, verified: { type: Boolean, default: false } },
-    zoom: { userId: String, accessToken: String, connected: { type: Boolean, default: false } }
+    zoom: {
+      userId: String,
+      accessToken: { type: String, select: false },
+      connected: { type: Boolean, default: false }
+    }
   },
 
   // Subscription
@@ -151,7 +161,7 @@ userSchema.pre('save', async function(next) {
 
 userSchema.pre('save', function(next) {
   if (!this.referralCode) {
-    this.referralCode = require("crypto").randomBytes(4).toString("hex").toUpperCase();
+    this.referralCode = crypto.randomBytes(4).toString('hex').toUpperCase();
   }
   next();
 });

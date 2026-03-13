@@ -39,13 +39,16 @@ router.get('/stripe/connect', async (req, res) => {
 
     const user = await User.findById(req.user._id);
     if (!user.integrations?.stripe?.accountId) {
-      const account = await stripeService.createConnectAccount({ email: user.email });
+      const { account } = await stripeService.createConnectAccount({ email: user.email });
       user.integrations = user.integrations || {};
-      user.integrations.stripe = { accountId: account.id };
+      user.integrations.stripe = {
+        ...(user.integrations?.stripe?.toObject?.() || user.integrations?.stripe || {}),
+        accountId: account.id
+      };
       await user.save();
     }
 
-    const accountLink = await stripeService.createAccountLink(
+    const { accountLink } = await stripeService.createAccountLink(
       user.integrations.stripe.accountId,
       `${process.env.FRONTEND_URL}/settings/integrations?stripe=refresh`,
       `${process.env.FRONTEND_URL}/settings/integrations?stripe=success`
@@ -101,7 +104,8 @@ router.post('/google/callback', async (req, res) => {
 
 router.get('/google/calendars', async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id)
+      .select('+integrations.google.accessToken +integrations.google.refreshToken');
     if (!user.integrations?.google?.connected) {
       return res.status(400).json({ success: false, message: 'Google não conectado' });
     }
@@ -182,7 +186,8 @@ router.post('/zoom/disconnect', async (req, res) => {
 
 router.post('/zoom/create-meeting', async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id)
+      .select('+integrations.zoom.accessToken');
     if (!user.integrations?.zoom?.connected) {
       return res.status(400).json({ success: false, message: 'Zoom não conectado' });
     }

@@ -2,9 +2,11 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Student from '../../models/Student.js';
+import User from '../../models/User.js';
 import { getJWTSecret, isValidObjectId } from './helpers.js';
 
 const router = express.Router();
+const allowedTeacherSubscriptionStatuses = ['active', 'trialing', 'incomplete', null, undefined];
 
 // POST /api/portal/auth/register
 router.post('/auth/register', async (req, res) => {
@@ -50,6 +52,23 @@ router.post('/auth/register', async (req, res) => {
       }
     }
 
+    let teacher = null;
+    if (teacherId) {
+      teacher = await User.findOne({ _id: teacherId, role: 'teacher' })
+        .select('name subscriptionStatus');
+
+      if (!teacher) {
+        return res.status(404).json({ success: false, message: 'Professor não encontrado' });
+      }
+
+      if (!allowedTeacherSubscriptionStatuses.includes(teacher.subscriptionStatus)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Este professor não está aceitando novos alunos no momento'
+        });
+      }
+    }
+
     const existingStudent = await Student.findOne({ 'portalAccess.email': email.toLowerCase().trim() });
     if (existingStudent) {
       return res.status(400).json({ success: false, message: 'Este email já está cadastrado' });
@@ -75,7 +94,7 @@ router.post('/auth/register', async (req, res) => {
       points: 0,
       level: 1,
       active: true,
-      teacher: teacherId || null
+      teacher: teacher?._id || null
     };
 
     if (parentName) studentData.parentName = parentName;
@@ -86,7 +105,7 @@ router.post('/auth/register', async (req, res) => {
     await student.save();
 
     const token = jwt.sign(
-      { studentId: student._id, type: 'student', teacherId: teacherId || null },
+      { studentId: student._id, type: 'student', teacherId: teacher?._id?.toString() || null },
       getJWTSecret(),
       { expiresIn: '30d' }
     );
@@ -103,7 +122,9 @@ router.post('/auth/register', async (req, res) => {
         subject: student.subject,
         points: student.points,
         level: student.level,
-        performance: student.performance
+        performance: student.performance,
+        onboardingCompleted: student.onboarding?.completed || false,
+        teacher: teacher ? { id: teacher._id, name: teacher.name } : null
       }
     });
   } catch (error) {
