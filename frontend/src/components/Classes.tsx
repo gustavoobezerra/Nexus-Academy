@@ -276,11 +276,12 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
           </div>
         ) : (
           <>
-            {aulas.map((aula: unknown) => {
+            {aulas.map((aula) => {
             const { hora } = formatarDataHora(aula.scheduledAt);
+            const aulaId = aula.id || aula._id || '';
             return (
               <div
-                key={aula.id || aula._id}
+                key={aulaId}
                 className={`${
                   aula.isLive
                     ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700'
@@ -345,10 +346,10 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                     <button
                       onClick={() => {
                         if (aula.isLive) {
-                          encerrarAula(aula.id || aula._id, aula.title);
+                          encerrarAula(aulaId, aula.title);
                         } else {
-                          iniciarAula(aula.id || aula._id, aula.title);
-                          onStartLive?.(aula.id || aula._id, aula.title);
+                          iniciarAula(aulaId, aula.title);
+                          onStartLive?.(aulaId, aula.title);
                         }
                       }}
                       className={`px-6 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${

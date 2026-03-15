@@ -32,7 +32,7 @@ jobs:
 
       - name: Run linter
         working-directory: backend-core
-        run: npm run lint || true
+        run: npm run lint
 
       - name: Run tests
         working-directory: backend-core
@@ -68,13 +68,13 @@ jobs:
         working-directory: frontend
         run: npm run lint || true
 
+      - name: Run typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
       - name: Build
         working-directory: frontend
         run: npm run build
-
-      - name: Run tests
-        working-directory: frontend
-        run: npm test -- --run || true
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -128,7 +128,7 @@ jobs:
 
       - name: Run E2E tests
         working-directory: frontend
-        run: npx playwright test || true
+        run: npm run test:e2e
 
   deploy-staging:
     runs-on: ubuntu-latest

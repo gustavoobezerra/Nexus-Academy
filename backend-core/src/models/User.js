@@ -64,6 +64,65 @@ const userSchema = new mongoose.Schema({
   referralCount: { type: Number, default: 0 },
   referralBonus: { type: Number, default: 0 },
 
+  // Teacher workspace data used by the advanced hub screens
+  teacherWorkspace: {
+    grades: [{
+      studentId: { type: String, trim: true },
+      classId: { type: String, trim: true },
+      subject: { type: String, trim: true },
+      score: { type: Number, default: 0 },
+      maxScore: { type: Number, default: 100 },
+      percentage: { type: Number, default: 0 },
+      assessmentType: {
+        type: String,
+        enum: ['quiz', 'exercise', 'test', 'participation'],
+        default: 'exercise'
+      },
+      createdAt: { type: Date, default: Date.now }
+    }],
+    materials: [{
+      classId: { type: String, trim: true },
+      className: { type: String, trim: true },
+      topic: { type: String, trim: true },
+      title: { type: String, required: true, trim: true },
+      type: {
+        type: String,
+        enum: ['pdf', 'video', 'link', 'exercise'],
+        default: 'pdf'
+      },
+      url: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      uploadedAt: { type: Date, default: Date.now }
+    }],
+    teachingTemplates: [{
+      name: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      subject: { type: String, trim: true },
+      duration: { type: Number, default: 60 },
+      structure: {
+        warmup: { type: String, trim: true },
+        mainTopic: { type: String, trim: true },
+        exercises: { type: String, trim: true },
+        closing: { type: String, trim: true }
+      },
+      materials: [{ type: String, trim: true }],
+      createdAt: { type: Date, default: Date.now }
+    }],
+    coursePlans: [{
+      name: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      totalModules: { type: Number, default: 0 },
+      modules: [{
+        order: { type: Number, default: 1 },
+        name: { type: String, trim: true },
+        topics: [{ type: String, trim: true }],
+        duration: { type: Number, default: 0 },
+        students: [{ type: String, trim: true }]
+      }],
+      createdAt: { type: Date, default: Date.now }
+    }]
+  },
+
   // ===== MULTI-TENANT: Link Único do Professor =====
   slug: {
     type: String,
@@ -149,8 +208,6 @@ const userSchema = new mongoose.Schema({
   loginCount: { type: Number, default: 0 }
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-userSchema.index({ email: 1 });
-userSchema.index({ referralCode: 1 });
 userSchema.index({ role: 1 });
 
 userSchema.pre('save', async function(next) {

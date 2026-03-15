@@ -16,35 +16,50 @@ interface Suggestion {
   action: string;
 }
 
-export const AIAssistant = () => {
+interface AIAssistantProps {
+  scope?: 'teacher' | 'student';
+  title?: string;
+  subtitle?: string;
+  placeholder?: string;
+  emptyHint?: string;
+}
+
+export const AIAssistant = ({
+  scope = 'teacher',
+  title = 'Assistente IA',
+  subtitle = 'Pergunte sobre alunos, aulas, pagamentos e muito mais',
+  placeholder = 'Pergunte algo ao assistente...',
+  emptyHint = 'Ex: "Como está o desempenho dos meus alunos?"'
+}: AIAssistantProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const endpointPrefix = scope === 'student' ? '/portal/ai' : '/ai';
 
   const loadHistory = useCallback(async () => {
     try {
-      const data = await apiService.get<any>('/ai-assistant/history');
+      const data = await apiService.get<{ success: boolean; history?: Message[] }>(`${endpointPrefix}/history`);
       if (data.success && data.history) {
         setMessages(data.history);
       }
     } catch (error) {
       console.error('Error loading history:', error);
     }
-  }, []);
+  }, [endpointPrefix]);
 
   const loadSuggestions = useCallback(async () => {
     try {
-      const data = await apiService.get<any>('/ai-assistant/suggestions');
+      const data = await apiService.get<{ success: boolean; suggestions?: Suggestion[] }>(`${endpointPrefix}/suggestions`);
       if (data.success) {
         setSuggestions(data.suggestions || []);
       }
     } catch (error) {
       console.error('Error loading suggestions:', error);
     }
-  }, []);
+  }, [endpointPrefix]);
 
   useEffect(() => {
     loadHistory();
@@ -72,7 +87,7 @@ export const AIAssistant = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const data = await apiService.post<any>('/ai-assistant/chat', { message: text });
+      const data = await apiService.post<{ success: boolean; message: string; timestamp?: string }>(`${endpointPrefix}/chat`, { message: text });
 
       if (data.success) {
         const aiMessage: Message = {
@@ -94,7 +109,7 @@ export const AIAssistant = () => {
 
   const clearHistory = async () => {
     try {
-      await apiService.delete('/ai-assistant/history');
+      await apiService.delete(`${endpointPrefix}/history`);
       setMessages([]);
       toast.success('Histórico limpo');
     } catch (error) {
@@ -117,10 +132,10 @@ export const AIAssistant = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Assistente IA
+                {title}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Pergunte sobre alunos, aulas, pagamentos e muito mais
+                {subtitle}
               </p>
             </div>
           </div>
@@ -165,7 +180,7 @@ export const AIAssistant = () => {
               <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                 <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Faça uma pergunta para começar!</p>
-                <p className="text-xs mt-2">Ex: "Como está o desempenho dos meus alunos?"</p>
+                <p className="text-xs mt-2">{emptyHint}</p>
               </div>
             )}
           </div>
@@ -235,7 +250,7 @@ export const AIAssistant = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Pergunte algo ao assistente..."
+            placeholder={placeholder}
             className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
             disabled={loading}
           />

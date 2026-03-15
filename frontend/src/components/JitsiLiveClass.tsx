@@ -12,6 +12,15 @@ interface JitsiLiveClassProps {
   onEnd: () => void;
 }
 
+interface JitsiParticipant {
+  displayName?: string;
+}
+
+interface JitsiExternalApi {
+  on: (event: string, callback: (payload?: JitsiParticipant) => void) => void;
+  executeCommand: (command: string, options?: Record<string, unknown>) => void;
+}
+
 export const JitsiLiveClass = ({
   classId,
   className,
@@ -42,7 +51,7 @@ export const JitsiLiveClass = ({
     onEnd();
   };
 
-  const handleApiReady = (externalApi: unknown) => {
+  const handleApiReady = (externalApi: JitsiExternalApi) => {
     setIsLoading(false);
 
     // Adicionar event listeners
@@ -50,7 +59,7 @@ export const JitsiLiveClass = ({
       toast.success('Conectado à aula ao vivo!');
     });
 
-    externalApi.on('participantJoined', (participant: unknown) => {
+    externalApi.on('participantJoined', (participant?: JitsiParticipant) => {
       if (participant?.displayName) {
         toast(`${participant.displayName} entrou na aula`, {
           icon: '👋',
@@ -58,7 +67,7 @@ export const JitsiLiveClass = ({
       }
     });
 
-    externalApi.on('participantLeft', (participant: unknown) => {
+    externalApi.on('participantLeft', (participant?: JitsiParticipant) => {
       if (participant?.displayName) {
         toast(`${participant.displayName} saiu da aula`, {
           icon: '👋',

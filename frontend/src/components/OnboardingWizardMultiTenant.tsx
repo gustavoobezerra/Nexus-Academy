@@ -6,7 +6,7 @@ import {
   Wallet, Building2, Smartphone, Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { onboardingAPI } from '../lib/api';
+import { onboardingAPI, type ApiError } from '../lib/api';
 import BrandLogo from './BrandLogo';
 
 interface OnboardingWizardMultiTenantProps {
@@ -36,6 +36,11 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
   // Loading states
   const [loading, setLoading] = useState(false);
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    const apiError = error as Partial<ApiError>;
+    return apiError?.message || fallback;
+  };
+
   // Debounce slug check
   useEffect(() => {
     if (!slug || slug.length < 3) {
@@ -47,8 +52,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
     const timeoutId = setTimeout(async () => {
       setCheckingSlug(true);
       try {
-        const response = await onboardingAPI.checkSlug(slug) as any;
-        // apiService já retorna response.data, então acessamos diretamente
+        const response = await onboardingAPI.checkSlug(slug);
         setSlugAvailable(response.available);
       } catch (error: unknown) {
         console.error('[ONBOARDING] Erro ao verificar slug:', error);
@@ -85,7 +89,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         toast.success('Link personalizado configurado!');
         setStep(2);
       } catch (error: unknown) {
-        toast.error(error.response?.data?.message || 'Erro ao configurar slug');
+        toast.error(getErrorMessage(error, 'Erro ao configurar slug'));
       } finally {
         setLoading(false);
       }
@@ -138,7 +142,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         }
         setStep(3);
       } catch (error: unknown) {
-        toast.error(error.response?.data?.message || 'Erro ao configurar pagamentos');
+        toast.error(getErrorMessage(error, 'Erro ao configurar pagamentos'));
       } finally {
         setLoading(false);
       }
@@ -151,9 +155,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
 
       setLoading(true);
       try {
-        // Criar sessão Stripe
-        const response = await onboardingAPI.createSubscriptionSession(selectedPlan) as any;
-        // apiService já retorna response.data, então acessamos diretamente
+        const response = await onboardingAPI.createSubscriptionSession(selectedPlan);
         const checkoutUrl = response.checkoutUrl;
 
         if (!checkoutUrl) {
@@ -165,7 +167,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
         // Redirecionar para Stripe Checkout
         window.location.href = checkoutUrl;
       } catch (error: unknown) {
-        toast.error(error.response?.data?.message || 'Erro ao criar assinatura');
+        toast.error(getErrorMessage(error, 'Erro ao criar assinatura'));
         setLoading(false);
       }
     }

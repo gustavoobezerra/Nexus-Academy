@@ -25,8 +25,13 @@ export const classesAPI = {
 export const studentsAPI = {
   getAll: () => apiService.get<{ students: Aluno[] }>('/students'),
   getStats: () => apiService.get<{ stats: { totalStudents: number; totalMonthlyRevenue: number; pendingPayments: number } }>('/students/stats'),
-  create: (data: Partial<Aluno>) => apiService.post<Aluno>('/students', data),
+  create: (data: Partial<Aluno>) => apiService.post<{ success: boolean; student: Aluno }>('/students', data),
   delete: (id: string) => apiService.delete<void>(`/students/${id}`),
+  addPoints: (studentId: string, points: number, _eventType: string, reason: string) =>
+    apiService.post<{ success: boolean; message: string; student: { id: string; totalPoints: number; awarded: number } }>(
+      '/gamification/award-points',
+      { studentId, points, reason }
+    ),
 };
 
 export const authAPI = {
@@ -44,14 +49,14 @@ export const portalAPI = {
   login: (email: string, password: string) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/login', { email, password }),
   register: (data: Partial<Aluno>) => apiService.post<{ student: Aluno; token: string }>('/portal/auth/register', data),
   getProfile: () => apiService.get<{ student: Aluno }>('/portal/profile'),
-  updateProfile: (data: unknown) => apiService.put<{ student: Aluno }>('/portal/profile', data),
-  completeOnboarding: (data: unknown) => apiService.post<void>('/portal/onboarding', data),
+  updateProfile: (data: unknown) => apiService.put<{ success: boolean; message: string; profile: Aluno['profile'] }>('/portal/profile', data),
+  completeOnboarding: (data: unknown) => apiService.post<{ success: boolean; message: string }>('/portal/onboarding', data),
   createGoal: (data: unknown) => apiService.post<{ goal: Record<string, unknown> }>('/portal/goals', data),
   updateGoal: (id: string, data: unknown) => apiService.put<{ goal: Record<string, unknown> }>(`/portal/goals/${id}`, data),
   deleteGoal: (id: string) => apiService.delete<void>(`/portal/goals/${id}`),
   getClasses: (params?: { status?: string; limit?: number; page?: number }) =>
     apiService.get<{ classes: Aula[]; pagination?: { total: number; page: number; limit: number; pages: number } }>('/portal/classes', { params }),
-  getPayments: () => apiService.get<{ payments: StudentPaymentStatus[] }>('/portal/payments'),
+  getPayments: () => apiService.get<{ payments: Pagamento[] }>('/portal/payments'),
   getActivities: () => apiService.get<{ activities: Activity[] }>('/portal/activities')
 };
 

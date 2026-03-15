@@ -19,6 +19,7 @@ const connectionOptions = {
 
 let isConnected = false;
 let reconnectAttempts = 0;
+let memoryServer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 5000; // 5 segundos
 
@@ -32,15 +33,25 @@ const connectDB = async () => {
 
     const mongoUri = process.env.MONGO_URI;
     const isProduction = process.env.NODE_ENV === 'production';
+    const useInMemoryMongo = process.env.NODE_ENV === 'test' || process.env.USE_IN_MEMORY_MONGO === 'true';
 
-    if (!mongoUri) {
+    if (!mongoUri && !useInMemoryMongo) {
       if (isProduction) {
         throw new Error('MONGO_URI must be defined in production');
       }
       console.warn('⚠️ MONGO_URI não definida. Usando MongoDB local para desenvolvimento.');
     }
 
-    const resolvedMongoUri = mongoUri || 'mongodb://localhost:27017/nexus-academy';
+    let resolvedMongoUri = mongoUri;
+
+    if (!resolvedMongoUri && useInMemoryMongo) {
+      const { MongoMemoryServer } = await import('mongodb-memory-server');
+      memoryServer = await MongoMemoryServer.create();
+      resolvedMongoUri = memoryServer.getUri();
+      console.info('🧪 Using MongoMemoryServer for automated environment');
+    }
+
+    resolvedMongoUri = resolvedMongoUri || 'mongodb://localhost:27017/nexus-academy';
 
     const conn = await mongoose.connect(resolvedMongoUri, connectionOptions);
 
@@ -92,7 +103,7 @@ const connectDB = async () => {
 
     // Monitorar performance
     if (process.env.NODE_ENV === 'development') {
-      mongoose.set('debug', (collectionName, method, query, doc) => {
+      mongoose.set('debug', (_collectionName, _method, _query, _doc) => {
         // DEBUG: console.log(`[Mongoose] ${collectionName}.${method}`, query);
       });
     }
@@ -131,6 +142,11 @@ export const disconnectDB = async () => {
       await mongoose.connection.close();
       isConnected = false;
       // DEBUG: console.log('✅ MongoDB connection closed gracefully');
+    }
+
+    if (memoryServer) {
+      await memoryServer.stop();
+      memoryServer = null;
     }
   } catch (error) {
     console.error('❌ Error closing MongoDB connection:', error.message);

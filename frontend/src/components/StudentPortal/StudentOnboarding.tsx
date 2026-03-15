@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FadeIn, SlideIn } from '../ui/Animations';
-import { portalAPI } from '../../lib/api';
+import { portalAPI, type ApiError } from '../../lib/api';
 
 interface OnboardingData {
   learningPurpose: string;
@@ -76,6 +76,13 @@ const PURPOSE_OPTIONS = [
   'Preparação para exames/certificações',
   'Outro'
 ];
+
+const getApiError = (error: unknown): Partial<ApiError> => {
+  if (error && typeof error === 'object') {
+    return error as Partial<ApiError>;
+  }
+  return {};
+};
 
 export const StudentOnboarding = () => {
   const navigate = useNavigate();
@@ -161,12 +168,13 @@ export const StudentOnboarding = () => {
 
       navigate('/portal/dashboard');
     } catch (error: unknown) {
+      const apiError = getApiError(error);
       console.error('[Onboarding] ❌ Erro:', error);
-      console.error('[Onboarding] Tipo de erro:', error?.type);
-      console.error('[Onboarding] Detalhes:', error?.response || error?.message);
+      console.error('[Onboarding] Tipo de erro:', apiError.type);
+      console.error('[Onboarding] Detalhes:', apiError.message);
 
       // Se for erro de rede, oferecer modo offline
-      if (error?.type === 'network' || error?.code === 'NETWORK_ERROR') {
+      if (apiError.type === 'network' || apiError.code === 'NETWORK_ERROR') {
         toast.error('Sem conexão com o servidor. Verifique se o backend está rodando.', {
           duration: 6000
         });
@@ -182,7 +190,7 @@ export const StudentOnboarding = () => {
         setTimeout(() => navigate('/portal/dashboard'), 2000);
       } else {
         // Outros erros
-        const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao salvar configurações';
+        const errorMessage = apiError.message || 'Erro ao salvar configurações';
         toast.error(errorMessage);
       }
     } finally {

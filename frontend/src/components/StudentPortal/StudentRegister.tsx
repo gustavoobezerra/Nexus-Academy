@@ -18,7 +18,7 @@ export function StudentRegister() {
   // A URL é /professor/nome-do-professor
   const extractSlugFromPath = (): string | null => {
     const path = location.pathname;
-    const match = path.match(/\/professor\/([^\/]+)/);
+    const match = path.match(/^\/professor\/([^/]+)/);
     return match ? match[1] : null;
   };
 

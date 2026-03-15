@@ -280,7 +280,7 @@ export function PaymentTutorials() {
   // A URL pode ser /tutoriais/mercadopago ou similar
   const extractGatewayFromPath = () => {
     const path = location.pathname;
-    const match = path.match(/\/tutoriais\/([^\/]+)/);
+    const match = path.match(/^\/tutoriais\/([^/]+)/);
     return match ? match[1] : null;
   };
 

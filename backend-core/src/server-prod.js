@@ -53,6 +53,7 @@ import hangmanRoutes from './routes/hangman.js';
 import teachingAssistantRoutes from './routes/teachingAssistant.js';
 import gamificationRoutes from './routes/gamification.js';
 import auditLogsRoutes from './routes/auditLogs.js';
+import hubRoutes from './routes/hub.js';
 
 dotenv.config();
 
@@ -374,6 +375,7 @@ app.use('/api/pronunciation', pronunciationTeacherRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiAssistantRoutes);
+app.use('/api', hubRoutes);
 app.use('/api/hangman', hangmanRoutes);
 app.use('/api/teaching-assistant', teachingAssistantRoutes);
 app.use('/api/gamification', gamificationRoutes);

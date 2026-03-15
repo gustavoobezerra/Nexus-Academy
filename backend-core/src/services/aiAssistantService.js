@@ -10,12 +10,16 @@ const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
 
 class AIAssistantService {
   constructor() {
-    this.conversationHistory = new Map(); // userId -> conversation history
+    this.conversationHistory = new Map(); // scope:id -> conversation history
     this.maxHistoryLength = 20;
   }
 
   isConfigured() {
     return !!GEMINI_API_KEY;
+  }
+
+  getConversationKey(actorId, scope = 'teacher') {
+    return `${scope}:${actorId}`;
   }
 
   /**
@@ -68,27 +72,133 @@ class AIAssistantService {
   }
 
   /**
+   * Obter contexto do aluno (professor, próximas aulas, atividades)
+   */
+  async getStudentContext(studentId, models) {
+    const { Student, Class, Payment, Activity, User } = models;
+
+    try {
+      const student = await Student.findById(studentId)
+        .populate('teacher', 'name email subjects')
+        .lean();
+
+      if (!student) {
+        return null;
+      }
+
+      const [upcomingClasses, recentActivities, payments] = await Promise.all([
+        Class.find({ student: studentId })
+          .sort({ scheduledAt: 1 })
+          .limit(5)
+          .select('title subject scheduledAt status duration'),
+        Activity.find({ student: studentId })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select('title type status dueDate'),
+        Payment.find({ student: studentId })
+          .sort({ dueDate: -1 })
+          .limit(5)
+          .select('amount status dueDate paidAt month year')
+      ]);
+
+      let teacher = student.teacher;
+      if (!teacher && student.teacher) {
+        teacher = await User.findById(student.teacher).select('name email subjects').lean();
+      }
+
+      return {
+        student: {
+          name: student.name,
+          grade: student.grade,
+          subject: student.subject,
+          points: student.points || 0,
+          level: student.level || 1,
+          performance: student.performance?.overall || 0,
+          onboardingCompleted: student.onboarding?.completed || false
+        },
+        teacher: {
+          name: teacher?.name || 'Professor',
+          email: teacher?.email || '',
+          subjects: teacher?.subjects || []
+        },
+        upcomingClasses: upcomingClasses.map((item) => ({
+          title: item.title,
+          subject: item.subject,
+          scheduledAt: item.scheduledAt,
+          status: item.status,
+          duration: item.duration
+        })),
+        recentActivities: recentActivities.map((item) => ({
+          title: item.title,
+          type: item.type,
+          status: item.status,
+          dueDate: item.dueDate
+        })),
+        payments: payments.map((item) => ({
+          amount: item.amount,
+          status: item.status,
+          dueDate: item.dueDate
+        }))
+      };
+    } catch (error) {
+      console.error('Error getting student context:', error);
+      return null;
+    }
+  }
+
+  /**
    * Processar mensagem do professor e retornar resposta da IA
    */
   async processMessage(teacherId, message, models) {
-    if (!this.isConfigured()) {
-      return {
-        success: false,
-        message: 'IA não configurada. Configure GEMINI_API_KEY no .env',
-        mock: true
-      };
-    }
+    return this.processTeacherMessage(teacherId, message, models);
+  }
 
+  async processTeacherMessage(teacherId, message, models) {
+    return this.processActorMessage({
+      actorType: 'teacher',
+      actorId: teacherId,
+      message,
+      models
+    });
+  }
+
+  async processStudentMessage(studentId, message, models) {
+    return this.processActorMessage({
+      actorType: 'student',
+      actorId: studentId,
+      message,
+      models
+    });
+  }
+
+  async processActorMessage({ actorType, actorId, message, models }) {
     try {
-      // Obter contexto do professor
-      const context = await this.getTeacherContext(teacherId, models);
-      
-      // Obter histórico da conversa
-      const history = this.conversationHistory.get(teacherId) || [];
-      
-      // Construir prompt com contexto
-      const systemPrompt = this.buildSystemPrompt(context);
-      
+      const context = actorType === 'teacher'
+        ? await this.getTeacherContext(actorId, models)
+        : await this.getStudentContext(actorId, models);
+
+      const history = this.getHistory(actorId, actorType);
+      const systemPrompt = actorType === 'teacher'
+        ? this.buildSystemPrompt(context)
+        : this.buildStudentSystemPrompt(context);
+
+      if (!this.isConfigured()) {
+        const fallbackMessage = this.generateOfflineResponse({
+          actorType,
+          context,
+          message
+        });
+
+        this.updateHistory(actorId, message, fallbackMessage, actorType);
+
+        return {
+          success: true,
+          message: fallbackMessage,
+          timestamp: new Date().toISOString(),
+          mock: true
+        };
+      }
+
       // Preparar mensagens para Gemini
       const messages = [
         { role: 'user', parts: [{ text: systemPrompt }] },
@@ -119,7 +229,7 @@ class AIAssistantService {
       const aiResponse = response.data.candidates[0].content.parts[0].text;
 
       // Atualizar histórico
-      this.updateHistory(teacherId, message, aiResponse);
+      this.updateHistory(actorId, message, aiResponse, actorType);
 
       return {
         success: true,
@@ -173,15 +283,79 @@ INSTRUÇÕES:
 - Se não souber algo, seja honesto`;
   }
 
+  buildStudentSystemPrompt(context) {
+    if (!context) {
+      return `Você é um tutor educacional do Nexus Academy.
+Responda como um mentor de estudos, em português brasileiro, com linguagem clara e prática.`;
+    }
+
+    return `Você é um tutor educacional do Nexus Academy ajudando um aluno.
+
+CONTEXTO DO ALUNO:
+- Nome: ${context.student.name}
+- Matéria principal: ${context.student.subject || 'não definida'}
+- Série/Nível escolar: ${context.student.grade}
+- Pontos: ${context.student.points}
+- Nível: ${context.student.level}
+- Desempenho atual: ${context.student.performance}%
+- Professor: ${context.teacher.name}
+
+PRÓXIMAS AULAS:
+${context.upcomingClasses.map((item) => `- ${item.title} (${item.subject || 'matéria'}) em ${item.scheduledAt}`).join('\n') || '- Nenhuma aula agendada'}
+
+ATIVIDADES RECENTES:
+${context.recentActivities.map((item) => `- ${item.title} (${item.status})`).join('\n') || '- Nenhuma atividade recente'}
+
+INSTRUÇÕES:
+- Ajude com organização de estudos, motivação, revisão e entendimento de atividades
+- Dê passos curtos e acionáveis
+- Fale em português brasileiro
+- Quando apropriado, sugira pedir apoio ao professor`;
+  }
+
+  generateOfflineResponse({ actorType, context, message }) {
+    const lowerMessage = String(message || '').toLowerCase();
+
+    if (actorType === 'student') {
+      const nextClass = context?.upcomingClasses?.[0];
+      const pendingPayment = context?.payments?.find((payment) => ['pending', 'late', 'overdue'].includes(payment.status));
+
+      if (lowerMessage.includes('aula') && nextClass) {
+        return `Sua próxima aula é "${nextClass.title}" em ${new Date(nextClass.scheduledAt).toLocaleString('pt-BR')}. Revise ${nextClass.subject || 'o conteúdo da matéria'} por 15 minutos antes de entrar.`;
+      }
+
+      if ((lowerMessage.includes('pagamento') || lowerMessage.includes('mensalidade')) && pendingPayment) {
+        return `Existe um pagamento com status ${pendingPayment.status}. O melhor caminho é abrir a área de pagamentos do portal e confirmar a data de vencimento com seu professor.`;
+      }
+
+      return `Estou em modo local no momento, mas consigo te orientar com base no seu portal. Você está no nível ${context?.student?.level || 1}, com ${context?.student?.points || 0} pontos. Foque em revisar a matéria principal, registrar suas dúvidas e usar o chat com ${context?.teacher?.name || 'seu professor'} quando precisar de algo específico.`;
+    }
+
+    const lowPerformance = context?.students?.list?.filter((student) => student.performance < 70) || [];
+    const pendingPayments = context?.recentPayments?.filter((payment) => ['pending', 'late'].includes(payment.status)) || [];
+
+    if (lowerMessage.includes('pagamento') && pendingPayments.length > 0) {
+      return `Você tem ${pendingPayments.length} pagamento(s) recente(s) com pendência. Priorize uma régua curta: lembrete amigável, confirmação de leitura e follow-up em 48 horas.`;
+    }
+
+    if ((lowerMessage.includes('desempenho') || lowerMessage.includes('aluno')) && lowPerformance.length > 0) {
+      return `Os alunos com maior necessidade de atenção agora são ${lowPerformance.map((student) => student.name).join(', ')}. Vale revisar frequência, tarefas entregues e propor um reforço curto com objetivo específico para a próxima aula.`;
+    }
+
+    return `Estou em modo local, mas consigo resumir seu contexto atual: ${context?.students?.total || 0} aluno(s) ativos, ${context?.recentClasses?.length || 0} aula(s) recente(s) e ${pendingPayments.length} pagamento(s) pendente(s). Posso te ajudar com prioridades pedagógicas, agenda e cobrança.`;
+  }
+
   /**
    * Atualizar histórico de conversa
    */
-  updateHistory(teacherId, userMessage, aiResponse) {
-    if (!this.conversationHistory.has(teacherId)) {
-      this.conversationHistory.set(teacherId, []);
+  updateHistory(actorId, userMessage, aiResponse, scope = 'teacher') {
+    const historyKey = this.getConversationKey(actorId, scope);
+
+    if (!this.conversationHistory.has(historyKey)) {
+      this.conversationHistory.set(historyKey, []);
     }
 
-    const history = this.conversationHistory.get(teacherId);
+    const history = this.conversationHistory.get(historyKey);
     history.push(
       { role: 'user', content: userMessage, timestamp: new Date() },
       { role: 'assistant', content: aiResponse, timestamp: new Date() }
@@ -192,7 +366,7 @@ INSTRUÇÕES:
       history.splice(0, history.length - this.maxHistoryLength * 2);
     }
 
-    this.conversationHistory.set(teacherId, history);
+    this.conversationHistory.set(historyKey, history);
   }
 
   /**
@@ -302,23 +476,27 @@ REGRAS OBRIGATÓRIAS (violação invalida a resposta):
   /**
    * Limpar histórico de conversa
    */
-  clearHistory(teacherId) {
-    this.conversationHistory.delete(teacherId);
+  clearHistory(actorId, scope = 'teacher') {
+    this.conversationHistory.delete(this.getConversationKey(actorId, scope));
   }
 
   /**
    * Obter histórico de conversa
    */
-  getHistory(teacherId) {
-    return this.conversationHistory.get(teacherId) || [];
+  getHistory(actorId, scope = 'teacher') {
+    return this.conversationHistory.get(this.getConversationKey(actorId, scope)) || [];
   }
 
   /**
    * Sugestões rápidas baseadas em contexto
    */
-  async getQuickSuggestions(teacherId, models) {
-    const context = await this.getTeacherContext(teacherId, models);
-    
+  async getQuickSuggestions(actorId, models, actorType = 'teacher') {
+    if (actorType === 'student') {
+      return this.getStudentQuickSuggestions(actorId, models);
+    }
+
+    const context = await this.getTeacherContext(actorId, models);
+
     if (!context) {
       return [];
     }
@@ -360,6 +538,55 @@ REGRAS OBRIGATÓRIAS (violação invalida a resposta):
         action: 'view_classes'
       });
     }
+
+    return suggestions;
+  }
+
+  async getStudentQuickSuggestions(studentId, models) {
+    const context = await this.getStudentContext(studentId, models);
+
+    if (!context) {
+      return [];
+    }
+
+    const suggestions = [];
+    const nextClass = context.upcomingClasses[0];
+    const pendingActivity = context.recentActivities.find((activity) => activity.status === 'pending');
+    const pendingPayment = context.payments.find((payment) => ['pending', 'late', 'overdue'].includes(payment.status));
+
+    if (nextClass) {
+      suggestions.push({
+        type: 'class',
+        title: 'Preparar próxima aula',
+        message: `Como posso me preparar para a aula "${nextClass.title}"?`,
+        action: 'view_classes'
+      });
+    }
+
+    if (pendingActivity) {
+      suggestions.push({
+        type: 'activity',
+        title: 'Organizar estudos',
+        message: `Me ajude a concluir a atividade "${pendingActivity.title}"`,
+        action: 'view_activities'
+      });
+    }
+
+    if (pendingPayment) {
+      suggestions.push({
+        type: 'payment',
+        title: 'Entender pagamentos',
+        message: 'Explique meu status de pagamentos e o que eu devo fazer agora',
+        action: 'view_payments'
+      });
+    }
+
+    suggestions.push({
+      type: 'study',
+      title: 'Plano de estudo curto',
+      message: 'Monte um plano de estudo para esta semana',
+      action: 'study_plan'
+    });
 
     return suggestions;
   }

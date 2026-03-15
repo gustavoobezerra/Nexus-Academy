@@ -6,7 +6,7 @@ import {
   Menu, X, Target, User, ChevronRight, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { portalAPI } from '../../lib/api';
+import { portalAPI, type Aluno, type Aula, type Pagamento, type ApiError } from '../../lib/api';
 import BrandLogo from '../BrandLogo';
 // import { FadeContent, StaggerContainer, StaggerItem } from '../ui/Animations';
 
@@ -25,7 +25,8 @@ interface Student {
 }
 
 interface Class {
-  _id: string;
+  _id?: string;
+  id?: string;
   title: string;
   subject: string;
   scheduledAt: string;
@@ -35,7 +36,8 @@ interface Class {
 }
 
 interface Payment {
-  _id: string;
+  _id?: string;
+  id?: string;
   amount: number;
   status: string;
   dueDate: string;
@@ -84,12 +86,47 @@ export const StudentPortalDashboard = () => {
       ]);
 
       // Dados já vêm processados pela API
-      setStudent(profileData.student);
-      setClasses(classesData.classes || []);
-      setPayments(paymentsData.payments || []);
-    } catch (error: any) {
+      const profile = profileData.student as Aluno;
+      const normalizedClasses = (classesData.classes || []).map((item: Aula): Class => ({
+        _id: item._id,
+        id: item.id,
+        title: item.title,
+        subject: item.subject,
+        scheduledAt: item.scheduledAt,
+        duration: item.duration,
+        status: item.status,
+        assessmentScore: (item as Aula & { assessmentScore?: number }).assessmentScore
+      }));
+      const normalizedPayments = (paymentsData.payments || []).map((payment: Pagamento): Payment => ({
+        _id: payment._id,
+        id: payment.id,
+        amount: payment.amount,
+        status: payment.status,
+        dueDate: payment.dueDate,
+        paidAt: payment.paidAt,
+        month: payment.month,
+        year: payment.year
+      }));
+
+      setStudent({
+        id: profile.id || profile._id || '',
+        name: profile.name,
+        email: profile.email || '',
+        grade: profile.grade,
+        subject: profile.subject || '',
+        points: profile.points || 0,
+        level: profile.level || 1,
+        performance: {
+          overall: profile.performance?.overall || 0,
+          trend: profile.performance?.trend || 'stable'
+        }
+      });
+      setClasses(normalizedClasses);
+      setPayments(normalizedPayments);
+    } catch (error: unknown) {
+      const apiError = error as Partial<ApiError>;
       console.error('Load data error:', error);
-      const message = error?.message || 'Erro ao carregar dados. Tente novamente.';
+      const message = apiError?.message || 'Erro ao carregar dados. Tente novamente.';
       toast.error(message);
     } finally {
       setLoading(false);

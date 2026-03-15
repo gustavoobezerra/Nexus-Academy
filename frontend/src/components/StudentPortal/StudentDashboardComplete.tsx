@@ -286,7 +286,11 @@ export const StudentDashboardComplete = ({ onJoinClass }: StudentDashboardComple
               </button>
             </div>
             <div className="h-[calc(100%-4rem)]">
-              <AIAssistant />
+              <AIAssistant
+                scope="student"
+                subtitle="Peça ajuda para estudar, revisar tarefas e se preparar para as próximas aulas"
+                emptyHint='Ex: "Monte um plano de estudo para esta semana"'
+              />
             </div>
           </div>
         </div>

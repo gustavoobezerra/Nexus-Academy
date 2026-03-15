@@ -23,6 +23,11 @@ interface EngagementDashboardProps {
   sessionDuration: number;
 }
 
+interface PieLabelProps {
+  name?: string;
+  value?: number | string;
+}
+
 const EngagementDashboard = ({
   classTitle,
   participants,
@@ -117,7 +122,7 @@ const EngagementDashboard = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props: unknown) => `${props.name}: ${props.value}`}
+                  label={({ name, value }: PieLabelProps) => `${name || 'Item'}: ${value ?? 0}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="mentions"
