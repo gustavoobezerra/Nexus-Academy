@@ -1,11 +1,8 @@
 import express from 'express';
 import liveClassService from '../services/liveClassService.js';
-import { authorize, protect } from '../middleware/auth.js';
+import { authenticateOptional, authorize, protect } from '../middleware/auth.js';
 
 const router = express.Router();
-
-router.use(protect);
-router.use(authorize('teacher', 'admin'));
 
 /**
  * @swagger
@@ -17,6 +14,7 @@ router.use(authorize('teacher', 'admin'));
  *       - bearerAuth: []
  */
 router.post('/start', async (req, res) => {
+  return protect(req, res, () => authorize('teacher', 'admin')(req, res, async () => {
   try {
     const { classId } = req.body;
     const io = req.app.get('io');
@@ -45,6 +43,7 @@ router.post('/start', async (req, res) => {
       message: "Erro interno do servidor" 
     });
   }
+  }));
 });
 
 /**
@@ -57,12 +56,20 @@ router.post('/start', async (req, res) => {
  *       - bearerAuth: []
  */
 router.post('/:sessionId/join', async (req, res) => {
+  return authenticateOptional(req, res, async () => {
   try {
     const { sessionId } = req.params;
-    const userType = req.user.role === 'student' ? 'student' : 'teacher';
-    const io = req.app.get('io');
+    const userId = req.studentId || req.user?._id?.toString?.() || req.userId?.toString?.();
 
-    const userId = req.user._id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Autenticacao obrigatoria'
+      });
+    }
+
+    const userType = req.roles?.includes('student') ? 'student' : 'teacher';
+    const io = req.app.get('io');
 
     const result = await liveClassService.joinSession(
       sessionId,
@@ -82,6 +89,7 @@ router.post('/:sessionId/join', async (req, res) => {
       message: "Erro interno do servidor" 
     });
   }
+  });
 });
 
 /**
@@ -94,6 +102,7 @@ router.post('/:sessionId/join', async (req, res) => {
  *       - bearerAuth: []
  */
 router.post('/:sessionId/end', async (req, res) => {
+  return protect(req, res, () => authorize('teacher', 'admin')(req, res, async () => {
   try {
     const { sessionId } = req.params;
     const io = req.app.get('io');
@@ -115,6 +124,7 @@ router.post('/:sessionId/end', async (req, res) => {
       message: "Erro interno do servidor" 
     });
   }
+  }));
 });
 
 /**
@@ -127,6 +137,7 @@ router.post('/:sessionId/end', async (req, res) => {
  *       - bearerAuth: []
  */
 router.get('/active/list', async (req, res) => {
+  return protect(req, res, () => authorize('teacher', 'admin')(req, res, async () => {
   try {
     const sessions = liveClassService.getTeacherActiveSessions(req.user._id);
     res.json({ success: true, sessions });
@@ -136,6 +147,7 @@ router.get('/active/list', async (req, res) => {
       message: "Erro interno do servidor"
     });
   }
+  }));
 });
 
 /**
@@ -148,9 +160,11 @@ router.get('/active/list', async (req, res) => {
  *       - bearerAuth: []
  */
 router.get('/:sessionId', async (req, res) => {
+  return authenticateOptional(req, res, async () => {
   try {
     const { sessionId } = req.params;
     const session = liveClassService.getSession(sessionId);
+    const actorId = req.studentId || req.user?._id?.toString?.() || req.userId?.toString?.();
 
     if (!session) {
       return res.status(404).json({
@@ -159,9 +173,16 @@ router.get('/:sessionId', async (req, res) => {
       });
     }
 
+    if (!actorId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Autenticacao obrigatoria'
+      });
+    }
+
     // Verificar acesso
-    if (session.teacherId !== req.user._id.toString() &&
-        session.studentId !== req.user._id.toString()) {
+    if (session.teacherId !== actorId &&
+        session.studentId !== actorId) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado'
@@ -175,6 +196,7 @@ router.get('/:sessionId', async (req, res) => {
       message: "Erro interno do servidor"
     });
   }
+  });
 });
 
 export default router;

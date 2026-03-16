@@ -84,31 +84,8 @@ export const StudentProfilePage = () => {
       setStudent(data.student);
       setDescription(data.student.profile?.description || '');
     } catch (error) {
-      // Erro tratado pelo interceptor, usar fallback demo
-      const savedStudent = localStorage.getItem('student');
-      if (savedStudent) {
-        const parsed = JSON.parse(savedStudent);
-        setStudent({
-          ...parsed,
-          profile: { description: '', avatar: null, interests: [] },
-          goals: [
-            { _id: '1', title: 'Assistir séries sem legenda', description: 'Conseguir entender 80% das séries em inglês', targetDate: null, progress: 35, status: 'active' },
-            { _id: '2', title: 'Fazer prova de certificação', description: 'Tirar nota boa no TOEFL', targetDate: '2025-12-01', progress: 20, status: 'active' }
-          ],
-          onboarding: {
-            completed: true,
-            answers: {
-              learningPurpose: 'Trabalho/Carreira',
-              currentLevel: 'intermediate',
-              targetTimeframe: '1 ano',
-              studyHoursPerWeek: 5,
-              preferredSchedule: 'evening',
-              learningStyle: 'visual'
-            }
-          }
-        });
-        setDescription('');
-      }
+      toast.error('Nao foi possivel carregar seu perfil agora.');
+      setStudent(null);
       console.error('Load profile error:', error);
     } finally {
       setLoading(false);
@@ -136,16 +113,8 @@ export const StudentProfilePage = () => {
         });
       }
     } catch (error) {
-      // Erro já tratado pelo interceptor
-      // Fallback demo mode
-      toast.success('Descrição atualizada! (demo)');
-      setEditingDescription(false);
-      if (student) {
-        setStudent({
-          ...student,
-          profile: { ...student.profile, description }
-        });
-      }
+      console.error('Save description error:', error);
+      toast.error('Nao foi possivel atualizar a descricao.');
     }
   };
 
@@ -168,25 +137,7 @@ export const StudentProfilePage = () => {
       }
     } catch (error) {
       console.error('Add goal error:', error);
-      // Demo mode
-      const demoGoal: Goal = {
-        _id: Date.now().toString(),
-        title: newGoal.title,
-        description: newGoal.description,
-        targetDate: newGoal.targetDate || null,
-        progress: 0,
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
-      toast.success('Meta criada! (demo)');
-      setShowAddGoal(false);
-      setNewGoal({ title: '', description: '', targetDate: '' });
-      if (student) {
-        setStudent({
-          ...student,
-          goals: [...student.goals, demoGoal]
-        });
-      }
+      toast.error('Nao foi possivel criar a meta.');
     }
   };
 
@@ -209,19 +160,8 @@ export const StudentProfilePage = () => {
         toast.success('Meta concluída! Parabéns!');
       }
     } catch (error) {
-      // Erro tratado pelo interceptor, fallback demo
-      if (student) {
-        const status = progress >= 100 ? 'completed' : 'active';
-        setStudent({
-          ...student,
-          goals: student.goals.map(g =>
-            g._id === goalId ? { ...g, progress, status } : g
-          )
-        });
-        if (progress >= 100) {
-          toast.success('Meta concluída! Parabéns!');
-        }
-      }
+      console.error('Update goal error:', error);
+      toast.error('Nao foi possivel atualizar a meta.');
     }
   };
 
@@ -238,14 +178,8 @@ export const StudentProfilePage = () => {
         });
       }
     } catch (error) {
-      // Erro tratado pelo interceptor, fallback demo
-      toast.success('Meta excluída (demo)');
-      if (student) {
-        setStudent({
-          ...student,
-          goals: student.goals.filter(g => g._id !== goalId)
-        });
-      }
+      console.error('Delete goal error:', error);
+      toast.error('Nao foi possivel excluir a meta.');
     }
   };
 

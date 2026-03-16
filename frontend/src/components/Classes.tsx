@@ -64,11 +64,25 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
       return;
     }
 
-    const dados = { title, studentId, subject, scheduledAt, duration, notes };
+    const scheduledDate = new Date(scheduledAt);
+    if (Number.isNaN(scheduledDate.getTime())) {
+      toast.error('Informe uma data válida');
+      return;
+    }
+
+    const dados = {
+      title,
+      studentId,
+      subject,
+      scheduledAt: scheduledDate.toISOString(),
+      duration,
+      notes
+    };
 
     try {
       const response = await classesAPI.create(dados) as any;
-      const newId = response?.id || response?._id || 'new';
+      const createdClass = response?.class || response;
+      const newId = createdClass?.id || createdClass?._id || 'new';
       automationEngine.fireTrigger('class_scheduled', 'class', newId, title, {
         subject,
         studentId,
@@ -146,6 +160,12 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
       }),
     };
   };
+
+  const getStudentName = (aula: Aula & { student?: { name?: string } }) =>
+    aula.studentName || aula.student?.name || 'Aluno';
+
+  const getStudentGrade = (aula: Aula & { student?: { grade?: string } }) =>
+    aula.grade || aula.student?.grade || 'Sem série';
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -239,6 +259,19 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                 className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Duração (min)
+              </label>
+              <input
+                name="duration"
+                type="number"
+                min="15"
+                max="480"
+                defaultValue={60}
+                className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
+              />
+            </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Observacoes
@@ -279,11 +312,12 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
             {aulas.map((aula) => {
             const { hora } = formatarDataHora(aula.scheduledAt);
             const aulaId = aula.id || aula._id || '';
+            const aulaAoVivo = aula.isLive || aula.status === 'in_progress';
             return (
               <div
                 key={aulaId}
                 className={`${
-                  aula.isLive
+                  aulaAoVivo
                     ? 'border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700'
                     : aula.status === 'completed'
                     ? 'border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-700'
@@ -294,14 +328,14 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                   <div className="flex items-center gap-4">
                     <div
                       className={`w-16 h-16 rounded-xl flex flex-col items-center justify-center ${
-                        aula.isLive
+                        aulaAoVivo
                           ? 'bg-red-500 text-white'
                           : aula.status === 'completed'
                           ? 'bg-green-500 text-white'
                           : 'bg-indigo-100 text-indigo-600'
                       }`}
                     >
-                      {aula.isLive ? (
+                      {aulaAoVivo ? (
                         <div className="text-center">
                           <div className="w-3 h-3 bg-white rounded-full animate-pulse mx-auto mb-1"></div>
                           <span className="text-xs font-bold">LIVE</span>
@@ -332,7 +366,7 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                         )}
                       </div>
                       <p className="text-slate-500 dark:text-slate-400">
-                        {aula.studentName} - {aula.grade}
+                        {getStudentName(aula as Aula & { student?: { name?: string; grade?: string } })} - {getStudentGrade(aula as Aula & { student?: { name?: string; grade?: string } })}
                       </p>
                       <div className="flex items-center gap-4 mt-1 text-sm text-slate-400 dark:text-slate-500">
                         <span className="flex items-center gap-1">
@@ -345,7 +379,7 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        if (aula.isLive) {
+                        if (aulaAoVivo) {
                           encerrarAula(aulaId, aula.title);
                         } else {
                           iniciarAula(aulaId, aula.title);
@@ -353,12 +387,12 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                         }
                       }}
                       className={`px-6 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 ${
-                        aula.isLive
+                        aulaAoVivo
                           ? 'bg-red-500 text-white hover:bg-red-600'
                           : 'bg-indigo-600 text-white hover:bg-indigo-700'
                       }`}
                     >
-                      {aula.isLive ? 'ENCERRAR' : 'INICIAR'}
+                      {aulaAoVivo ? 'ENCERRAR' : 'INICIAR'}
                     </button>
                     <button
                       onClick={() => setAulaParaExcluir(aula)}

@@ -211,8 +211,11 @@ api.interceptors.response.use(
 
         // Redirecionar para login apropriado
         const isStudentPortal = window.location.pathname.includes('/portal');
+        const redirectTarget = `${window.location.pathname}${window.location.search}`;
         setTimeout(() => {
-          window.location.href = isStudentPortal ? '/portal/login' : '/login';
+          window.location.href = isStudentPortal
+            ? `/portal/login?redirect=${encodeURIComponent(redirectTarget)}`
+            : '/login';
         }, 1500);
 
         return Promise.reject({

@@ -97,6 +97,7 @@ export async function setSlug(req, res) {
   try {
     const { slug } = req.body;
     const userId = req.user._id;
+    const frontendBaseUrl = getFrontendBaseUrl();
 
     // Mesmas validações do check
     if (!slug || typeof slug !== 'string') {
@@ -147,7 +148,7 @@ export async function setSlug(req, res) {
       success: true,
       message: 'Slug configurado com sucesso',
       slug: user.slug,
-      publicUrl: `${process.env.FRONTEND_URL}/professor/${user.slug}`
+      publicUrl: `${frontendBaseUrl}/professor/${user.slug}`
     });
 
   } catch (error) {
@@ -412,6 +413,14 @@ const STRIPE_PRICES = {
   pro: process.env.STRIPE_PRICE_PRO
 };
 
+const getFrontendBaseUrl = () => {
+  const fallbackUrl = process.env.NODE_ENV === 'production'
+    ? 'https://nexus-academy-frontend.onrender.com'
+    : 'http://localhost:5173';
+
+  return (process.env.FRONTEND_URL || fallbackUrl).replace(/\/+$/, '');
+};
+
 /**
  * Cria sessão de checkout do Stripe para assinatura do Nexus
  * POST /api/onboarding/create-subscription-session
@@ -453,6 +462,8 @@ export async function createSubscriptionSession(req, res) {
       });
     }
 
+    const frontendBaseUrl = getFrontendBaseUrl();
+
     // Cria ou busca customer no Stripe
     let stripeCustomerId = user.stripeCustomerId;
 
@@ -487,8 +498,8 @@ export async function createSubscriptionSession(req, res) {
           plan: plan
         }
       },
-      success_url: `${process.env.FRONTEND_URL}/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/onboarding/plan-selection`,
+      success_url: `${frontendBaseUrl}/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendBaseUrl}/onboarding?step=3`,
     });
 
     res.json({
@@ -513,6 +524,7 @@ export async function createSubscriptionSession(req, res) {
 export async function completeOnboarding(req, res) {
   try {
     const userId = req.user._id;
+    const frontendBaseUrl = getFrontendBaseUrl();
 
     // Buscar usuário atual
     const currentUser = await User.findById(userId);
@@ -536,7 +548,8 @@ export async function completeOnboarding(req, res) {
           slug: currentUser.slug,
           subscriptionStatus: currentUser.subscriptionStatus,
           subscriptionPlan: currentUser.subscriptionPlan,
-          status: currentUser.status
+          status: currentUser.status,
+          publicUrl: currentUser.slug ? `${frontendBaseUrl}/professor/${currentUser.slug}` : null
         }
       });
     }
@@ -569,7 +582,7 @@ export async function completeOnboarding(req, res) {
         subscriptionPlan: user.subscriptionPlan,
         trialEndsAt: user.trialEndsAt,
         status: user.status,
-        publicUrl: `${process.env.FRONTEND_URL}/professor/${user.slug}`
+        publicUrl: user.slug ? `${frontendBaseUrl}/professor/${user.slug}` : null
       }
     });
 

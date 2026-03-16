@@ -208,8 +208,6 @@ const userSchema = new mongoose.Schema({
   loginCount: { type: Number, default: 0 }
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
-userSchema.index({ email: 1 });
-userSchema.index({ referralCode: 1 });
 userSchema.index({ role: 1 });
 
 userSchema.pre('save', async function(next) {

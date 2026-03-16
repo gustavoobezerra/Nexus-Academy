@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import Student from '../../models/Student.js';
 import User from '../../models/User.js';
 import { getJWTSecret, isValidObjectId } from './helpers.js';
+import cacheService from '../../services/cacheService.js';
 
 const router = express.Router();
 const allowedTeacherSubscriptionStatuses = ['active', 'trialing', 'incomplete', null, undefined];
@@ -103,6 +104,10 @@ router.post('/auth/register', async (req, res) => {
 
     const student = new Student(studentData);
     await student.save();
+
+    if (teacher?._id) {
+      await cacheService.delPattern(`students:${teacher._id}:*`);
+    }
 
     const token = jwt.sign(
       { studentId: student._id, type: 'student', teacherId: teacher?._id?.toString() || null },

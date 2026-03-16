@@ -69,7 +69,7 @@ function AppWithRouter() {
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [liveClassData, setLiveClassData] = useState<{ id: string; title: string } | null>(null);
-  const [preferDaily] = useState(true); // Usar Daily.co como padrão (true) ou Jitsi (false)
+  const [preferDaily] = useState(false); // Jitsi como padrão enquanto o Daily permanece instável no ambiente atual
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
   const [mostrarHangman, setMostrarHangman] = useState(false);
 
@@ -91,13 +91,18 @@ function AppWithRouter() {
   useEffect(() => {
     // Se está no portal e não tem token, redirecionar para login
     if (isStudentPortal && !studentToken && !location.pathname.includes('/login')) {
-      navigate('/portal/login');
+      const redirectTarget = `${location.pathname}${location.search}`;
+      navigate(`/portal/login?redirect=${encodeURIComponent(redirectTarget)}`);
     }
     // Se está no portal e tem token mas está na página de login, redirecionar para dashboard
     if (isStudentPortal && studentToken && location.pathname.includes('/login')) {
-      navigate('/portal/dashboard');
+      const redirectParam = new URLSearchParams(location.search).get('redirect');
+      const safeRedirect = redirectParam && redirectParam.startsWith('/portal')
+        ? redirectParam
+        : '/portal/dashboard';
+      navigate(safeRedirect);
     }
-  }, [isStudentPortal, studentToken, location.pathname, navigate]);
+  }, [isStudentPortal, studentToken, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (!isStudentPortal && !isPublicRoute) {
@@ -105,13 +110,19 @@ function AppWithRouter() {
       // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
       setUnreadAlerts(count);
 
-      const onboardingConcluido = localStorage.getItem('onboarding_concluido');
+      const onboardingConcluido = localStorage.getItem('onboarding_concluido') === 'true'
+        || localStorage.getItem('onboarding_completed') === 'true'
+        || Boolean((user as any)?.onboardingCompletedAt)
+        || ['active', 'trialing'].includes((user as any)?.subscriptionStatus || '')
+        || (user as any)?.status === 'active';
       if (!onboardingConcluido && isAuthenticated) {
         // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setMostrarOnboarding(true);
+      } else {
+        setMostrarOnboarding(false);
       }
     }
-  }, [isStudentPortal, isPublicRoute, isAuthenticated]);
+  }, [isStudentPortal, isPublicRoute, isAuthenticated, user]);
 
   const handleNavegar = useCallback((tab: string) => {
     if (tab === 'hangman') {
@@ -225,12 +236,27 @@ function AppWithRouter() {
         />
       );
     }
-    if (location.pathname === '/portal/live-class' && liveClassData) {
+    if (location.pathname === '/portal/live-class') {
+      const searchParams = new URLSearchParams(location.search);
+      const queryClassId = searchParams.get('classId');
+      const queryClassName = searchParams.get('className');
+      const queryTeacherName = searchParams.get('teacherName');
+      const resolvedLiveClass = liveClassData || (queryClassId
+        ? {
+            id: queryClassId,
+            title: queryClassName || 'Aula ao vivo'
+          }
+        : null);
+
+      if (!resolvedLiveClass) {
+        return <StudentDashboard />;
+      }
+
       return preferDaily ? (
         <DailyLiveClass
-          classId={liveClassData.id}
-          className={liveClassData.title}
-          teacherName="Professor"
+          classId={resolvedLiveClass.id}
+          className={resolvedLiveClass.title}
+          teacherName={queryTeacherName || 'Professor'}
           studentName={studentToken ? 'Aluno' : undefined}
           userType="student"
           onEnd={() => {
@@ -240,9 +266,9 @@ function AppWithRouter() {
         />
       ) : (
         <JitsiLiveClass
-          classId={liveClassData.id}
-          className={liveClassData.title}
-          teacherName="Professor"
+          classId={resolvedLiveClass.id}
+          className={resolvedLiveClass.title}
+          teacherName={queryTeacherName || 'Professor'}
           studentName={studentToken ? 'Aluno' : undefined}
           userType="student"
           onEnd={() => {

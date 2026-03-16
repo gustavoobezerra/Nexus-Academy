@@ -910,7 +910,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
               <input
                 type="text"
                 value={wordGuess}
-                onChange={(e) => setWordGuess(e.target.value.toUpperCase().replace(/[^A-Z\s]/g, ''))}
+                onChange={(e) => setWordGuess(e.target.value.toUpperCase().replace(/[^\p{L}\s]/gu, ''))}
                 maxLength={gameState.revealedWord.length}
                 placeholder={`Tente a palavra (${gameState.revealedWord.length} letras)`}
                 className="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-yellow-100 placeholder-gray-500 font-mono uppercase tracking-widest focus:outline-none focus:border-indigo-400 text-sm"

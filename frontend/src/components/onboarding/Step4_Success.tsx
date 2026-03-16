@@ -10,7 +10,7 @@ interface Step4Props {
 export const Step4_Success = ({ slug, onFinish }: Step4Props) => {
   const [copied, setCopied] = useState(false);
 
-  const publicUrl = `https://nexusacademy.com/professor/${slug}`;
+  const publicUrl = `${window.location.origin}/professor/${slug}`;
   const whatsappMessage = encodeURIComponent(
     `Oi! Confira minha página de professor no Nexus Academy: ${publicUrl}`
   );

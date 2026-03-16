@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { JitsiMeeting } from '@jitsi/react-sdk';
-import { Users, Settings, Video } from 'lucide-react';
+import { Users, Settings, Video, PhoneOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { classesAPI } from '../lib/api';
 
 interface JitsiLiveClassProps {
   classId: string;
@@ -32,6 +33,8 @@ export const JitsiLiveClass = ({
   const [isLoading, setIsLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [roomName, setRoomName] = useState('');
+  const hasClosedRef = useRef(false);
+  const apiRef = useRef<JitsiExternalApi | null>(null);
 
   useEffect(() => {
     // Configurar nome de exibição
@@ -46,12 +49,28 @@ export const JitsiLiveClass = ({
     toast.success(`Iniciando aula ao vivo: ${className}`);
   }, [classId, className, teacherName, studentName, userType]);
 
-  const handleMeetingEnd = () => {
-    toast.success('Aula finalizada com sucesso!');
+  const handleMeetingEnd = async () => {
+    if (hasClosedRef.current) {
+      return;
+    }
+
+    hasClosedRef.current = true;
+
+    if (userType === 'teacher') {
+      try {
+        await classesAPI.end(classId);
+      } catch (error) {
+        console.error('Erro ao encerrar aula via Jitsi:', error);
+        toast.error('A sala foi encerrada, mas houve erro ao atualizar o status da aula.');
+      }
+    }
+
+    toast.success(userType === 'teacher' ? 'Aula finalizada com sucesso!' : 'Você saiu da aula.');
     onEnd();
   };
 
   const handleApiReady = (externalApi: JitsiExternalApi) => {
+    apiRef.current = externalApi;
     setIsLoading(false);
 
     // Adicionar event listeners
@@ -79,19 +98,18 @@ export const JitsiLiveClass = ({
       handleMeetingEnd();
     });
 
-    // Se for professor, configurações adicionais
-    if (userType === 'teacher') {
-      // Professor pode gravar a aula (funcionalidade nativa do Jitsi)
-      try {
-        externalApi.executeCommand('toggleRecording', {
-          mode: 'file',
-          shouldShare: false
-        });
-      } catch (e) {
-        // Recording might not be enabled
-        // Gravação não disponível neste contexto
-      }
+  };
+
+  const handleLeaveClick = () => {
+    if (apiRef.current) {
+      apiRef.current.executeCommand('hangup');
+      window.setTimeout(() => {
+        handleMeetingEnd();
+      }, 1500);
+      return;
     }
+
+    handleMeetingEnd();
   };
 
   return (
@@ -115,6 +133,13 @@ export const JitsiLiveClass = ({
             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.6)]"></div>
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Ao Vivo</span>
           </div>
+          <button
+            onClick={handleLeaveClick}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <PhoneOff className="w-4 h-4" />
+            <span className="hidden sm:inline">{userType === 'teacher' ? 'Encerrar' : 'Sair'}</span>
+          </button>
         </div>
       </div>
 

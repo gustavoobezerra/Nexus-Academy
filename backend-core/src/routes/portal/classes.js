@@ -13,10 +13,10 @@ router.get('/classes', authenticateStudent, async (req, res) => {
     if (status) query.status = status;
 
     const classes = await Class.find(query)
-      .sort({ scheduledAt: -1 })
+      .sort({ scheduledAt: 1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
-      .select('title subject scheduledAt duration status assessmentScore notes homework');
+      .select('title subject scheduledAt duration status assessmentScore notes homework meetingLink');
 
     const total = await Class.countDocuments(query);
 

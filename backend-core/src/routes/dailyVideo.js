@@ -1,10 +1,9 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth.js';
+import Class from '../models/Class.js';
+import { authenticateOptional } from '../middleware/auth.js';
 
 const router = express.Router();
-
-router.use(protect);
-router.use(authorize('teacher', 'admin'));
+router.use(authenticateOptional);
 
 // Daily.co API configuration
 const DAILY_API_KEY = process.env.DAILY_API_KEY;
@@ -31,10 +30,133 @@ async function dailyFetch(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.info || error.error || `Daily API error: ${response.status}`);
+    const requestError = new Error(error.info || error.error || `Daily API error: ${response.status}`);
+    requestError.status = response.status;
+    throw requestError;
   }
 
   return response.json();
+}
+
+const isTeacherActor = (req) =>
+  Array.isArray(req.roles) && req.roles.some((role) => role === 'teacher' || role === 'admin');
+
+const getActorId = (req) =>
+  req.user?._id?.toString?.() || req.userId?.toString?.() || req.studentId?.toString?.() || null;
+
+const getActorDisplayName = (req, providedName) => {
+  if (typeof providedName === 'string' && providedName.trim()) {
+    return providedName.trim().slice(0, 100);
+  }
+
+  if (req.user?.name) {
+    return req.user.name;
+  }
+
+  return isTeacherActor(req) ? 'Professor' : 'Aluno';
+};
+
+const buildRoomName = (classId) => `nexus-class-${String(classId).toLowerCase()}`;
+
+const parseClassIdFromRoomName = (roomName) => {
+  if (typeof roomName !== 'string') {
+    return null;
+  }
+
+  const match = roomName.match(/^nexus-class-([a-f0-9]{24})$/i);
+  return match ? match[1].toLowerCase() : null;
+};
+
+const ensureAuthenticated = (req, res) => {
+  if (getActorId(req)) {
+    return true;
+  }
+
+  res.status(401).json({
+    success: false,
+    message: 'Autenticacao obrigatoria'
+  });
+  return false;
+};
+
+const ensureTeacher = (req, res) => {
+  if (!ensureAuthenticated(req, res)) {
+    return false;
+  }
+
+  if (isTeacherActor(req)) {
+    return true;
+  }
+
+  res.status(403).json({
+    success: false,
+    message: 'Apenas professores podem executar esta acao'
+  });
+  return false;
+};
+
+const getAccessibleClass = async (req, classId) => {
+  if (!classId) {
+    return null;
+  }
+
+  const actorId = getActorId(req);
+  if (!actorId) {
+    return null;
+  }
+
+  const query = isTeacherActor(req)
+    ? { _id: classId, teacher: actorId }
+    : { _id: classId, student: actorId };
+
+  return Class.findOne(query).select('title teacher student status meetingLink');
+};
+
+const getAccessibleClassByRoomName = async (req, roomName) => {
+  const classId = parseClassIdFromRoomName(roomName);
+  if (!classId) {
+    return null;
+  }
+
+  return getAccessibleClass(req, classId);
+};
+
+async function getOrCreateRoom(roomName, expiry) {
+  try {
+    return await dailyFetch(`/rooms/${roomName}`);
+  } catch (error) {
+    if (error.status !== 404) {
+      throw error;
+    }
+  }
+
+  try {
+    return await dailyFetch('/rooms', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: roomName,
+        privacy: 'private',
+        properties: {
+          exp: expiry,
+          eject_at_room_exp: true,
+          max_participants: 10,
+          enable_chat: true,
+          enable_screenshare: true,
+          enable_knocking: true,
+          start_video_off: false,
+          start_audio_off: false,
+          lang: 'pt',
+          enable_prejoin_ui: false,
+          enable_network_ui: true
+        }
+      })
+    });
+  } catch (error) {
+    if (error.status === 409) {
+      return dailyFetch(`/rooms/${roomName}`);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -68,61 +190,33 @@ async function dailyFetch(endpoint, options = {}) {
  */
 router.post('/create-room', async (req, res) => {
   try {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
+
+    const { classId, expiryMinutes = 120 } = req.body;
+    const classData = await getAccessibleClass(req, classId);
+
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aula nao encontrada ou acesso negado'
+      });
+    }
+
+    const roomName = buildRoomName(classData._id);
+    const expiry = Math.floor(Date.now() / 1000) + (Number(expiryMinutes || 120) * 60);
+
     // Verificar se Daily.co está configurado
     if (!DAILY_API_KEY) {
-      // Modo fallback sem Daily.co configurado
-      const roomName = `nexus-${req.user._id}-${Date.now()}`;
-      return res.json({
-        success: true,
-        room: {
-          name: roomName,
-          url: `https://nexus-academy.daily.co/${roomName}`,
-          id: roomName,
-          privacy: 'private'
-        },
-        message: 'Sala criada em modo simulado (configure DAILY_API_KEY para produção)'
-      });
-    }
-
-    const { classId, className, expiryMinutes = 120 } = req.body;
-
-    if (!classId) {
-      return res.status(400).json({
+      return res.status(503).json({
         success: false,
-        message: 'ID da aula é obrigatório'
+        message: 'Daily.co indisponivel. Configure DAILY_API_KEY ou use o provedor padrao.'
       });
     }
-
-    // Criar nome único para a sala
-    const roomName = `nexus-${req.user._id.toString().slice(-8)}-${classId.toString().slice(-8)}-${Date.now().toString().slice(-6)}`;
-
-    // Calcular expiração
-    const expiry = Math.floor(Date.now() / 1000) + (expiryMinutes * 60);
 
     // Criar sala no Daily.co
-    const room = await dailyFetch('/rooms', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: roomName,
-        privacy: 'private',
-        properties: {
-          exp: expiry,
-          eject_at_room_exp: true,
-          max_participants: 10,
-          enable_chat: true,
-          enable_screenshare: true,
-          enable_knocking: true,
-          start_video_off: false,
-          start_audio_off: false,
-          lang: 'pt',
-          // Configurações de gravação (requer plano pago)
-          // enable_recording: 'cloud',
-          // Configurações de qualidade
-          enable_prejoin_ui: false, // Desabilita tela de entrada para SSO
-          enable_network_ui: true
-        }
-      })
-    });
+    const room = await getOrCreateRoom(roomName, expiry);
 
     res.json({
       success: true,
@@ -173,40 +267,55 @@ router.post('/create-room', async (req, res) => {
  */
 router.post('/create-token', async (req, res) => {
   try {
-    // Verificar se Daily.co está configurado
-    if (!DAILY_API_KEY) {
-      // Modo fallback
-      return res.json({
-        success: true,
-        token: `demo-token-${Date.now()}`,
-        message: 'Token simulado (configure DAILY_API_KEY para produção)'
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
+
+    const { roomName, classId, isOwner = false, userName } = req.body;
+    const classData = await getAccessibleClass(req, classId);
+    const actorId = getActorId(req);
+
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aula nao encontrada ou acesso negado'
       });
     }
 
-    const { roomName, isOwner = false, userName } = req.body;
+    const normalizedRoomName = buildRoomName(classData._id);
 
-    if (!roomName) {
+    if (roomName && roomName !== normalizedRoomName) {
       return res.status(400).json({
         success: false,
-        message: 'Nome da sala é obrigatório'
+        message: 'Sala invalida para esta aula'
+      });
+    }
+
+    const ownerToken = Boolean(isOwner) && isTeacherActor(req);
+
+    // Verificar se Daily.co está configurado
+    if (!DAILY_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Daily.co indisponivel. Configure DAILY_API_KEY ou use o provedor padrao.'
       });
     }
 
     // Determinar nome de exibição
-    const displayName = userName || req.user.name || 'Participante';
+    const displayName = getActorDisplayName(req, userName);
 
     // Configurar permissões baseadas no tipo de usuário
     const tokenConfig = {
       properties: {
-        room_name: roomName,
+        room_name: normalizedRoomName,
         user_name: displayName,
-        user_id: req.user._id.toString(),
-        is_owner: isOwner,
+        user_id: actorId,
+        is_owner: ownerToken,
         enable_screenshare: true,
         start_video_off: false,
         start_audio_off: false,
         // Permissões de proprietário (professor)
-        ...(isOwner && {
+        ...(ownerToken && {
           enable_recording: true,
           enable_transcription: true
         })
@@ -222,9 +331,9 @@ router.post('/create-token', async (req, res) => {
     res.json({
       success: true,
       token: tokenResponse.token,
-      roomName,
+      roomName: normalizedRoomName,
       userName: displayName,
-      isOwner
+      isOwner: ownerToken
     });
 
   } catch (error) {
@@ -255,19 +364,26 @@ router.post('/create-token', async (req, res) => {
  */
 router.get('/room-info/:roomName', async (req, res) => {
   try {
-    if (!DAILY_API_KEY) {
-      return res.json({
-        success: true,
-        room: {
-          name: req.params.roomName,
-          url: `https://nexus-academy.daily.co/${req.params.roomName}`,
-          privacy: 'private',
-          participants: 0
-        }
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
+
+    const classData = await getAccessibleClassByRoomName(req, req.params.roomName);
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sala nao encontrada ou acesso negado'
       });
     }
 
-    const { roomName } = req.params;
+    if (!DAILY_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Daily.co indisponivel. Configure DAILY_API_KEY ou use o provedor padrao.'
+      });
+    }
+
+    const roomName = buildRoomName(classData._id);
 
     const room = await dailyFetch(`/rooms/${roomName}`);
 
@@ -310,14 +426,26 @@ router.get('/room-info/:roomName', async (req, res) => {
  */
 router.delete('/delete-room/:roomName', async (req, res) => {
   try {
-    if (!DAILY_API_KEY) {
-      return res.json({
-        success: true,
-        message: 'Sala deletada (modo simulado)'
+    if (!ensureTeacher(req, res)) {
+      return;
+    }
+
+    const classData = await getAccessibleClassByRoomName(req, req.params.roomName);
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sala nao encontrada ou acesso negado'
       });
     }
 
-    const { roomName } = req.params;
+    if (!DAILY_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Daily.co indisponivel. Configure DAILY_API_KEY ou use o provedor padrao.'
+      });
+    }
+
+    const roomName = buildRoomName(classData._id);
 
     await dailyFetch(`/rooms/${roomName}`, {
       method: 'DELETE'

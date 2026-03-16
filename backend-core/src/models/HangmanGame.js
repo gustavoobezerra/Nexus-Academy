@@ -1,6 +1,13 @@
 import mongoose from 'mongoose';
 import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
+const normalizeHangmanText = (value = '') => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toUpperCase();
+
+const normalizeHangmanLetter = (value = '') => normalizeHangmanText(value).replace(/[^A-Z]/g, '');
+
 const HangmanGameSchema = new mongoose.Schema({
   teacher: {
     type: mongoose.Schema.Types.ObjectId,
@@ -113,12 +120,25 @@ HangmanGameSchema.plugin(tenantAwarePlugin);
 
 // Método para verificar se a letra já foi tentada
 HangmanGameSchema.methods.isLetterGuessed = function(letter) {
-  return this.guessedLetters.includes(letter.toUpperCase());
+  const normalizedLetter = normalizeHangmanLetter(letter);
+  if (!normalizedLetter) return false;
+
+  return this.guessedLetters.some((guessedLetter) =>
+    normalizeHangmanLetter(guessedLetter) === normalizedLetter
+  );
 };
 
 // Método para processar tentativa de letra
 HangmanGameSchema.methods.guessLetter = function(letter, playerId = null) {
-  const upperLetter = letter.toUpperCase();
+  const upperLetter = normalizeHangmanLetter(letter);
+  const normalizedWord = normalizeHangmanText(this.word);
+
+  if (!upperLetter) {
+    return {
+      success: false,
+      message: 'Letra inválida'
+    };
+  }
   
   // Verificar se letra já foi tentada
   if (this.isLetterGuessed(upperLetter)) {
@@ -133,7 +153,7 @@ HangmanGameSchema.methods.guessLetter = function(letter, playerId = null) {
   this.guessedLetters.push(upperLetter);
   
   // Verificar se a letra está na palavra
-  const isCorrect = this.word.includes(upperLetter);
+  const isCorrect = normalizedWord.includes(upperLetter);
   
   if (!isCorrect) {
     this.wrongGuesses += 1;
@@ -151,7 +171,10 @@ HangmanGameSchema.methods.guessLetter = function(letter, playerId = null) {
       
       if (isCorrect) {
         // Contar quantas vezes a letra aparece na palavra
-        const occurrences = (this.word.match(new RegExp(upperLetter, 'g')) || []).length;
+        const occurrences = normalizedWord
+          .split('')
+          .filter((character) => character === upperLetter)
+          .length;
         player.score += occurrences * 10;
       } else {
         player.score = Math.max(0, player.score - 5);
@@ -169,8 +192,8 @@ HangmanGameSchema.methods.guessLetter = function(letter, playerId = null) {
   });
   
   // Verificar vitória
-  const allLettersGuessed = this.word.split('').every(letter => 
-    this.guessedLetters.includes(letter) || letter === ' '
+  const allLettersGuessed = this.word.split('').every((currentLetter) =>
+    currentLetter === ' ' || this.isLetterGuessed(currentLetter)
   );
   
   if (allLettersGuessed) {
@@ -207,13 +230,14 @@ HangmanGameSchema.methods.guessLetter = function(letter, playerId = null) {
 
 // Método para processar tentativa de palavra completa
 HangmanGameSchema.methods.guessWord = function(word, playerId = null) {
-  const normalized = word.toUpperCase().trim();
+  const normalized = normalizeHangmanText(word).trim();
+  const normalizedTarget = normalizeHangmanText(this.word).trim();
 
   if (this.status !== 'active') {
     return { success: false, message: 'Jogo não está ativo' };
   }
 
-  if (normalized.length !== this.word.length) {
+  if (normalized.length !== normalizedTarget.length) {
     return { success: false, message: 'Palavra com tamanho incorreto' };
   }
 
@@ -222,13 +246,18 @@ HangmanGameSchema.methods.guessWord = function(word, playerId = null) {
     action: 'word-guess',
     player: playerId ? playerId.toString() : 'unknown',
     letter: normalized,
-    correct: normalized === this.word,
+    correct: normalized === normalizedTarget,
     timestamp: new Date()
   });
 
-  if (normalized === this.word) {
+  if (normalized === normalizedTarget) {
     // Revelar todas as letras
-    this.guessedLetters = [...new Set([...this.guessedLetters, ...this.word.split('')])];
+    this.guessedLetters = [
+      ...new Set([
+        ...this.guessedLetters,
+        ...normalizedTarget.replace(/\s/g, '').split('')
+      ])
+    ];
     this.status = 'won';
     this.finishedAt = new Date();
     this.duration = Math.floor((this.finishedAt - this.startedAt) / 1000);
@@ -248,7 +277,7 @@ HangmanGameSchema.methods.guessWord = function(word, playerId = null) {
       correct: true,
       wrongGuesses: this.wrongGuesses,
       status: 'won',
-      revealedWord: this.word
+      revealedWord: this.getRevealedWord()
     };
   } else {
     this.wrongGuesses += 1;
@@ -280,9 +309,9 @@ HangmanGameSchema.methods.guessWord = function(word, playerId = null) {
 
 // Método para obter palavra com letras reveladas
 HangmanGameSchema.methods.getRevealedWord = function() {
-  return this.word.split('').map(letter => {
+  return this.word.split('').map((letter) => {
     if (letter === ' ') return ' ';
-    return this.guessedLetters.includes(letter) ? letter : '_';
+    return this.isLetterGuessed(letter) ? letter : '_';
   }).join('');
 };
 

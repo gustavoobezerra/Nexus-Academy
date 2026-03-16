@@ -267,6 +267,14 @@ export const setupHangmanSocket = (io) => {
 
         // Processar tentativa
         const result = game.guessLetter(letter, user.id);
+        if (!result.success) {
+          socket.emit('error', createSocketError(
+            result.alreadyGuessed ? 'LETTER_ALREADY_GUESSED' : 'INVALID_LETTER',
+            result.message || 'Failed to process guess'
+          ));
+          return;
+        }
+
         await game.save();
 
         // Avançar turno se for baseado em turnos

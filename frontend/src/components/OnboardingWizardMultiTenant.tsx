@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Check, ChevronRight, ChevronLeft, Link2, DollarSign,
   Rocket, AlertCircle, Loader2, ExternalLink, CheckCircle2,
@@ -15,7 +15,12 @@ interface OnboardingWizardMultiTenantProps {
 
 export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantProps> = ({ onComplete: _onComplete }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const location = useLocation();
+  const getInitialStep = () => {
+    const parsedStep = Number(new URLSearchParams(location.search).get('step'));
+    return [1, 2, 3].includes(parsedStep) ? parsedStep : 1;
+  };
+  const [step, setStep] = useState(getInitialStep);
 
   // Step 1 - Slug
   const [slug, setSlug] = useState('');
@@ -42,6 +47,11 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
   };
 
   // Debounce slug check
+  useEffect(() => {
+    const nextStep = getInitialStep();
+    setStep((currentStep) => (currentStep === nextStep ? currentStep : nextStep));
+  }, [location.search]);
+
   useEffect(() => {
     if (!slug || slug.length < 3) {
       // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.

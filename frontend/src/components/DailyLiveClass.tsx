@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { dailyAPI } from '../lib/api';
+import { classesAPI } from '../lib/api';
 
 interface DailyLiveClassProps {
   classId: string;
@@ -42,6 +43,7 @@ export const DailyLiveClass = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const callFrameRef = useRef<ReturnType<typeof DailyIframe.createFrame> | null>(null);
   const fabTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasExitedRef = useRef(false);
 
   const displayName = userType === 'teacher' ? `Prof. ${teacherName}` : studentName || 'Aluno';
 
@@ -75,6 +77,7 @@ export const DailyLiveClass = ({
 
         // Criar token usando dailyAPI
         const tokenData = await dailyAPI.createToken({
+          classId,
           roomName: roomData.room.name,
           isOwner: userType === 'teacher',
           userName: displayName
@@ -90,9 +93,8 @@ export const DailyLiveClass = ({
       } catch (error) {
         console.error('Erro ao inicializar chamada:', error);
         toast.error('Erro ao criar sala de vídeo');
-        // Fallback para modo demo
-        setRoomUrl(`https://nexus-academy.daily.co/demo-${classId}`);
-        setToken('demo-token');
+        setIsLoading(false);
+        onEnd();
       } finally {
         // Loading será desativado pelo evento 'loaded' do Daily
       }
@@ -112,12 +114,21 @@ export const DailyLiveClass = ({
   useEffect(() => {
     if (!roomUrl || !containerRef.current) return;
 
-    const endCallHandler = () => {
-      if (callFrameRef.current) {
-        callFrameRef.current.leave();
-        callFrameRef.current.destroy();
+    hasExitedRef.current = false;
+
+    const finalizeExit = (message: string) => {
+      if (hasExitedRef.current) {
+        return;
       }
-      toast.success('Aula finalizada com sucesso!');
+
+      hasExitedRef.current = true;
+
+      if (callFrameRef.current) {
+        callFrameRef.current.destroy();
+        callFrameRef.current = null;
+      }
+
+      toast.success(message);
       onEnd();
     };
 
@@ -162,7 +173,7 @@ export const DailyLiveClass = ({
         });
 
         callFrame.on('left-meeting', () => {
-          endCallHandler();
+          finalizeExit(userType === 'teacher' ? 'Aula finalizada com sucesso!' : 'Você saiu da aula.');
         });
 
         callFrame.on('error', (error) => {
@@ -185,21 +196,44 @@ export const DailyLiveClass = ({
     };
 
     initDaily();
-  }, [roomUrl, token, displayName, onEnd]);
+  }, [roomUrl, token, displayName, onEnd, userType]);
 
   const updateParticipantCount = (frame: ReturnType<typeof DailyIframe.createFrame>) => {
     const participants = frame.participants();
     setParticipantCount(Object.keys(participants).length);
   };
 
-  const handleEndCall = useCallback(() => {
-    if (callFrameRef.current) {
-      callFrameRef.current.leave();
-      callFrameRef.current.destroy();
+  const leaveCallFrame = useCallback(() => {
+    if (!callFrameRef.current) {
+      onEnd();
+      return;
     }
-    toast.success('Aula finalizada com sucesso!');
-    onEnd();
+
+    callFrameRef.current.leave().catch(() => {
+      if (callFrameRef.current) {
+        callFrameRef.current.destroy();
+        callFrameRef.current = null;
+      }
+      hasExitedRef.current = true;
+      onEnd();
+    });
   }, [onEnd]);
+
+  const handleEndCall = useCallback(async () => {
+    if (userType !== 'teacher') {
+      leaveCallFrame();
+      return;
+    }
+
+    try {
+      await classesAPI.end(classId);
+    } catch (error) {
+      console.error('Erro ao encerrar aula no backend:', error);
+      toast.error('A aula foi encerrada na sala, mas houve erro ao atualizar o status.');
+    } finally {
+      leaveCallFrame();
+    }
+  }, [classId, leaveCallFrame, userType]);
 
   // Handlers de FAB
   const handleFabMouseEnter = () => {
@@ -288,16 +322,13 @@ export const DailyLiveClass = ({
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
 
-            {/* End call button (professor only) */}
-            {userType === 'teacher' && (
-              <button
-                onClick={handleEndCall}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <PhoneOff className="w-4 h-4" />
-                <span className="hidden sm:inline">Encerrar</span>
-              </button>
-            )}
+            <button
+              onClick={handleEndCall}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <PhoneOff className="w-4 h-4" />
+              <span className="hidden sm:inline">{userType === 'teacher' ? 'Encerrar' : 'Sair'}</span>
+            </button>
           </div>
         </div>
 

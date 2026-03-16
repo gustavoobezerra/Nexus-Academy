@@ -83,8 +83,6 @@ certificateSchema.pre('save', function(next) {
 certificateSchema.index({ student: 1 });
 certificateSchema.index({ teacher: 1 });
 certificateSchema.index({ course: 1 });
-certificateSchema.index({ certificateNumber: 1 });
-certificateSchema.index({ verificationCode: 1 });
 certificateSchema.index({ status: 1 });
 certificateSchema.index({ issueDate: -1 });
 

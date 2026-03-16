@@ -295,7 +295,13 @@ class LiveClassService {
       const student = await Student.findById(classData.student);
       if (!student) return;
 
-      const classUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/live-class/${sessionId}`;
+      const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+      const classId = classData._id?.toString?.() || classData.id?.toString?.() || sessionId;
+      const classUrl = classData.meetingLink || `${frontendUrl}/portal/live-class?${new URLSearchParams({
+        classId: String(classId),
+        className: classData.title || 'Aula ao vivo',
+        teacherName: 'Professor'
+      }).toString()}`;
 
       await emailService.sendEmail({
         to: student.parentEmail || student.email,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, ArrowLeft, Eye, EyeOff, User, Phone, Calendar, BookOpen, LogIn, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FadeContent, BlurText, GradientText, MagneticButton } from '../ui/Animations';
@@ -38,6 +38,7 @@ export const StudentPortalLogin = () => {
   const parsedAge = parseInt(age, 10);
   const isMinor = age ? !Number.isNaN(parsedAge) && parsedAge < 18 : true;
 
+  const location = useLocation();
   // Check for saved student on mount
   useEffect(() => {
     const savedStudentData = localStorage.getItem('savedStudent');
@@ -73,6 +74,10 @@ export const StudentPortalLogin = () => {
 
     try {
       const data = await portalAPI.login(email, password);
+      const redirectParam = new URLSearchParams(location.search).get('redirect');
+      const safeRedirect = redirectParam && redirectParam.startsWith('/portal')
+        ? redirectParam
+        : null;
 
       // Sucesso - portalAPI já tratou erros automaticamente
       localStorage.setItem('studentToken', data.token);
@@ -93,7 +98,7 @@ export const StudentPortalLogin = () => {
       if (!data.student.onboardingCompleted) {
         navigate('/portal/onboarding');
       } else {
-        navigate('/portal/dashboard');
+        navigate(safeRedirect || '/portal/dashboard');
       }
     } catch (error: any) {
       // Mostrar erro específico ou mensagem genérica
@@ -607,7 +612,7 @@ export const StudentPortalLogin = () => {
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {isRegistering
                     ? 'Após o cadastro, você vai configurar seu perfil e metas de aprendizado.'
-                    : 'Entre com qualquer email/senha para testar a plataforma.'}
+                    : 'Use o email e a senha cadastrados para acessar seu portal com segurança.'}
                 </p>
               </div>
             </FadeContent>

@@ -46,7 +46,8 @@ interface Class {
   title: string;
   scheduledAt: string;
   duration: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  meetingLink?: string;
 }
 
 export const StudentDashboard = () => {
@@ -127,6 +128,16 @@ export const StudentDashboard = () => {
     clearSensitiveData();
     toast.success('Logout realizado com sucesso!');
     navigate('/portal/login');
+  };
+
+  const openLiveClass = (cls: Class) => {
+    const search = new URLSearchParams({
+      classId: cls._id,
+      className: cls.title,
+      teacherName: student?.teacher?.name || 'Professor'
+    });
+
+    navigate(`/portal/live-class?${search.toString()}`);
   };
 
 
@@ -303,19 +314,36 @@ export const StudentDashboard = () => {
                   <div className="space-y-3">
                     {classes.map((cls: Class) => (
                       <div key={cls._id} className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-4">
                           <div>
                             <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{cls.title}</p>
                             <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                               {new Date(cls.scheduledAt).toLocaleDateString('pt-BR')} • {cls.duration}min
                             </p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${cls.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                              cls.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
-                                'bg-blue-500/20 text-blue-400'
-                            }`}>
-                            {cls.status === 'completed' ? 'Concluída' : cls.status === 'cancelled' ? 'Cancelada' : 'Agendada'}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${cls.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                                cls.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                  cls.status === 'in_progress' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    'bg-blue-500/20 text-blue-400'
+                              }`}>
+                              {cls.status === 'completed'
+                                ? 'Concluída'
+                                : cls.status === 'cancelled'
+                                  ? 'Cancelada'
+                                  : cls.status === 'in_progress'
+                                    ? 'Ao vivo'
+                                    : 'Agendada'}
+                            </span>
+                            {cls.status === 'in_progress' && (
+                              <button
+                                onClick={() => openLiveClass(cls)}
+                                className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors"
+                              >
+                                Entrar na aula
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -1,6 +1,38 @@
 import Class from '../models/Class.js';
+import Student from '../models/Student.js';
 import axios from 'axios';
 import emailService from '../services/emailService.js';
+
+const populateClass = (query) => query.populate('student', 'name grade');
+
+const serializeClass = (classData) => {
+  const plainClass = typeof classData.toObject === 'function'
+    ? classData.toObject()
+    : classData;
+  const populatedStudent = plainClass.student && typeof plainClass.student === 'object'
+    ? plainClass.student
+    : null;
+
+  return {
+    ...plainClass,
+    id: plainClass._id?.toString?.() || plainClass.id,
+    studentId: populatedStudent?._id?.toString?.() || plainClass.student?._id?.toString?.() || plainClass.student?.toString?.() || plainClass.studentId,
+    studentName: plainClass.studentName || populatedStudent?.name || '',
+    grade: plainClass.grade || populatedStudent?.grade || ''
+  };
+};
+
+const buildPortalLiveClassLink = (classData, teacherName = 'Professor') => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const classId = classData._id?.toString?.() || classData.id;
+  const query = new URLSearchParams({
+    classId: String(classId || ''),
+    className: classData.title || 'Aula ao vivo',
+    teacherName
+  });
+
+  return `${frontendUrl.replace(/\/+$/, '')}/portal/live-class?${query.toString()}`;
+};
 
 export const getClasses = async (req, res) => {
   try {
@@ -19,11 +51,12 @@ export const getClasses = async (req, res) => {
     }
 
     const [classes, total] = await Promise.all([
-      Class.find(query)
-        .populate('student', 'name grade')
-        .sort('-scheduledAt')
-        .skip(skip)
-        .limit(limit),
+      populateClass(
+        Class.find(query)
+          .sort({ scheduledAt: -1 })
+          .skip(skip)
+          .limit(limit)
+      ),
       Class.countDocuments(query)
     ]);
 
@@ -33,7 +66,7 @@ export const getClasses = async (req, res) => {
       total,
       page,
       totalPages: Math.ceil(total / limit),
-      classes
+      classes: classes.map(serializeClass)
     });
   } catch (error) {
     console.error('Erro ao buscar aulas:', error);
@@ -43,10 +76,10 @@ export const getClasses = async (req, res) => {
 
 export const getClass = async (req, res) => {
   try {
-    const classData = await Class.findOne({
+    const classData = await populateClass(Class.findOne({
       _id: req.params.id,
       teacher: req.user._id
-    }).populate('student', 'name grade');
+    }));
 
     if (!classData) {
       return res.status(404).json({ message: 'Aula não encontrada.' });
@@ -54,7 +87,7 @@ export const getClass = async (req, res) => {
 
     res.json({
       success: true,
-      class: classData
+      class: serializeClass(classData)
     });
   } catch (error) {
     console.error('Erro ao buscar aula:', error);
@@ -65,17 +98,37 @@ export const getClass = async (req, res) => {
 export const createClass = async (req, res) => {
   try {
     const { studentId, ...rest } = req.body;
+    const studentRef = studentId || req.body.student;
+
+    if (!studentRef) {
+      return res.status(400).json({ success: false, message: 'Aluno é obrigatório.' });
+    }
+
+    const student = await Student.findOne({
+      _id: studentRef,
+      teacher: req.user._id,
+      active: true
+    }).select('name grade');
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Aluno não encontrado.' });
+    }
+
     const classData = {
       ...rest,
-      student: studentId || req.body.student,
-      teacher: req.user._id
+      student: student._id,
+      teacher: req.user._id,
+      studentName: student.name,
+      grade: rest.grade || student.grade,
+      scheduledAt: rest.scheduledAt ? new Date(rest.scheduledAt) : rest.scheduledAt
     };
 
     const newClass = await Class.create(classData);
+    const populatedClass = await populateClass(Class.findById(newClass._id));
 
     res.status(201).json({
       success: true,
-      class: newClass
+      class: serializeClass(populatedClass)
     });
   } catch (error) {
     console.error('Erro ao criar aula:', error);
@@ -85,7 +138,7 @@ export const createClass = async (req, res) => {
 
 export const updateClass = async (req, res) => {
   try {
-    const allowedFields = ['title', 'description', 'scheduledAt', 'duration', 'status', 'student', 'subject', 'notes', 'materials', 'homework'];
+    const allowedFields = ['title', 'description', 'scheduledAt', 'duration', 'status', 'student', 'subject', 'notes', 'materials', 'homework', 'grade'];
     const updateData = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
@@ -93,11 +146,35 @@ export const updateClass = async (req, res) => {
       }
     }
 
-    const classData = await Class.findOneAndUpdate(
+    if (req.body.studentId !== undefined) {
+      updateData.student = req.body.studentId;
+    }
+
+    if (updateData.student) {
+      const student = await Student.findOne({
+        _id: updateData.student,
+        teacher: req.user._id,
+        active: true
+      }).select('name grade');
+
+      if (!student) {
+        return res.status(404).json({ success: false, message: 'Aluno não encontrado.' });
+      }
+
+      updateData.student = student._id;
+      updateData.studentName = student.name;
+      updateData.grade = updateData.grade || student.grade;
+    }
+
+    if (updateData.scheduledAt) {
+      updateData.scheduledAt = new Date(updateData.scheduledAt);
+    }
+
+    const classData = await populateClass(Class.findOneAndUpdate(
       { _id: req.params.id, teacher: req.user._id },
       updateData,
       { new: true, runValidators: true }
-    );
+    ));
 
     if (!classData) {
       return res.status(404).json({ message: 'Aula não encontrada.' });
@@ -105,7 +182,7 @@ export const updateClass = async (req, res) => {
 
     res.json({
       success: true,
-      class: classData
+      class: serializeClass(classData)
     });
   } catch (error) {
     console.error('Erro ao atualizar aula:', error);
@@ -149,23 +226,25 @@ export const generateAISummary = async (req, res) => {
 
 export const startClass = async (req, res) => {
   try {
-    const classData = await Class.findOneAndUpdate(
-      { _id: req.params.id, teacher: req.user._id },
-      { status: 'in_progress', startedAt: new Date() },
-      { new: true }
-    );
+    const classData = await populateClass(Class.findOne({
+      _id: req.params.id,
+      teacher: req.user._id
+    }));
 
     if (!classData) {
       return res.status(404).json({ success: false, message: 'Aula não encontrada.' });
     }
 
+    classData.meetingLink = buildPortalLiveClassLink(classData, req.user?.name || 'Professor');
+    await classData.startClass();
+
     // Notificar via Socket.IO se disponível
     const io = req.app.get('io');
     if (io) {
-      io.emit('class-started', { classId: req.params.id, class: classData });
+      io.emit('class-started', { classId: req.params.id, class: serializeClass(classData) });
     }
 
-    res.json({ success: true, class: classData });
+    res.json({ success: true, class: serializeClass(classData) });
   } catch (error) {
     console.error('Erro ao iniciar aula:', error);
     res.status(500).json({ success: false, message: 'Erro ao iniciar aula' });
@@ -188,7 +267,9 @@ export const endClass = async (req, res) => {
     classData.status = 'completed';
     classData.endedAt = endedAt;
     classData.actualDuration = actualDuration > 0 ? actualDuration : classData.duration;
+    classData.isLive = false;
     await classData.save();
+    await classData.populate('student', 'name grade');
 
     // Notificar via Socket.IO se disponível
     const io = req.app.get('io');
@@ -196,7 +277,7 @@ export const endClass = async (req, res) => {
       io.emit('class-ended', { classId: req.params.id });
     }
 
-    res.json({ success: true, class: classData });
+    res.json({ success: true, class: serializeClass(classData) });
   } catch (error) {
     console.error('Erro ao encerrar aula:', error);
     res.status(500).json({ success: false, message: 'Erro ao encerrar aula' });

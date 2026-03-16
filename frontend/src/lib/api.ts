@@ -13,9 +13,9 @@ export const paymentsAPI = {
 
 export const classesAPI = {
   getAll: (params?: { page?: number; limit?: number }) => apiService.get<{ classes: Aula[]; total: number; totalPages: number }>('/classes', { params }),
-  create: (data: Partial<Aula>) => apiService.post<Aula>('/classes', data),
-  start: (id: string) => apiService.post<void>(`/classes/${id}/start`),
-  end: (id: string) => apiService.post<void>(`/classes/${id}/end`),
+  create: (data: Partial<Aula>) => apiService.post<{ success: boolean; class: Aula }>('/classes', data),
+  start: (id: string) => apiService.post<{ success: boolean; class: Aula }>(`/classes/${id}/start`),
+  end: (id: string) => apiService.post<{ success: boolean; class: Aula }>(`/classes/${id}/end`),
   delete: (id: string) => apiService.delete<void>(`/classes/${id}`),
   generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; aiSummary: string }>(`/classes/${classId}/generate-summary`, { transcript }),
   sendSummary: (classId: string, data: { parentEmail: string; studentName: string; summary: string; keyPoints: string[]; homework: string[]; className: string }) =>
@@ -69,7 +69,7 @@ export const liveClassAPI = {
 
 export const dailyAPI = {
   createRoom: (data: { classId: string; className: string; expiryMinutes?: number }) => apiService.post<{ success: boolean; message?: string; room: { url: string; name: string } }>('/daily/create-room', data),
-  createToken: (data: { roomName: string; isOwner: boolean; userName: string }) => apiService.post<{ success: boolean; message?: string; token: string }>('/daily/create-token', data),
+  createToken: (data: { roomName: string; classId: string; isOwner: boolean; userName: string }) => apiService.post<{ success: boolean; message?: string; token: string }>('/daily/create-token', data),
 };
 
 export const onboardingAPI = {

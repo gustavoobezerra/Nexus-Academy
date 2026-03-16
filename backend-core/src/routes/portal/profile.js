@@ -5,6 +5,7 @@ import Activity from '../../models/Activity.js';
 import User from '../../models/User.js';
 import { authenticateStudent } from '../../middleware/studentAuth.js';
 import emailService from '../../services/emailService.js';
+import cacheService from '../../services/cacheService.js';
 
 const router = express.Router();
 
@@ -247,6 +248,7 @@ router.post('/join-teacher', authenticateStudent, async (req, res) => {
     }
 
     await Student.findByIdAndUpdate(req.studentId, { teacher: teacher._id });
+    await cacheService.delPattern(`students:${teacher._id}:*`);
 
     // Notificar professor por email (fire-and-forget)
     emailService.sendEmail({

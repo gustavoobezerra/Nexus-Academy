@@ -11,7 +11,7 @@ import BrandLogo from './BrandLogo';
 
 export const OnboardingSuccess: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, setAuth } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
 
@@ -19,13 +19,25 @@ export const OnboardingSuccess: React.FC = () => {
     const completeOnboarding = async () => {
       try {
         const response = await onboardingAPI.complete() as any;
+        const storedUser = localStorage.getItem('user');
+        const baseUser = storedUser ? JSON.parse(storedUser) : user;
+        const updatedUser = {
+          ...(baseUser || {}),
+          ...(response.user || {})
+        };
+        const token = localStorage.getItem('token');
+
         // apiService já retorna response.data diretamente
         // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setUserData(response.user);
+        if (token && response.user) {
+          setAuth(updatedUser, token);
+        }
         toast.success('Onboarding completo!');
 
         // Marcar no localStorage
         localStorage.setItem('onboarding_completed', 'true');
+        localStorage.setItem('onboarding_concluido', 'true');
       } catch (error: unknown) {
         console.error('Error completing onboarding:', error);
         toast.error('Erro ao completar onboarding');
@@ -35,7 +47,7 @@ export const OnboardingSuccess: React.FC = () => {
     };
 
     completeOnboarding();
-  }, []);
+  }, [setAuth]);
 
   const publicUrl = userData?.publicUrl || `${window.location.origin}/professor/${userData?.slug || user?.slug || 'seu-link'}`;
 
@@ -205,7 +217,6 @@ export const OnboardingSuccess: React.FC = () => {
           <button
             onClick={() => {
               navigate('/');
-              window.location.reload(); // Force reload to update auth state
             }}
             className="px-12 py-5 bg-white text-indigo-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-200 inline-flex items-center gap-3"
           >

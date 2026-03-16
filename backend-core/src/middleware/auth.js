@@ -231,35 +231,42 @@ export const requireCompletedOnboarding = (req, res, next) => {
 
 // Sanitização de input
 export const sanitizeInput = (req, res, next) => {
-  const sanitize = (obj) => {
-    if (!obj || typeof obj !== 'object') return obj;
+  const sanitizeValue = (value) => {
+    if (typeof value === 'string') {
+      return value
+        .replace(/[<>]/g, '')
+        .trim();
+    }
+
+    if (Buffer.isBuffer(value) || value instanceof Date) {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitizeValue(item));
+    }
+
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
 
     const sanitized = {};
-    for (const [key, value] of Object.entries(obj)) {
-      // Prevenir NoSQL injection
+    for (const [key, nestedValue] of Object.entries(value)) {
       if (key.startsWith('$') || key.includes('.')) {
-        continue; // Ignorar keys suspeitas
+        continue;
       }
 
-      if (typeof value === 'string') {
-        // Remover caracteres potencialmente perigosos
-        sanitized[key] = value
-          .replace(/[<>]/g, '') // XSS básico
-          .trim();
-      } else if (typeof value === 'object' && value !== null) {
-        sanitized[key] = sanitize(value);
-      } else {
-        sanitized[key] = value;
-      }
+      sanitized[key] = sanitizeValue(nestedValue);
     }
+
     return sanitized;
   };
 
   if (req.body) {
-    req.body = sanitize(req.body);
+    req.body = sanitizeValue(req.body);
   }
   if (req.query) {
-    req.query = sanitize(req.query);
+    req.query = sanitizeValue(req.query);
   }
 
   next();
