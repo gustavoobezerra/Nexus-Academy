@@ -129,9 +129,9 @@ router.get('/games/:id', async (req, res) => {
         wrongGuesses: game.wrongGuesses,
         maxWrongGuesses: game.maxWrongGuesses,
         players: game.players.map(p => ({
-          id: p.studentId._id,
-          name: p.studentId.name,
-          avatar: p.studentId.avatar,
+          id: p.studentId?._id || p.studentId,
+          name: p.studentId?.name || p.name,
+          avatar: p.studentId?.avatar || p.avatar,
           score: p.score,
           guessesCount: p.guesses.length
         })),

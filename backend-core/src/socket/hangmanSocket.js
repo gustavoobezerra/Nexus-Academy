@@ -66,6 +66,9 @@ export const setupHangmanSocket = (io) => {
           status: 'waiting'
         });
 
+        // O professor tambem participa da partida, para poder jogar junto com o aluno.
+        game.addPlayer(user.id, user.name, null);
+
         await game.save();
 
         const gameId = game._id.toString();
