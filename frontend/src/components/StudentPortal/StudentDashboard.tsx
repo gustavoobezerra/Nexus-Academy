@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
+import { clearSensitiveData } from '../../utils/security';
 import { StudentChat } from './StudentChat';
 import BrandLogo from '../BrandLogo';
 import { useTheme } from '../../context/ThemeContext';
@@ -43,7 +44,7 @@ interface Activity {
 interface Class {
   _id: string;
   title: string;
-  date: string;
+  scheduledAt: string;
   duration: number;
   status: 'scheduled' | 'completed' | 'cancelled';
 }
@@ -123,9 +124,7 @@ export const StudentDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('studentToken');
-    localStorage.removeItem('student');
-    localStorage.removeItem('studentData');
+    clearSensitiveData();
     toast.success('Logout realizado com sucesso!');
     navigate('/portal/login');
   };
@@ -308,7 +307,7 @@ export const StudentDashboard = () => {
                           <div>
                             <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{cls.title}</p>
                             <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                              {new Date(cls.date).toLocaleDateString('pt-BR')} • {cls.duration}min
+                              {new Date(cls.scheduledAt).toLocaleDateString('pt-BR')} • {cls.duration}min
                             </p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${cls.status === 'completed' ? 'bg-green-500/20 text-green-400' :
@@ -362,7 +361,7 @@ export const StudentDashboard = () => {
                       <div key={cls._id} className={`p-4 rounded-lg border-l-4 border-indigo-500 ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
                         <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{cls.title}</p>
                         <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                          {new Date(cls.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          {new Date(cls.scheduledAt).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </p>
                       </div>
                     ))}

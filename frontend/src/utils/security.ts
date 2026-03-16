@@ -160,7 +160,9 @@ export function clearSensitiveData(): void {
   localStorage.removeItem('token');
   localStorage.removeItem('studentToken');
   localStorage.removeItem('user');
+  localStorage.removeItem('student');
   localStorage.removeItem('studentData');
+  localStorage.removeItem('savedStudent');
 
   // Limpar sessionStorage também
   sessionStorage.clear();

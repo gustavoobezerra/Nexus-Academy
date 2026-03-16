@@ -64,6 +64,8 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false
+      - key: VITE_USE_MOCK_AI
+        value: false
     routes:
       - type: rewrite
         source: /*

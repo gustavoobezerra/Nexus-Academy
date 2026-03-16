@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from './store/authStore';
 import { useTheme } from './context/ThemeContext';
+import { clearSensitiveData } from './utils/security';
 
 import OnlineStudents from './components/OnlineStudents';
 import CalendarView from './components/CalendarView';
@@ -295,8 +296,7 @@ function AppWithRouter() {
 
   const handleLogout = () => {
     logout();
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearSensitiveData();
     navigate('/');
   };
 

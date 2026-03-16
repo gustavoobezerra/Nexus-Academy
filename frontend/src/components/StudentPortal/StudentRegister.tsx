@@ -145,7 +145,7 @@ export function StudentRegister() {
       // apiService já retorna response.data diretamente
       if (response.success) {
         localStorage.setItem('studentToken', response.token);
-        localStorage.setItem('studentData', JSON.stringify(response.student));
+        localStorage.setItem('student', JSON.stringify(response.student));
         toast.success('Conta criada com sucesso! Bem-vindo ao Nexus Academy!');
         // Redirecionar direto para o dashboard
         navigate('/portal/dashboard');

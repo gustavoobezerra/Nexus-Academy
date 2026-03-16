@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { isTokenExpired } from '../utils/security';
+import { isTokenExpired, clearSensitiveData } from '../utils/security';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -57,9 +57,7 @@ export const StudentProtectedRoute = ({ children }: { children: ReactNode }) => 
 
   // Verificar se o token expirou
   if (isTokenExpired(studentToken)) {
-    localStorage.removeItem('studentToken');
-    localStorage.removeItem('studentData');
-    localStorage.removeItem('student');
+    clearSensitiveData();
     return <Navigate to="/portal/login" state={{ from: location }} replace />;
   }
 

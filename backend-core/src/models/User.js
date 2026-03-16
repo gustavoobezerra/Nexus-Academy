@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: [true, 'Nome é obrigatório'], trim: true },
@@ -151,7 +152,7 @@ userSchema.pre('save', async function(next) {
 
 userSchema.pre('save', function(next) {
   if (!this.referralCode) {
-    this.referralCode = require("crypto").randomBytes(4).toString("hex").toUpperCase();
+    this.referralCode = randomBytes(4).toString("hex").toUpperCase();
   }
   next();
 });

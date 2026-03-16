@@ -8,6 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import { portalAPI } from '../../lib/api';
 import BrandLogo from '../BrandLogo';
+import { clearSensitiveData } from '../../utils/security';
 // import { FadeContent, StaggerContainer, StaggerItem } from '../ui/Animations';
 
 interface Student {
@@ -97,8 +98,7 @@ export const StudentPortalDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('studentToken');
-    localStorage.removeItem('student');
+    clearSensitiveData();
     navigate('/portal/login');
     toast.success('Logout realizado');
   };
