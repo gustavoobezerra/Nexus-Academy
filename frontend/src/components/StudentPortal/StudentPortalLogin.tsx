@@ -35,6 +35,8 @@ export const StudentPortalLogin = () => {
   const [parentPhone, setParentPhone] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const parsedAge = parseInt(age, 10);
+  const isMinor = age ? !Number.isNaN(parsedAge) && parsedAge < 18 : true;
 
   // Check for saved student on mount
   useEffect(() => {
@@ -106,19 +108,13 @@ export const StudentPortalLogin = () => {
     e.preventDefault();
 
     // Validações no frontend
-    if (!name.trim() || !email.trim() || !age.trim() || !grade.trim() || !parentName.trim() || !parentPhone.trim() || !parentEmail.trim()) {
+    if (!name.trim() || !email.trim() || !age.trim() || !grade.trim()) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
-    const ageNumber = parseInt(age, 10);
-    if (Number.isNaN(ageNumber) || ageNumber < 5 || ageNumber > 99) {
-      toast.error('Idade deve estar entre 5 e 99 anos');
-      return;
-    }
-
-    if (!parentEmail.includes('@')) {
-      toast.error('Email do responsável inválido');
+    if (Number.isNaN(parsedAge) || parsedAge < 3 || parsedAge > 120) {
+      toast.error('Idade deve estar entre 3 e 120 anos');
       return;
     }
 
@@ -132,23 +128,41 @@ export const StudentPortalLogin = () => {
       return;
     }
 
+    if (isMinor) {
+      if (!parentName.trim() || !parentPhone.trim() || !parentEmail.trim()) {
+        toast.error('Dados do responsável são obrigatórios para menores de 18 anos');
+        return;
+      }
+
+      if (!parentEmail.includes('@')) {
+        toast.error('Email do responsável inválido');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      const data = await portalAPI.register({
+      const registerData: Record<string, unknown> = {
         name,
         email,
         password,
-        age: parseInt(age),
-        grade,
-        parentName,
-        parentPhone,
-        parentEmail
-      });
+        age: parsedAge,
+        grade
+      };
+
+      if (isMinor) {
+        registerData.parentName = parentName;
+        registerData.parentPhone = parentPhone;
+        registerData.parentEmail = parentEmail;
+      }
+
+      const data = await portalAPI.register(registerData);
 
       // Sucesso
       localStorage.setItem('studentToken', data.token);
       localStorage.setItem('student', JSON.stringify(data.student));
+      localStorage.setItem('studentData', JSON.stringify(data.student));
       localStorage.setItem('savedStudent', JSON.stringify({
         id: data.student.id,
         name: data.student.name,
@@ -424,64 +438,68 @@ export const StudentPortalLogin = () => {
                       </div>
                     </div>
 
-                    {/* Parent Info Section */}
-                    <div>
-                      <div className="border-b border-slate-700/30 pb-3 mb-3 mt-4">
-                        <p className="text-xs uppercase tracking-wider text-indigo-400/80 font-medium">Dados do Responsável</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Nome do Responsável
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
-                        <input
-                          type="text"
-                          value={parentName}
-                          onChange={(e) => setParentName(e.target.value)}
-                          className={inputClasses}
-                          placeholder="Nome do pai/mãe"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="grid grid-cols-2 gap-3">
+                    {isMinor && (
+                      <>
+                        {/* Parent Info Section */}
                         <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Telefone
-                          </label>
-                          <div className="relative">
-                            <Phone className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
-                            <input
-                              type="tel"
-                              value={parentPhone}
-                              onChange={(e) => setParentPhone(formatPhoneBR(e.target.value))}
-                              className={inputClassesSmall}
-                              placeholder="(99) 99999"
-                            />
+                          <div className="border-b border-slate-700/30 pb-3 mb-3 mt-4">
+                            <p className="text-xs uppercase tracking-wider text-indigo-400/80 font-medium">Dados do Responsável</p>
                           </div>
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Email
+                            Nome do Responsável
                           </label>
                           <div className="relative">
-                            <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                             <input
-                              type="email"
-                              value={parentEmail}
-                              onChange={(e) => setParentEmail(e.target.value)}
-                              className={inputClassesSmall}
-                              placeholder="email@"
+                              type="text"
+                              value={parentName}
+                              onChange={(e) => setParentName(e.target.value)}
+                              className={inputClasses}
+                              placeholder="Nome do pai/mãe"
                             />
                           </div>
                         </div>
-                      </div>
-                    </div>
+
+                        <div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                                Telefone
+                              </label>
+                              <div className="relative">
+                                <Phone className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <input
+                                  type="tel"
+                                  value={parentPhone}
+                                  onChange={(e) => setParentPhone(formatPhoneBR(e.target.value))}
+                                  className={inputClassesSmall}
+                                  placeholder="(99) 99999"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                                Email
+                              </label>
+                              <div className="relative">
+                                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                <input
+                                  type="email"
+                                  value={parentEmail}
+                                  onChange={(e) => setParentEmail(e.target.value)}
+                                  className={inputClassesSmall}
+                                  placeholder="email@"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* Access Section */}
                     <div>

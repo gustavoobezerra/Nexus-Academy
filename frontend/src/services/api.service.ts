@@ -206,6 +206,7 @@ api.interceptors.response.use(
         localStorage.removeItem('studentToken');
         localStorage.removeItem('user');
         localStorage.removeItem('student');
+        localStorage.removeItem('studentData');
         localStorage.removeItem('auth-storage');
 
         // Redirecionar para login apropriado

@@ -15,6 +15,24 @@ interface TranscriptionResult {
   timestamp: Date;
 }
 
+interface BrowserSpeechRecognitionAlternative {
+  transcript: string;
+}
+
+interface BrowserSpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: BrowserSpeechRecognitionAlternative;
+}
+
+interface BrowserSpeechRecognitionEvent {
+  resultIndex: number;
+  results: BrowserSpeechRecognitionResult[];
+}
+
+interface BrowserSpeechRecognitionErrorEvent {
+  error: string;
+}
+
 export const useAudioTranscription = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -47,7 +65,7 @@ export const useAudioTranscription = () => {
       setError(null);
     };
 
-    recognition.onresult = (event: unknown) => {
+    recognition.onresult = (event: BrowserSpeechRecognitionEvent) => {
       let interimTrans = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -79,7 +97,7 @@ export const useAudioTranscription = () => {
       }
     };
 
-    recognition.onerror = (event: unknown) => {
+    recognition.onerror = (event: BrowserSpeechRecognitionErrorEvent) => {
       setError(`Erro: ${event.error}`);
       console.error('Speech recognition error:', event.error);
     };

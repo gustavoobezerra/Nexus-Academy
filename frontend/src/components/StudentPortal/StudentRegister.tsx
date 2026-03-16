@@ -18,7 +18,7 @@ export function StudentRegister() {
   // A URL é /professor/nome-do-professor
   const extractSlugFromPath = (): string | null => {
     const path = location.pathname;
-    const match = path.match(/\/professor\/([^\/]+)/);
+    const match = path.match(/^\/professor\/([^/]+)/);
     return match ? match[1] : null;
   };
 
@@ -146,9 +146,15 @@ export function StudentRegister() {
       if (response.success) {
         localStorage.setItem('studentToken', response.token);
         localStorage.setItem('student', JSON.stringify(response.student));
+        localStorage.setItem('studentData', JSON.stringify(response.student));
+        localStorage.setItem('savedStudent', JSON.stringify({
+          id: response.student.id,
+          name: response.student.name,
+          email: response.student.email,
+          grade: response.student.grade
+        }));
         toast.success('Conta criada com sucesso! Bem-vindo ao Nexus Academy!');
-        // Redirecionar direto para o dashboard
-        navigate('/portal/dashboard');
+        navigate(response.student.onboardingCompleted ? '/portal/dashboard' : '/portal/onboarding');
       }
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'Erro ao criar conta');

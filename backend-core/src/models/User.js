@@ -27,10 +27,19 @@ const userSchema = new mongoose.Schema({
 
   // Integrations
   integrations: {
-    google: { connected: { type: Boolean, default: false }, accessToken: String, refreshToken: String, calendarId: String },
+    google: {
+      connected: { type: Boolean, default: false },
+      accessToken: { type: String, select: false },
+      refreshToken: { type: String, select: false },
+      calendarId: String
+    },
     stripe: { customerId: String, accountId: String, connected: { type: Boolean, default: false } },
     whatsapp: { phoneNumber: String, verified: { type: Boolean, default: false } },
-    zoom: { userId: String, accessToken: String, connected: { type: Boolean, default: false } }
+    zoom: {
+      userId: String,
+      accessToken: { type: String, select: false },
+      connected: { type: Boolean, default: false }
+    }
   },
 
   // Subscription
@@ -54,6 +63,65 @@ const userSchema = new mongoose.Schema({
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   referralCount: { type: Number, default: 0 },
   referralBonus: { type: Number, default: 0 },
+
+  // Teacher workspace data used by the advanced hub screens
+  teacherWorkspace: {
+    grades: [{
+      studentId: { type: String, trim: true },
+      classId: { type: String, trim: true },
+      subject: { type: String, trim: true },
+      score: { type: Number, default: 0 },
+      maxScore: { type: Number, default: 100 },
+      percentage: { type: Number, default: 0 },
+      assessmentType: {
+        type: String,
+        enum: ['quiz', 'exercise', 'test', 'participation'],
+        default: 'exercise'
+      },
+      createdAt: { type: Date, default: Date.now }
+    }],
+    materials: [{
+      classId: { type: String, trim: true },
+      className: { type: String, trim: true },
+      topic: { type: String, trim: true },
+      title: { type: String, required: true, trim: true },
+      type: {
+        type: String,
+        enum: ['pdf', 'video', 'link', 'exercise'],
+        default: 'pdf'
+      },
+      url: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      uploadedAt: { type: Date, default: Date.now }
+    }],
+    teachingTemplates: [{
+      name: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      subject: { type: String, trim: true },
+      duration: { type: Number, default: 60 },
+      structure: {
+        warmup: { type: String, trim: true },
+        mainTopic: { type: String, trim: true },
+        exercises: { type: String, trim: true },
+        closing: { type: String, trim: true }
+      },
+      materials: [{ type: String, trim: true }],
+      createdAt: { type: Date, default: Date.now }
+    }],
+    coursePlans: [{
+      name: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      totalModules: { type: Number, default: 0 },
+      modules: [{
+        order: { type: Number, default: 1 },
+        name: { type: String, trim: true },
+        topics: [{ type: String, trim: true }],
+        duration: { type: Number, default: 0 },
+        students: [{ type: String, trim: true }]
+      }],
+      createdAt: { type: Date, default: Date.now }
+    }]
+  },
 
   // ===== MULTI-TENANT: Link Único do Professor =====
   slug: {
@@ -152,7 +220,7 @@ userSchema.pre('save', async function(next) {
 
 userSchema.pre('save', function(next) {
   if (!this.referralCode) {
-    this.referralCode = randomBytes(4).toString("hex").toUpperCase();
+    this.referralCode = randomBytes(4).toString('hex').toUpperCase();
   }
   next();
 });

@@ -66,7 +66,7 @@ router.put('/profile', protect, authorize('teacher', 'admin'), async (req, res) 
     if (slug) updateData.slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
     const user = await User.findByIdAndUpdate(req.user._id, updateData, { new: true })
-      .select('-password -gatewayCredentials');
+      .select('-password -gatewayCredentials -integrations.google.accessToken -integrations.google.refreshToken -integrations.zoom.accessToken');
 
     res.json({
       success: true,

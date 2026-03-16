@@ -24,7 +24,7 @@ const ClassSummary = ({ classId, className, transcript, onClose }: ClassSummaryP
       const response = await classesAPI.generateSummary(classId, transcript);
 
       if (response.success) {
-        setSummary(response.summary);
+        setSummary(response.aiSummary);
         toast.success('Resumo gerado com sucesso!');
       }
     } catch (err) {

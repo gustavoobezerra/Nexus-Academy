@@ -3,11 +3,11 @@
   "version": "2.0.0",
   "description": "Backend Core API for Nexus Academy SaaS - Full Featured",
   "type": "module",
-  "main": "src/server.js",
+  "main": "src/server-prod.js",
   "scripts": {
     "start": "node src/server-prod.js",
     "start:simple": "node src/server-simple.js",
-    "dev": "nodemon src/server.js",
+    "dev": "nodemon src/server-prod.js",
     "dev:simple": "nodemon src/server-simple.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",

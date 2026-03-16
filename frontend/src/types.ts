@@ -4,16 +4,35 @@ export interface Aluno {
   name: string;
   email?: string;
   phone?: string;
-  age: number;
+  age?: number;
   grade: string;
-  monthlyFee: number;
-  parentName: string;
-  parentEmail: string;
-  parentPhone: string;
-  paymentStatus?: 'paid' | 'pending' | 'late';
+  monthlyFee?: number;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  paymentStatus?: 'paid' | 'pending' | 'late' | 'overdue';
   status?: string;
   subject?: string;
   nextClass?: string;
+  points?: number;
+  level?: number;
+  performance?: {
+    overall: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  profile?: {
+    avatar?: string | null;
+    description?: string;
+    interests?: string[];
+  };
+  onboardingCompleted?: boolean;
+  teacher?: {
+    id?: string;
+    _id?: string;
+    name: string;
+    email?: string;
+    avatar?: string | null;
+  } | null;
   createdAt?: string;
 }
 

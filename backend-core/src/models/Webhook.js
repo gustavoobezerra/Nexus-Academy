@@ -46,6 +46,7 @@ const webhookSchema = new mongoose.Schema({
 // Webhook Delivery Log
 const webhookDeliverySchema = new mongoose.Schema({
   webhook: { type: mongoose.Schema.Types.ObjectId, ref: 'Webhook', required: true },
+  teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   event: { type: String, required: true },
   payload: mongoose.Schema.Types.Mixed,
 
@@ -72,6 +73,7 @@ webhookSchema.index({ enabled: 1 });
 webhookSchema.index({ events: 1 });
 
 webhookDeliverySchema.index({ webhook: 1 });
+webhookDeliverySchema.index({ teacher: 1 });
 webhookDeliverySchema.index({ status: 1 });
 webhookDeliverySchema.index({ createdAt: -1 });
 

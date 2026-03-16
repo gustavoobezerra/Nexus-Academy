@@ -145,7 +145,9 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password -gatewayCredentials");
+    const user = await User.findById(req.user._id).select(
+      '-password -gatewayCredentials -integrations.google.accessToken -integrations.google.refreshToken -integrations.zoom.accessToken'
+    );
     res.json({
       success: true,
       user

@@ -263,7 +263,7 @@ const HangmanGame: React.FC<HangmanGameProps> = ({
     });
     
     socketInstance.on('whiteboard-update', (drawData) => {
-      drawOnCanvas(drawData, false);
+      drawOnCanvas(drawData);
     });
     
     socketInstance.on('whiteboard-cleared', () => {

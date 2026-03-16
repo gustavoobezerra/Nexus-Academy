@@ -49,6 +49,37 @@ interface SubjectsByCategory {
   [category: string]: Subject[];
 }
 
+type AnswerValue = string | number | string[];
+
+const isQuestionOptionObject = (option: QuestionOption | string): option is QuestionOption =>
+  typeof option !== 'string';
+
+const isQuestion = (value: unknown): value is Question => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const question = value as Partial<Question>;
+  return typeof question.id === 'string'
+    && typeof question.type === 'string'
+    && typeof question.question === 'string';
+};
+
+const isQuestionnaire = (value: unknown): value is Questionnaire => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const questionnaire = value as Partial<Questionnaire>;
+  return typeof questionnaire.subject === 'string'
+    && typeof questionnaire.icon === 'string'
+    && Array.isArray(questionnaire.questions)
+    && questionnaire.questions.every(isQuestion);
+};
+
+const isStringArrayAnswer = (value: AnswerValue | undefined): value is string[] =>
+  Array.isArray(value);
+
 // Ícone para categoria
 const getCategoryIcon = (category: string) => {
   switch (category) {
@@ -83,7 +114,7 @@ export const SmartOnboarding = () => {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [customSubject, setCustomSubject] = useState('');
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string | number | string[]>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Estados de horário e metas
@@ -156,16 +187,18 @@ export const SmartOnboarding = () => {
       );
 
       if (data.questionnaire) {
+        if (!isQuestionnaire(data.questionnaire)) {
+          throw new Error('Questionário inválido recebido do servidor');
+        }
+
         setQuestionnaire(data.questionnaire);
         setStep('questionnaire');
         setCurrentQuestionIndex(0);
         setAnswers({});
-      } else {
-        toast.error('Erro ao carregar questionário');
       }
     } catch (error) {
       console.error('Erro ao selecionar matéria:', error);
-      // Erro já tratado pelo interceptor
+      toast.error('Erro ao carregar questionário');
     } finally {
       setLoading(false);
       setSelectingSubject(null);
@@ -173,16 +206,16 @@ export const SmartOnboarding = () => {
   };
 
   // Atualizar resposta
-  const updateAnswer = (questionId: string, value: string | number | string[]) => {
+  const updateAnswer = (questionId: string, value: AnswerValue) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
   // Toggle para múltipla escolha
   const toggleMultipleChoice = (questionId: string, option: string) => {
     setAnswers(prev => {
-      const current = prev[questionId] || [];
+      const current = isStringArrayAnswer(prev[questionId]) ? prev[questionId] : [];
       if (current.includes(option)) {
-        return { ...prev, [questionId]: current.filter((o: string) => o !== option) };
+        return { ...prev, [questionId]: current.filter((item) => item !== option) };
       }
       return { ...prev, [questionId]: [...current, option] };
     });
@@ -385,8 +418,8 @@ export const SmartOnboarding = () => {
             {question.type === 'single-choice' && question.options && (
               <div className="space-y-3">
                 {question.options.map((option, idx) => {
-                  const optionValue = typeof option === 'string' ? option : option.value;
-                  const optionLabel = typeof option === 'string' ? option : option.label;
+                  const optionValue = isQuestionOptionObject(option) ? option.value : option;
+                  const optionLabel = isQuestionOptionObject(option) ? option.label : option;
                   return (
                     <button
                       key={idx}
@@ -413,8 +446,10 @@ export const SmartOnboarding = () => {
             {question.type === 'multiple-choice' && question.options && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {question.options.map((option, idx) => {
-                  const optionValue = typeof option === 'string' ? option : option;
-                  const isSelected = (answers[question.id] || []).includes(optionValue);
+                  const optionValue = isQuestionOptionObject(option) ? option.value : option;
+                  const currentAnswer = answers[question.id];
+                  const selectedAnswers = isStringArrayAnswer(currentAnswer) ? currentAnswer : [];
+                  const isSelected = selectedAnswers.includes(optionValue);
                   return (
                     <button
                       key={idx}
@@ -442,7 +477,7 @@ export const SmartOnboarding = () => {
             {/* Text */}
             {question.type === 'text' && (
               <textarea
-                value={answers[question.id] || ''}
+                value={typeof answers[question.id] === 'string' ? answers[question.id] : ''}
                 onChange={(e) => updateAnswer(question.id, e.target.value)}
                 placeholder={question.placeholder || 'Digite sua resposta...'}
                 rows={4}
@@ -459,13 +494,13 @@ export const SmartOnboarding = () => {
                     min={question.min || 1}
                     max={question.max || 10}
                     step={question.step || 1}
-                    value={answers[question.id] || question.min || 1}
+                    value={typeof answers[question.id] === 'number' ? answers[question.id] : (question.min || 1)}
                     onChange={(e) => updateAnswer(question.id, parseInt(e.target.value))}
                     className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                   />
                   <div className="min-w-[80px] text-center">
                     <span className="text-3xl font-bold text-indigo-400">
-                      {answers[question.id] || question.min || 1}
+                      {typeof answers[question.id] === 'number' ? answers[question.id] : (question.min || 1)}
                     </span>
                     {question.unit && (
                       <span className="text-slate-400 text-sm block">{question.unit}</span>
