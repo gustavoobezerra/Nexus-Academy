@@ -50,5 +50,7 @@ frontend/tsconfig.app.tsbuildinfo
 # temp
 /tmpclaude-*
 /backend-core/tmpclaude-*
+/backend-core/tmp-*
+/frontend/tmp-*
 /DOCUMENTACAO_COMPLETA_FUNCIONALIDADES.md
 /RELATORIO_ERROS_COMPLETO.md
