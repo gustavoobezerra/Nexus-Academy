@@ -1,0 +1,90 @@
+
+> nexus-academy-backend-core@2.0.0 start
+> node src/server-prod.js
+
+✅ MongoDB Connected: ac-z3o5xrt-shard-00-00.1ljoyfg.mongodb.net
+2026-03-16 14:03:31 [[32minfo[39m]: API rodando na porta 5007
+[0mPOST /api/auth/register [32m201[0m 589.179 ms - 454[0m
+[0mPOST /api/onboarding/check-slug [32m200[0m 52.276 ms - 63[0m
+[0mPOST /api/onboarding/set-slug [32m200[0m 94.205 ms - 166[0m
+[0mPOST /api/onboarding/setup-manual-payment [32m200[0m 100.598 ms - 130[0m
+[0mPOST /api/onboarding/create-subscription-session [32m200[0m 1629.777 ms - 468[0m
+[0mPOST /api/onboarding/complete [32m200[0m 100.961 ms - 430[0m
+[0mPOST /api/onboarding/complete [32m200[0m 103.066 ms - 430[0m
+[0mGET /api/students [32m200[0m 70.759 ms - 40[0m
+[0mGET /api/classes [32m200[0m 79.615 ms - 73[0m
+[0mGET /api/students/stats [32m200[0m 99.498 ms - 88[0m
+[0mGET /api/students [32m200[0m 49.576 ms - 54[0m
+[0mGET /api/payments/stats [32m200[0m 136.992 ms - 127[0m
+[0mGET /api/classes [36m304[0m 74.129 ms - -[0m
+[0mGET /api/students/stats [36m304[0m 91.464 ms - -[0m
+[0mGET /api/payments/stats [36m304[0m 136.406 ms - -[0m
+[0mGET /api/students [36m304[0m 38.707 ms - -[0m
+[0mGET /api/students [36m304[0m 44.105 ms - -[0m
+[0mGET /api/auth/teacher/prof-revisao-1773680718041 [32m200[0m 28.018 ms - 137[0m
+[0mGET /api/auth/teacher/prof-revisao-1773680718041 [36m304[0m 26.042 ms - -[0m
+[0mPOST /api/portal/auth/register [32m201[0m 426.033 ms - 693[0m
+[0mGET /api/student-onboarding/subjects [32m200[0m 3.410 ms - -[0m
+[0mGET /api/student-onboarding/subjects [36m304[0m 1.317 ms - -[0m
+[0mGET /api/students [32m200[0m 79.163 ms - -[0m
+[0mGET /api/students [32m200[0m 51.321 ms - -[0m
+[0mGET /api/classes?page=1&limit=200 [32m200[0m 63.321 ms - 73[0m
+[0mGET /api/students [36m304[0m 45.927 ms - -[0m
+[0mGET /api/classes?page=1&limit=200 [36m304[0m 91.322 ms - -[0m
+[0mPOST /api/classes [32m201[0m 138.006 ms - 813[0m
+[0mGET /api/students [36m304[0m 44.978 ms - -[0m
+[0mGET /api/classes?page=1&limit=200 [32m200[0m 81.569 ms - 861[0m
+[0mGET /api/students [36m304[0m 42.762 ms - -[0m
+[0mGET /api/students [36m304[0m 47.118 ms - -[0m
+[0mGET /api/classes?page=1&limit=20 [32m200[0m 90.863 ms - 861[0m
+[0mGET /api/classes?page=1&limit=20 [36m304[0m 86.801 ms - -[0m
+[0mPOST /api/classes/69b83874d7eb6b07d81c5cd3/start [32m200[0m 123.103 ms - 1023[0m
+[0mGET /api/students [36m304[0m 59.422 ms - -[0m
+[0mGET /api/classes?page=1&limit=20 [32m200[0m 109.742 ms - -[0m
+[0mPOST /api/portal/auth/login [32m200[0m 680.472 ms - 729[0m
+[0mGET /api/student-onboarding/subjects [32m200[0m 3.439 ms - -[0m
+[0mGET /api/student-onboarding/subjects [36m304[0m 2.687 ms - -[0m
+[0mPOST /api/student-onboarding/select-subject [32m200[0m 138.694 ms - -[0m
+[0mPOST /api/student-onboarding/submit [32m200[0m 177.311 ms - 133[0m
+[0mGET /api/portal/activities [32m200[0m 55.892 ms - 32[0m
+[0mGET /api/portal/classes [32m200[0m 86.094 ms - 517[0m
+[0mGET /api/portal/activities [36m304[0m 53.825 ms - -[0m
+[0mGET /api/portal/me [32m200[0m 155.854 ms - 401[0m
+[0mGET /api/portal/classes [36m304[0m 69.206 ms - -[0m
+[0mGET /api/portal/me [36m304[0m 153.504 ms - -[0m
+[0mGET /api/portal/activities [36m304[0m 55.115 ms - -[0m
+[0mGET /api/portal/classes [36m304[0m 75.406 ms - -[0m
+[0mGET /api/portal/activities [36m304[0m 44.880 ms - -[0m
+[0mGET /api/portal/me [36m304[0m 118.685 ms - -[0m
+[0mGET /api/portal/classes [36m304[0m 72.870 ms - -[0m
+[0mGET /api/portal/me [36m304[0m 126.713 ms - -[0m
+[0mPOST /api/portal/pronunciation/generate [32m200[0m 50.412 ms - 115[0m
+[0mPOST /api/portal/pronunciation/generate [32m200[0m 49.455 ms - 115[0m
+[0mGET /api/portal/activities [36m304[0m 39.943 ms - -[0m
+[0mGET /api/portal/classes [36m304[0m 67.488 ms - -[0m
+[0mGET /api/portal/activities [36m304[0m 43.372 ms - -[0m
+[0mGET /api/portal/me [36m304[0m 103.129 ms - -[0m
+[0mGET /api/portal/classes [36m304[0m 65.927 ms - -[0m
+[0mGET /api/portal/me [36m304[0m 109.794 ms - -[0m
+🎮 Player connected to Hangman: Bg9cfSoM7Nd6HS54AAAC | Professor Revisao 1773680718041 (teacher)
+🎮 Game created: 69b83888d7eb6b07d81c5d46 - Word: LETTER - Teacher: Professor Revisao 1773680718041
+🎮 Player connected to Hangman: d8LbKGu2rEmBmcgIAAAF | Aluno Revisao 1773680718041 (student)
+[0mPOST /api/classes/69b83874d7eb6b07d81c5cd3/end [32m200[0m 156.775 ms - -[0m
+[0mGET /api/students [36m304[0m 47.782 ms - -[0m
+[0mGET /api/classes?page=1&limit=20 [32m200[0m 100.883 ms - -[0m
+[0mGET /api/students [36m304[0m 51.852 ms - -[0m
+[0mGET /api/classes?page=1&limit=20 [36m304[0m 98.159 ms - -[0m
+👤 Aluno Revisao 1773680718041 joined game 69b83888d7eb6b07d81c5d46
+[GAME] Game started: 69b83888d7eb6b07d81c5d46 by Professor Revisao 1773680718041
+[GAME] Letter guessed: T - Correct: true - Player: Aluno Revisao 1773680718041
+🗑️ Jogo 69b83888d7eb6b07d81c5d46 removido (sem jogadores)
+❌ Player disconnected: d8LbKGu2rEmBmcgIAAAF
+❌ Player disconnected: Bg9cfSoM7Nd6HS54AAAC
+✅ MongoDB reconnected successfully
+✅ MongoDB already connected
+✅ MongoDB reconnected successfully
+✅ MongoDB reconnected successfully
+✅ MongoDB already connected
+✅ MongoDB reconnected successfully
+✅ MongoDB reconnected successfully
+✅ MongoDB already connected
