@@ -334,6 +334,14 @@ export const sanitizeEventData = (data) => {
     return data;
   }
 
+  if (Array.isArray(data)) {
+    return data.map((item) =>
+      typeof item === 'object' && item !== null
+        ? sanitizeEventData(item)
+        : item
+    );
+  }
+
   const sanitized = { ...data };
 
   // Remove dangerous fields

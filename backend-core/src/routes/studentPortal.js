@@ -20,6 +20,7 @@ import paymentsRoutes from './portal/payments.js';
 import coursesRoutes from './portal/courses.js';
 import chatRoutes from './portal/chat.js';
 import aiRoutes from './portal/ai.js';
+import notificationsRoutes from './portal/notifications.js';
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.use('/', paymentsRoutes);
 router.use('/', coursesRoutes);
 router.use('/', chatRoutes);
 router.use('/', aiRoutes);
+router.use('/', notificationsRoutes);
 
 export default router;

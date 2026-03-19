@@ -3,6 +3,12 @@ import type { Variants } from 'framer-motion';
 import { useRef } from 'react';
 import type { ReactNode } from 'react';
 
+/**
+ * Biblioteca leve de animações do frontend. Os defaults foram mantidos
+ * contidos para reforçar a direção editorial do projeto: revelar conteúdo com
+ * hierarquia, sem transformar toda interação em espetáculo visual.
+ */
+
 // ============================================
 // SPLIT TEXT - Animação letra por letra
 // Inspirado em: https://reactbits.dev/
@@ -40,8 +46,8 @@ export const SplitText = ({
   const letterVariants: Variants = {
     hidden: {
       opacity: 0,
-      y: 20,
-      filter: 'blur(10px)'
+      y: 14,
+      filter: 'blur(8px)'
     },
     visible: {
       opacity: 1,
@@ -101,8 +107,8 @@ export const BlurText = ({
       className={className}
       initial={{
         opacity: 0,
-        filter: 'blur(20px)',
-        y: 10
+        filter: 'blur(12px)',
+        y: 8
       }}
       animate={isInView ? {
         opacity: 1,
@@ -140,7 +146,7 @@ export const FadeContent = ({
   delay = 0,
   duration = 0.6,
   direction = 'up',
-  distance = 30,
+  distance = 20,
   blur = false,
   scale = 1
 }: FadeContentProps) => {
@@ -241,8 +247,8 @@ export const StaggerItem = ({ children, className = '' }: StaggerItemProps) => {
   const itemVariants: Variants = {
     hidden: {
       opacity: 0,
-      y: 20,
-      filter: 'blur(5px)'
+      y: 16,
+      filter: 'blur(4px)'
     },
     visible: {
       opacity: 1,

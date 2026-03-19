@@ -7,6 +7,7 @@ const normalizeHangmanText = (value = '') => value
   .toUpperCase();
 
 const normalizeHangmanLetter = (value = '') => normalizeHangmanText(value).replace(/[^A-Z]/g, '');
+const TURN_DURATION_OPTIONS = [15, 20, 25, 30, 35, 40];
 
 const HangmanGameSchema = new mongoose.Schema({
   teacher: {
@@ -82,6 +83,35 @@ const HangmanGameSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  turnDurationSeconds: {
+    type: Number,
+    enum: TURN_DURATION_OPTIONS,
+    default: 20
+  },
+  currentTurnStartedAt: Date,
+  currentTurnExpiresAt: Date,
+  roundNumber: {
+    type: Number,
+    default: 1
+  },
+  invitedStudents: [{
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student'
+    },
+    name: String,
+    email: String,
+    status: {
+      type: String,
+      enum: ['pending', 'joined'],
+      default: 'pending'
+    },
+    invitedAt: {
+      type: Date,
+      default: Date.now
+    },
+    joinedAt: Date
+  }],
   
   // Histórico
   gameHistory: [{
@@ -126,6 +156,118 @@ HangmanGameSchema.methods.isLetterGuessed = function(letter) {
   return this.guessedLetters.some((guessedLetter) =>
     normalizeHangmanLetter(guessedLetter) === normalizedLetter
   );
+};
+
+/**
+ * Retorna o jogador da vez sem expor detalhes internos do documento.
+ */
+HangmanGameSchema.methods.getCurrentPlayer = function() {
+  if (!Array.isArray(this.players) || this.players.length === 0) {
+    return null;
+  }
+
+  const safeIndex = this.currentPlayerIndex % this.players.length;
+  return this.players[safeIndex] || null;
+};
+
+/**
+ * Reinicia a janela de tempo do turno atual. O frontend so precisa ler
+ * `currentTurnExpiresAt` para desenhar o countdown corretamente.
+ */
+HangmanGameSchema.methods.refreshTurnWindow = function(referenceDate = new Date()) {
+  const baseDate = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  this.currentTurnStartedAt = baseDate;
+  this.currentTurnExpiresAt = new Date(baseDate.getTime() + (this.turnDurationSeconds || 20) * 1000);
+};
+
+/**
+ * Avanca a rodada. Em jogos com um unico aluno o indice continua no mesmo
+ * jogador, mas a rodada e reiniciada para manter o timer consistente.
+ */
+HangmanGameSchema.methods.advanceTurn = function(reason = 'manual') {
+  const previousPlayer = this.getCurrentPlayer();
+
+  if (Array.isArray(this.players) && this.players.length > 0) {
+    if (this.turnBased && this.players.length > 1) {
+      this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+      if (this.currentPlayerIndex === 0) {
+        this.roundNumber += 1;
+      }
+    } else {
+      this.currentPlayerIndex = 0;
+      this.roundNumber += 1;
+    }
+  } else {
+    this.currentPlayerIndex = 0;
+  }
+
+  this.refreshTurnWindow();
+  const currentPlayer = this.getCurrentPlayer();
+
+  this.gameHistory.push({
+    action: 'turn-change',
+    player: currentPlayer?.studentId?.toString() || previousPlayer?.studentId?.toString() || 'unknown',
+    letter: reason,
+    timestamp: new Date()
+  });
+
+  return {
+    previousPlayer,
+    currentPlayer,
+    roundNumber: this.roundNumber
+  };
+};
+
+/**
+ * Aplica o comportamento de timeout da rodada:
+ * - multiplos alunos em modo por turnos: passa para o proximo aluno
+ * - um unico aluno ou modo livre: desenha mais uma parte da forca e reinicia o timer
+ */
+HangmanGameSchema.methods.handleTurnTimeout = function() {
+  const timedOutPlayer = this.getCurrentPlayer();
+  const shouldPenalize = !this.turnBased || this.players.length <= 1;
+
+  this.gameHistory.push({
+    action: 'timeout',
+    player: timedOutPlayer?.studentId?.toString() || 'unknown',
+    correct: false,
+    timestamp: new Date()
+  });
+
+  if (shouldPenalize) {
+    this.wrongGuesses += 1;
+
+    if (this.wrongGuesses >= this.maxWrongGuesses) {
+      this.status = 'lost';
+      this.finishedAt = new Date();
+      this.duration = this.startedAt
+        ? Math.floor((this.finishedAt - this.startedAt) / 1000)
+        : 0;
+
+      this.gameHistory.push({
+        action: 'lose',
+        timestamp: new Date()
+      });
+
+      return {
+        timedOutPlayer,
+        penaltyApplied: true,
+        status: this.status,
+        wrongGuesses: this.wrongGuesses
+      };
+    }
+  }
+
+  const turnChange = this.advanceTurn('timeout');
+
+  return {
+    timedOutPlayer,
+    currentPlayer: turnChange.currentPlayer,
+    penaltyApplied: shouldPenalize,
+    status: this.status,
+    wrongGuesses: this.wrongGuesses,
+    roundNumber: this.roundNumber
+  };
 };
 
 // Método para processar tentativa de letra
@@ -319,6 +461,9 @@ HangmanGameSchema.methods.getRevealedWord = function() {
 HangmanGameSchema.methods.startGame = function() {
   this.status = 'active';
   this.startedAt = new Date();
+  this.currentPlayerIndex = 0;
+  this.roundNumber = 1;
+  this.refreshTurnWindow(this.startedAt);
   
   this.gameHistory.push({
     action: 'start',
@@ -343,8 +488,24 @@ HangmanGameSchema.methods.addPlayer = function(studentId, name, avatar) {
   }
 };
 
+/**
+ * Mantem a fila de convidados sincronizada com quem ja entrou no jogo.
+ */
+HangmanGameSchema.methods.markInvitedStudentJoined = function(studentId) {
+  const invitedStudent = this.invitedStudents.find((item) =>
+    item.studentId?.toString() === studentId.toString()
+  );
+
+  if (invitedStudent) {
+    invitedStudent.status = 'joined';
+    invitedStudent.joinedAt = new Date();
+  }
+};
+
 // Método para obter estado do jogo (sem revelar a palavra)
 HangmanGameSchema.methods.getGameState = function() {
+  const currentPlayer = this.getCurrentPlayer();
+
   return {
     id: this._id,
     status: this.status,
@@ -360,8 +521,26 @@ HangmanGameSchema.methods.getGameState = function() {
       avatar: p.avatar,
       score: p.score
     })),
+    invitedStudents: this.invitedStudents.map((student) => ({
+      id: student.studentId,
+      name: student.name,
+      email: student.email,
+      status: student.status,
+      invitedAt: student.invitedAt,
+      joinedAt: student.joinedAt
+    })),
     currentPlayerIndex: this.currentPlayerIndex,
+    currentPlayer: currentPlayer ? {
+      id: currentPlayer.studentId,
+      name: currentPlayer.name,
+      avatar: currentPlayer.avatar,
+      score: currentPlayer.score
+    } : null,
     turnBased: this.turnBased,
+    turnDurationSeconds: this.turnDurationSeconds,
+    currentTurnStartedAt: this.currentTurnStartedAt,
+    currentTurnExpiresAt: this.currentTurnExpiresAt,
+    roundNumber: this.roundNumber,
     theme: this.theme,
     startedAt: this.startedAt,
     duration: this.startedAt ? Math.floor((new Date() - this.startedAt) / 1000) : 0

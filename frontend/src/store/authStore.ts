@@ -24,7 +24,10 @@ interface AuthState {
   logout: () => void;
 }
 
-// Inicializar do localStorage se existir
+/**
+ * Lê o usuário persistido sem quebrar a hidratação do app quando o storage
+ * contém dados inválidos ou antigos.
+ */
 const getStoredUser = (): User | null => {
   try {
     const stored = localStorage.getItem('user');
@@ -38,6 +41,11 @@ const getStoredToken = (): string | null => {
   return localStorage.getItem('token');
 };
 
+/**
+ * Store central de autenticação do professor. Os fluxos de login/onboarding
+ * dependem destas chaves e, por isso, o redesign visual não altera sua forma
+ * de persistência.
+ */
 export const useAuthStore = create<AuthState>((set) => ({
   user: getStoredUser(),
   token: getStoredToken(),

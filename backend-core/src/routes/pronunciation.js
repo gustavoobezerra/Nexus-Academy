@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import { authenticateStudent } from '../middleware/studentAuth.js';
 import { generatePhrase, analyzePronunciation } from '../services/pronunciationService.js';
 import cloudinaryService from '../services/cloudinaryService.js';
+import Student from '../models/Student.js';
+import { recordPronunciationSignals } from '../services/learningSignalsService.js';
 
 const router = express.Router();
 
@@ -259,6 +261,12 @@ router.post('/history', authenticateStudent, pronunciationLimiter, async (req, r
     });
 
     await pronunciationTest.save();
+
+    const student = await Student.findById(studentId).select('subject');
+    await recordPronunciationSignals({
+      pronunciationTest,
+      studentSubject: student?.subject || ''
+    });
 
     res.status(201).json({
       success: true,

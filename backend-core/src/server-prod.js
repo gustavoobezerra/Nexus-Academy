@@ -14,6 +14,7 @@ import liveClassService from './services/liveClassService.js';
 import { tenantContextMiddleware } from './middleware/tenantAware.js';
 import correlationId from './middleware/correlationId.js';
 import logger from './utils/logger.js';
+import { ensureDevelopmentDemoData } from './dev/ensureDemoData.js';
 import {
   authenticateSocket,
   validateClassRoomAccess,
@@ -62,6 +63,12 @@ const httpServer = createServer(app);
 
 app.set('trust proxy', 1);
 
+const localDevOrigins = ['localhost', '127.0.0.1']
+  .flatMap((hostname) =>
+    ['3000', '4173', '4174', '4175', '4176', '4177', '5173', '5174', '5175', '5176', '5177']
+      .map((port) => `http://${hostname}:${port}`)
+  );
+
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
@@ -72,18 +79,14 @@ if (process.env.FRONTEND_URL) {
 }
 
 if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push(
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:3000'
-  );
+  allowedOrigins.push(...localDevOrigins);
 }
+
+const normalizedAllowedOrigins = [...new Set(allowedOrigins)];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || normalizedAllowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     return callback(new Error('CORS origin not allowed'), false);
@@ -112,7 +115,7 @@ app.use('/api', authenticateOptional);
 app.use('/api', tenantContextMiddleware);
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, credentials: true },
+  cors: { origin: normalizedAllowedOrigins, credentials: true },
   pingTimeout: 60000,
   pingInterval: 25000,
   upgradeTimeout: 30000,
@@ -414,6 +417,20 @@ const PORT = process.env.PORT || 5000;
 
 const start = async () => {
   await connectDB();
+
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const demoCredentials = await ensureDevelopmentDemoData();
+      if (demoCredentials) {
+        logger.info('Dados demo garantidos para desenvolvimento local', demoCredentials);
+      }
+    } catch (error) {
+      logger.warn('Falha ao preparar dados demo locais', {
+        error: error.message
+      });
+    }
+  }
+
   httpServer.listen(PORT, () => {
     logger.info(`API rodando na porta ${PORT}`);
   });

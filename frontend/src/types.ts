@@ -19,11 +19,17 @@ export interface Aluno {
   performance?: {
     overall: number;
     trend: 'up' | 'down' | 'stable';
+    strengths?: string[];
+    weaknesses?: string[];
   };
   profile?: {
     avatar?: string | null;
     description?: string;
     interests?: string[];
+  };
+  portalAccess?: {
+    enabled?: boolean;
+    email?: string;
   };
   onboardingCompleted?: boolean;
   teacher?: {
@@ -58,6 +64,7 @@ export interface Aula {
   studentName: string;
   subject: string;
   grade: string;
+  topic?: string;
   scheduledAt: string;
   duration: number;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
@@ -174,6 +181,23 @@ export interface Notification {
   status: 'pending' | 'sent' | 'failed';
   templateId?: string;
   createdAt?: string;
+}
+
+export interface PortalNotification {
+  id: string;
+  title: string;
+  message: string;
+  status: 'pending' | 'scheduled' | 'sent' | 'delivered' | 'read' | 'failed' | 'cancelled';
+  createdAt?: string;
+  readAt?: string | null;
+  entityType?: string;
+  gameId?: string | null;
+  route?: string | null;
+  invitedBy?: string | null;
+  category?: string | null;
+  hint?: string | null;
+  turnDurationSeconds?: number | null;
+  kind?: string;
 }
 
 export interface NotificationTemplate {
@@ -498,9 +522,35 @@ export interface ActivityAIMetadata {
   sourceTranscript?: string;
   topics: string[];
   generatedAt: string;
+  providerMode?: 'live' | 'fallback';
+  sourceType?: 'class' | 'manual';
+  batchId?: string;
+  targetMode?: 'specific' | 'group' | 'all';
+  gradeLevel?: string;
+  learningObjective?: string;
   reviewed: boolean;
   reviewedAt?: string;
   reviewedBy?: string;
+}
+
+export interface PortalActivitySummary {
+  _id: string;
+  title: string;
+  description?: string;
+  type: Activity['type'];
+  dueDate?: string;
+  status: Activity['status'];
+  totalPoints: number;
+  totalQuestions: number;
+  createdAt?: string;
+  updatedAt?: string;
+  aiMetadata?: ActivityAIMetadata | null;
+  submissionCount: number;
+  latestSubmission?: Submission | null;
+}
+
+export interface PortalActivityDetail extends PortalActivitySummary {
+  questions: Question[];
 }
 
 // Preparação automática de aulas
@@ -612,6 +662,7 @@ export interface LessonAIMetadata {
   };
   generatedAt: string;
   confidence: number;
+  providerMode?: 'live' | 'fallback';
 }
 
 export interface TeacherReview {
@@ -639,6 +690,78 @@ export interface SmartScheduleSuggestion {
   conflicts: string[];
   studentPreference?: boolean;
   teacherAvailability?: boolean;
+}
+
+export interface StudentGroup {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  studentIds: string[];
+  suggestedByAI?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LearningSubjectSummary {
+  label: string;
+  averageScore: number;
+  signalCount: number;
+}
+
+export interface LearningTopicSummary extends LearningSubjectSummary {
+  subject: string;
+  sourceType: 'activity' | 'pronunciation' | 'assessment' | 'classroom';
+}
+
+export interface StudentLearningSnapshot {
+  studentId: string;
+  totalSignals: number;
+  averageScore: number;
+  objectiveAccuracy: number | null;
+  pronunciationAverage: number | null;
+  weakestSubjects: LearningSubjectSummary[];
+  weakestTopics: LearningTopicSummary[];
+  lastSignalAt?: string | null;
+}
+
+export interface SubjectSuggestion {
+  subject: string;
+  topic: string;
+  explanation: string;
+  evidence: string[];
+  basedOn: {
+    signalCount: number;
+    averageScore: number;
+    sourceTypes: string[];
+  };
+}
+
+export interface AIProviderInfo {
+  provider: string;
+  configured: boolean;
+  available: boolean;
+  mode: 'live' | 'fallback';
+  models: string[];
+}
+
+export interface TeacherWorkspaceData {
+  provider: AIProviderInfo;
+  students: Aluno[];
+  classes: Aula[];
+  payments: Pagamento[];
+  activities: Array<Activity & { studentName?: string; classTitle?: string }>;
+  lessonPreparations: Array<LessonPreparation & { studentName?: string; classTitle?: string }>;
+  learningSnapshots: StudentLearningSnapshot[];
+  studentGroups: StudentGroup[];
+  counts: {
+    students: number;
+    classes: number;
+    payments: number;
+    activities: number;
+    lessonPreparations: number;
+    studentGroups: number;
+  };
 }
 
 // Marketplace com Pontos

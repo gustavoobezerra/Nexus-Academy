@@ -1,5 +1,25 @@
 import apiService, { api, ApiError } from '../services/api.service';
-import type { Pagamento, Aula, Aluno, TeacherAnalytics, StudentPaymentStatus, AIAnalysis, Activity, LessonPreparation, Contract, HourBank, MarketplaceItem, MarketplacePurchase } from '../types';
+import type {
+  Pagamento,
+  Aula,
+  Aluno,
+  TeacherAnalytics,
+  StudentPaymentStatus,
+  AIAnalysis,
+  Activity,
+  LessonPreparation,
+  Contract,
+  HourBank,
+  MarketplaceItem,
+  MarketplacePurchase,
+  PortalNotification,
+  TeacherWorkspaceData,
+  StudentGroup,
+  Question,
+  PortalActivityDetail,
+  PortalActivitySummary,
+  SubjectSuggestion
+} from '../types';
 
 // ============================================================================
 // API ENDPOINTS WRAPPERS
@@ -57,7 +77,15 @@ export const portalAPI = {
   getClasses: (params?: { status?: string; limit?: number; page?: number }) =>
     apiService.get<{ classes: Aula[]; pagination?: { total: number; page: number; limit: number; pages: number } }>('/portal/classes', { params }),
   getPayments: () => apiService.get<{ payments: Pagamento[] }>('/portal/payments'),
-  getActivities: () => apiService.get<{ activities: Activity[] }>('/portal/activities')
+  getActivities: () => apiService.get<{ activities: PortalActivitySummary[] }>('/portal/activities'),
+  getActivityDetail: (activityId: string) =>
+    apiService.get<{ success: boolean; activity: PortalActivityDetail }>(`/portal/activities/${activityId}`),
+  submitActivity: (activityId: string, data: { answers: Array<{ questionNumber: number; answer: string }> }) =>
+    apiService.post<{ success: boolean; message: string; activity: PortalActivityDetail }>(`/portal/activities/${activityId}/submissions`, data),
+  getNotifications: (params?: { limit?: number }) =>
+    apiService.get<{ notifications: PortalNotification[]; unreadCount: number }>('/portal/notifications', { params }),
+  markNotificationRead: (id: string) =>
+    apiService.put<{ success: boolean; message: string }>(`/portal/notifications/${id}/read`)
 };
 
 export const liveClassAPI = {
@@ -83,8 +111,76 @@ export const onboardingAPI = {
 };
 
 export const aiAPI = {
-  generateActivity: (data: { lessonTopic: string; lessonSubject: string; lessonDescription?: string }) =>
-    apiService.post<{ success: boolean; questions: import('../types').Question[] }>('/ai/generate-activity', data),
+  getWorkspaceData: () =>
+    apiService.get<TeacherWorkspaceData & { success: boolean }>('/ai/workspace-data'),
+  getProviderStatus: () =>
+    apiService.get<{ success: boolean; provider: TeacherWorkspaceData['provider'] }>('/ai/provider-status'),
+  generateActivity: (data: {
+    mode: 'class' | 'manual';
+    lessonTopic: string;
+    lessonSubject: string;
+    lessonDescription?: string;
+    classId?: string;
+    gradeLevel?: string;
+    learningObjective?: string;
+    questionCount?: number;
+    questionMix?: Partial<Record<'multiple_choice' | 'true_false' | 'essay' | 'fill_blank', number>>;
+    assignmentTarget?: { mode: 'specific' | 'group' | 'all'; studentIds?: string[]; groupId?: string };
+  }) =>
+    apiService.post<{
+      success: boolean;
+      activityTemplate: {
+        title: string;
+        description: string;
+        questions: Question[];
+        batchId: string;
+      };
+      providerMode: 'live' | 'fallback';
+      providerModel?: string;
+      qualityReport?: { source: string; validated: boolean; issues: string[] };
+    }>('/ai/generate-activity', data),
+  publishActivity: (data: {
+    title: string;
+    description?: string;
+    type?: Activity['type'];
+    questions: Question[];
+    dueDate?: string;
+    classId?: string;
+    batchId?: string;
+    assignmentTarget: { mode: 'specific' | 'group' | 'all'; studentIds?: string[]; groupId?: string };
+    aiMetadata?: Activity['aiMetadata'];
+  }) =>
+    apiService.post<{
+      success: boolean;
+      activities: Array<Activity & { studentName?: string; classTitle?: string }>;
+      recipients: Array<{ id: string; name: string }>;
+      batchId: string;
+    }>('/ai/publish-activity', data),
+  generateLessonPreparation: (classId: string) =>
+    apiService.post<{
+      success: boolean;
+      preparation: LessonPreparation & { studentName?: string; classTitle?: string };
+      providerMode: 'live' | 'fallback';
+      providerModel?: string;
+    }>('/ai/lesson-preparations/generate', { classId }),
+  reviewLessonPreparation: (id: string, data: { approved: boolean; notes?: string; modifications?: string[] }) =>
+    apiService.put<{ success: boolean; preparation: LessonPreparation & { studentName?: string; classTitle?: string } }>(
+      `/ai/lesson-preparations/${id}/review`,
+      data
+    ),
+  createStudentGroup: (data: Omit<StudentGroup, 'id'>) =>
+    apiService.post<{ success: boolean; studentGroup: StudentGroup }>('/ai/student-groups', data),
+  updateStudentGroup: (id: string, data: Partial<StudentGroup>) =>
+    apiService.put<{ success: boolean; studentGroup: StudentGroup }>(`/ai/student-groups/${id}`, data),
+  deleteStudentGroup: (id: string) =>
+    apiService.delete<{ success: boolean; message: string }>(`/ai/student-groups/${id}`),
+  getStudentSubjectSuggestion: (studentId: string) =>
+    apiService.get<{
+      success: boolean;
+      providerMode: 'live' | 'fallback';
+      confidence: number;
+      suggestion: SubjectSuggestion;
+    }>(`/ai/students/${studentId}/subject-suggestion`),
 };
 
 // ============================================================================
@@ -103,7 +199,8 @@ export type {
   HourBank,
   MarketplaceItem,
   MarketplacePurchase,
-  ApiError
+  ApiError,
+  PortalNotification
 };
 
 // Default export for TeacherAnalyticsDashboard.tsx

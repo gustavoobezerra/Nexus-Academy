@@ -1,16 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard, BookOpen, Calendar, Trophy, MessageCircle,
-  Bell, User, LogOut, Menu, Sun, Moon, Video, FileText,
-  TrendingUp, Clock, Target, Award, Mic, Gamepad2, Link, AlertTriangle
+  Bell, User, LogOut, Menu, Sun, Moon, Video,
+  TrendingUp, Clock, Target, Mic, Gamepad2, Link, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api.service';
 import { clearSensitiveData } from '../../utils/security';
+import { StudentActivitiesWorkspace } from './StudentActivitiesWorkspace';
 import { StudentChat } from './StudentChat';
 import BrandLogo from '../BrandLogo';
 import { useTheme } from '../../context/ThemeContext';
+import { portalAPI } from '../../lib/api';
+import { createDemoPortalNotifications } from '../../mocks/gamificationData';
+import type { PortalActivitySummary, PortalNotification } from '../../types';
 
 interface StudentData {
   _id: string;
@@ -33,14 +37,6 @@ interface StudentData {
   } | null;
 }
 
-interface Activity {
-  _id: string;
-  title: string;
-  type: string;
-  dueDate: string;
-  status: 'pending' | 'completed' | 'late';
-}
-
 interface Class {
   _id: string;
   title: string;
@@ -54,31 +50,37 @@ export const StudentDashboard = () => {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
   const [student, setStudent] = useState<StudentData | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<PortalActivitySummary[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const unreadMessages = 0;
   const [teacherLinkInput, setTeacherLinkInput] = useState('');
   const [joiningTeacher, setJoiningTeacher] = useState(false);
+  const [notifications, setNotifications] = useState<PortalNotification[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
-    fetchStudentData();
+    const interval = window.setInterval(() => {
+      void fetchNotifications(true);
+    }, 15000);
+
+    return () => window.clearInterval(interval);
   }, []);
 
-  const fetchStudentData = async () => {
+  const fetchStudentData = useCallback(async () => {
     try {
       setLoading(true);
       const [studentRes, activitiesRes, classesRes] = await Promise.all([
         apiService.get('/portal/me'),
-        apiService.get('/portal/activities'),
+        portalAPI.getActivities(),
         apiService.get('/portal/classes')
       ]);
 
-      const activitiesData = Array.isArray(activitiesRes)
-        ? activitiesRes
-        : ((activitiesRes as any)?.activities || []);
+      const activitiesData = Array.isArray((activitiesRes as any)?.activities)
+        ? (activitiesRes as any).activities
+        : [];
       const classesData = Array.isArray(classesRes)
         ? classesRes
         : ((classesRes as any)?.classes || []);
@@ -86,11 +88,44 @@ export const StudentDashboard = () => {
       setStudent(studentRes as any);
       setActivities(activitiesData as any);
       setClasses(classesData as any);
+      await fetchNotifications(true);
     } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados do painel');
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchStudentData();
+  }, [fetchStudentData]);
+
+  const fetchNotifications = async (silent: boolean = false) => {
+    try {
+      const response = await portalAPI.getNotifications({ limit: 6 }) as {
+        notifications?: PortalNotification[];
+        unreadCount?: number;
+      };
+
+      const nextNotifications = Array.isArray(response?.notifications)
+        ? response.notifications
+        : [];
+
+      setNotifications(nextNotifications);
+      setNotificationCount(
+        typeof response?.unreadCount === 'number'
+          ? response.unreadCount
+          : nextNotifications.filter((notification) => !notification.readAt).length
+      );
+    } catch (error) {
+      console.error('Erro ao carregar notificacoes do portal:', error);
+
+      if (!silent && import.meta.env.DEV) {
+        const demoNotifications = createDemoPortalNotifications();
+        setNotifications(demoNotifications);
+        setNotificationCount(demoNotifications.length);
+      }
     }
   };
 
@@ -138,6 +173,28 @@ export const StudentDashboard = () => {
     });
 
     navigate(`/portal/live-class?${search.toString()}`);
+  };
+
+  const handleOpenNotification = async (notification: PortalNotification) => {
+    try {
+      if (!notification.readAt) {
+        await portalAPI.markNotificationRead(notification.id);
+      }
+    } catch (error) {
+      console.error('Erro ao marcar notificacao:', error);
+    }
+
+    setNotifications((currentNotifications) =>
+      currentNotifications.map((currentNotification) =>
+        currentNotification.id === notification.id
+          ? { ...currentNotification, readAt: new Date().toISOString(), status: 'read' }
+          : currentNotification
+      )
+    );
+    setNotificationCount((currentCount) => Math.max(currentCount - (notification.readAt ? 0 : 1), 0));
+
+    const route = notification.route || (notification.gameId ? `/portal/hangman?gameId=${notification.gameId}` : '/portal/hangman');
+    navigate(route);
   };
 
 
@@ -277,7 +334,7 @@ export const StudentDashboard = () => {
             <div className="flex items-center gap-4">
               <button className="relative p-2 rounded-xl hover:bg-slate-700 transition-colors">
                 <Bell size={22} className="text-slate-400" />
-                {unreadMessages > 0 && (
+                {notificationCount > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 )}
               </button>
@@ -295,7 +352,6 @@ export const StudentDashboard = () => {
               <DashboardContent
                 student={student}
                 activities={activities}
-                classes={classes}
                 isDark={isDark}
                 onOpenChat={() => setActiveTab('chat')}
                 onNavigate={(path: string) => navigate(path)}
@@ -303,6 +359,8 @@ export const StudentDashboard = () => {
                 onTeacherLinkChange={setTeacherLinkInput}
                 onJoinTeacher={handleJoinTeacher}
                 joiningTeacher={joiningTeacher}
+                notifications={notifications}
+                onOpenNotification={handleOpenNotification}
               />
             )}
             {activeTab === 'classes' && (
@@ -352,31 +410,7 @@ export const StudentDashboard = () => {
               </div>
             )}
             {activeTab === 'activities' && (
-              <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
-                <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Todas as Atividades</h3>
-                {activities.length === 0 ? (
-                  <p className={isDark ? 'text-slate-400' : 'text-slate-600'}>Nenhuma atividade encontrada</p>
-                ) : (
-                  <div className="space-y-3">
-                    {activities.map((activity: Activity) => (
-                      <div key={activity._id} className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{activity.title}</p>
-                            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tipo: {activity.type}</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${activity.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                              activity.status === 'late' ? 'bg-red-500/20 text-red-400' :
-                                'bg-yellow-500/20 text-yellow-400'
-                            }`}>
-                            {activity.status === 'completed' ? 'Concluída' : activity.status === 'late' ? 'Atrasada' : 'Pendente'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <StudentActivitiesWorkspace activities={activities} isDark={isDark} onRefresh={fetchStudentData} />
             )}
             {activeTab === 'calendar' && (
               <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
@@ -437,8 +471,7 @@ export const StudentDashboard = () => {
 // Dashboard Content Component
 interface DashboardContentProps {
   student: StudentData;
-  activities: Activity[];
-  classes: Class[];
+  activities: PortalActivitySummary[];
   isDark: boolean;
   onOpenChat: () => void;
   onNavigate: (path: string) => void;
@@ -446,9 +479,27 @@ interface DashboardContentProps {
   onTeacherLinkChange: (v: string) => void;
   onJoinTeacher: () => void;
   joiningTeacher: boolean;
+  notifications: PortalNotification[];
+  onOpenNotification: (notification: PortalNotification) => void;
 }
 
-const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, onNavigate, teacherLinkInput, onTeacherLinkChange, onJoinTeacher, joiningTeacher }: DashboardContentProps) => (
+const DashboardContent = ({
+  student,
+  activities,
+  isDark,
+  onOpenChat,
+  onNavigate,
+  teacherLinkInput,
+  onTeacherLinkChange,
+  onJoinTeacher,
+  joiningTeacher,
+  notifications,
+  onOpenNotification
+}: DashboardContentProps) => {
+  const hangmanInvites = notifications.filter((notification) => notification.kind === 'hangman_invite');
+  const primaryHangmanRoute = hangmanInvites[0]?.route || (hangmanInvites[0]?.gameId ? `/portal/hangman?gameId=${hangmanInvites[0]?.gameId}` : '/portal/hangman');
+
+  return (
   <div className="space-y-6">
     {/* Aviso: aluno sem professor vinculado */}
     {!student.teacher && (
@@ -518,6 +569,57 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
       />
     </div>
 
+    {hangmanInvites.length > 0 && (
+      <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} rounded-xl border p-6 shadow-lg`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className={`text-xs uppercase tracking-[0.24em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              Convites ativos
+            </p>
+            <h3 className={`mt-2 text-xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+              O professor chamou voce para a Forca
+            </h3>
+            <p className={`mt-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              Entre pela notificacao correta para cair direto na rodada que foi enviada para voce.
+            </p>
+          </div>
+          <button
+            onClick={() => onNavigate(primaryHangmanRoute)}
+            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-rose-500"
+          >
+            <Gamepad2 size={18} />
+            Abrir jogo
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {hangmanInvites.map((notification) => (
+            <button
+              key={notification.id}
+              onClick={() => onOpenNotification(notification)}
+              className={`w-full rounded-xl border px-4 py-4 text-left transition ${
+                notification.readAt
+                  ? isDark
+                    ? 'border-slate-800 bg-slate-950'
+                    : 'border-slate-200 bg-slate-50'
+                  : 'border-rose-400/30 bg-rose-500/10'
+              }`}
+            >
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{notification.title}</p>
+                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{notification.message}</p>
+                </div>
+                <div className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {notification.category || 'Forca'} • {notification.turnDurationSeconds || 20}s
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
     {/* Quick Actions */}
     <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
       <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
@@ -535,13 +637,13 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
           </div>
         </button>
         <button
-          onClick={() => onNavigate('/portal/hangman')}
+          onClick={() => onNavigate(primaryHangmanRoute)}
           className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
         >
           <Gamepad2 size={20} />
           <div className="text-left">
             <p className="font-bold text-sm">Jogo da Forca</p>
-            <p className="text-xs opacity-90">Treine vocabulário com a turma</p>
+            <p className="text-xs opacity-90">{hangmanInvites.length > 0 ? 'Abrir convite enviado pelo professor' : 'Treine vocabulário com a turma'}</p>
           </div>
         </button>
         <button
@@ -590,7 +692,7 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
         </p>
       ) : (
         <div className="space-y-3">
-          {activities.slice(0, 5).map((activity: Activity) => (
+          {activities.slice(0, 5).map((activity) => (
             <div key={activity._id} className={`p-4 rounded-lg ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
               <div className="flex items-center justify-between">
                 <div>
@@ -598,15 +700,21 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
                     {activity.title}
                   </p>
                   <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Tipo: {activity.type}
+                    Tipo: {activity.type} • {activity.totalQuestions} questão(ões)
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${activity.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                    activity.status === 'late' ? 'bg-red-500/20 text-red-400' :
-                      'bg-yellow-500/20 text-yellow-400'
-                  }`}>
-                  {activity.status === 'completed' ? 'Concluída' :
-                    activity.status === 'late' ? 'Atrasada' : 'Pendente'}
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  activity.status === 'graded'
+                    ? 'bg-green-500/20 text-green-400'
+                    : activity.status === 'completed'
+                      ? 'bg-cyan-500/20 text-cyan-300'
+                      : 'bg-yellow-500/20 text-yellow-400'
+                }`}>
+                  {activity.status === 'graded'
+                    ? 'Corrigida'
+                    : activity.status === 'completed'
+                      ? 'Enviada'
+                      : 'Pendente'}
                 </span>
               </div>
             </div>
@@ -615,7 +723,8 @@ const DashboardContent = ({ student, activities, classes, isDark, onOpenChat, on
       )}
     </div>
   </div>
-);
+  );
+};
 
 // Chat Content Component
 interface ChatContentProps {

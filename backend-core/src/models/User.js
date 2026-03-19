@@ -120,6 +120,16 @@ const userSchema = new mongoose.Schema({
         students: [{ type: String, trim: true }]
       }],
       createdAt: { type: Date, default: Date.now }
+    }],
+    studentGroups: [{
+      id: { type: String, required: true, trim: true },
+      name: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
+      color: { type: String, trim: true, default: '#4f46e5' },
+      studentIds: [{ type: String, trim: true }],
+      suggestedByAI: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now },
+      updatedAt: { type: Date, default: Date.now }
     }]
   },
 

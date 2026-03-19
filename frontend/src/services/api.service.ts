@@ -40,27 +40,106 @@ const RETRY_CONFIG: RetryConfig = {
   retryableStatuses: [408, 429, 500, 502, 503, 504]
 };
 
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1']);
+const LOCAL_API_PORT = 5000;
+const LOCAL_DEV_PORTS = new Set(['3000', '4173', '4174', '4175', '4176', '4177', '5173', '5174', '5175', '5176', '5177']);
+
+const normalizeLocalApiUrl = (rawUrl: string): string => {
+  if (rawUrl === '/api') {
+    return rawUrl;
+  }
+
+  if (typeof window === 'undefined') {
+    return rawUrl;
+  }
+
+  try {
+    const parsedUrl = new URL(rawUrl);
+    const currentHostname = window.location.hostname;
+
+    if (
+      import.meta.env.DEV &&
+      LOCAL_HOSTNAMES.has(parsedUrl.hostname) &&
+      LOCAL_HOSTNAMES.has(currentHostname)
+    ) {
+      parsedUrl.hostname = currentHostname;
+    }
+
+    return parsedUrl.toString().replace(/\/$/, '');
+  } catch {
+    return rawUrl;
+  }
+};
+
+const uniqueApiCandidates = (candidates: string[]): string[] => {
+  const seen = new Set<string>();
+  const normalizedCandidates: string[] = [];
+
+  candidates
+    .map((candidate) => candidate.trim())
+    .filter(Boolean)
+    .forEach((candidate) => {
+      const normalizedCandidate = normalizeLocalApiUrl(candidate);
+      if (!seen.has(normalizedCandidate)) {
+        seen.add(normalizedCandidate);
+        normalizedCandidates.push(normalizedCandidate);
+      }
+    });
+
+  return normalizedCandidates;
+};
+
+const getApiCandidates = (): string[] => {
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  const candidates: string[] = [];
+
+  if (envUrl) {
+    candidates.push(envUrl);
+  }
+
+  if (typeof window === 'undefined') {
+    return uniqueApiCandidates(candidates.length > 0 ? candidates : [`http://localhost:${LOCAL_API_PORT}/api`]);
+  }
+
+  const { hostname, port } = window.location;
+  const isLocalRuntime = LOCAL_HOSTNAMES.has(hostname) || LOCAL_DEV_PORTS.has(port);
+
+  if (import.meta.env.DEV || isLocalRuntime) {
+    candidates.push('/api');
+    candidates.push(`http://${hostname}:${LOCAL_API_PORT}/api`);
+    candidates.push(`http://localhost:${LOCAL_API_PORT}/api`);
+    candidates.push(`http://127.0.0.1:${LOCAL_API_PORT}/api`);
+  }
+
+  if (candidates.length === 0) {
+    candidates.push('/api');
+  }
+
+  return uniqueApiCandidates(candidates);
+};
+
+type ApiRequestConfig = InternalAxiosRequestConfig & {
+  _apiBaseCandidates?: string[];
+  _apiBaseAttempt?: number;
+};
+
+const stripApiSuffix = (baseUrl: string): string => baseUrl.replace(/\/api\/?$/, '');
+
 // ============================================================================
 // INSTÂNCIA AXIOS COM CONFIGURAÇÃO BASE
 // ============================================================================
 
 // Configuração de URL da API com validação de HTTPS em produção
-const getApiUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_URL;
+const API_CANDIDATES = getApiCandidates();
+const API_URL = API_CANDIDATES[0];
 
-  if (envUrl) {
-    // Em produção, garantir que a URL usa HTTPS
-    if (import.meta.env.PROD && !envUrl.startsWith('https://')) {
-      console.warn('[SECURITY] API URL should use HTTPS in production');
-    }
-    return envUrl;
-  }
-
-  // Fallback para desenvolvimento
-  return 'http://localhost:5000/api';
-};
-
-const API_URL = getApiUrl();
+if (
+  import.meta.env.PROD &&
+  API_URL.startsWith('http://') &&
+  !LOCAL_HOSTNAMES.has(new URL(API_URL).hostname)
+) {
+  console.warn('[SECURITY] API URL should use HTTPS in production');
+}
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -104,6 +183,43 @@ api.interceptors.request.use(
   }
 );
 
+const getRequestBaseCandidates = (config?: ApiRequestConfig): string[] => {
+  if (config?._apiBaseCandidates?.length) {
+    return config._apiBaseCandidates;
+  }
+
+  const currentBase = config?.baseURL ? normalizeLocalApiUrl(String(config.baseURL)) : API_URL;
+  return uniqueApiCandidates([currentBase, ...API_CANDIDATES]);
+};
+
+const getNextBaseCandidate = (config?: ApiRequestConfig): { candidates: string[]; nextIndex: number; nextBaseUrl: string } | null => {
+  const candidates = getRequestBaseCandidates(config);
+  const currentIndex = typeof config?._apiBaseAttempt === 'number'
+    ? config._apiBaseAttempt
+    : Math.max(0, candidates.findIndex((candidate) => candidate === normalizeLocalApiUrl(String(config?.baseURL || API_URL))));
+
+  const nextIndex = currentIndex + 1;
+
+  if (nextIndex >= candidates.length) {
+    return null;
+  }
+
+  return {
+    candidates,
+    nextIndex,
+    nextBaseUrl: candidates[nextIndex]
+  };
+};
+
+export const getSocketBaseUrl = (): string => {
+  if (typeof window !== 'undefined' && API_CANDIDATES.includes('/api')) {
+    return window.location.origin;
+  }
+
+  const absoluteCandidate = API_CANDIDATES.find((candidate) => /^https?:\/\//.test(candidate));
+  return absoluteCandidate ? stripApiSuffix(absoluteCandidate) : `http://localhost:${LOCAL_API_PORT}`;
+};
+
 // ============================================================================
 // INTERCEPTOR DE RESPOSTA COM TRATAMENTO INTELIGENTE DE ERROS
 // ============================================================================
@@ -118,12 +234,32 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean; _retryCount?: number };
+    const originalRequest = error.config as ApiRequestConfig & { _retry?: boolean; _retryCount?: number };
 
     // ========================================================================
     // ERRO DE REDE - Servidor não respondeu
     // ========================================================================
     if (!error.response) {
+      const retryBaseCandidate = getNextBaseCandidate(originalRequest);
+
+      if (retryBaseCandidate && originalRequest) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[API] Falha de rede em ${originalRequest.url}. Tentando novamente com base ${retryBaseCandidate.nextBaseUrl}`
+          );
+        }
+
+        originalRequest.baseURL = retryBaseCandidate.nextBaseUrl;
+        originalRequest._apiBaseCandidates = retryBaseCandidate.candidates;
+        originalRequest._apiBaseAttempt = retryBaseCandidate.nextIndex;
+
+        return api(originalRequest);
+      }
+
+      const localApiHint = LOCAL_HOSTNAMES.has(window.location.hostname)
+        ? ` Verifique se a API local esta acessivel. Tentativas: ${API_CANDIDATES.join(', ')}.`
+        : '';
+
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
         toast.error('A requisição demorou muito. Tente novamente.');
         return Promise.reject({
@@ -133,10 +269,10 @@ api.interceptors.response.use(
         } as ApiError);
       }
 
-      toast.error('Sem conexão com o servidor. Verifique sua internet.');
+      toast.error(`Sem conexão com o servidor.${localApiHint}`);
       return Promise.reject({
         type: 'network',
-        message: 'Erro de conexão com o servidor',
+        message: `Erro de conexão com o servidor.${localApiHint}`.trim(),
         code: 'NETWORK_ERROR'
       } as ApiError);
     }
@@ -390,4 +526,4 @@ const apiService = {
 // ============================================================================
 
 export default apiService;
-export { api, type ApiError };
+export { api, API_URL, type ApiError };

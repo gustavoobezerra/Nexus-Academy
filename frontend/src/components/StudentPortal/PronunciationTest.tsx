@@ -4,7 +4,7 @@ import { Mic, StopCircle, Volume2, RefreshCw, Loader2, Sparkles, CheckCircle2 } 
 import toast from 'react-hot-toast';
 import { DifficultySelector } from './DifficultySelector';
 import { WordFeedback } from './WordFeedback';
-import apiService from '../../services/api.service';
+import apiService, { API_URL } from '../../services/api.service';
 
 // Importar a API do portal
 // Assumindo que existe um arquivo api.ts ou similar
@@ -28,12 +28,6 @@ type AnalysisResult = {
 };
 
 // Funções de API (você pode mover para um arquivo separado)
-const API_BASE = (() => {
-  const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const trimmed = raw.replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
-})();
-
 const getAuthHeaders = () => {
   const token = localStorage.getItem('studentToken');
   return {
@@ -43,7 +37,7 @@ const getAuthHeaders = () => {
 };
 
 const generatePronunciationPhrase = async (difficulty: string) => {
-  const response = await fetch(`${API_BASE}/api/portal/pronunciation/generate`, {
+  const response = await fetch(`${API_URL}/portal/pronunciation/generate`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ difficulty })
@@ -58,7 +52,7 @@ const generatePronunciationPhrase = async (difficulty: string) => {
 
 const analyzePronunciation = async (formData: FormData) => {
   const token = localStorage.getItem('studentToken');
-  const response = await fetch(`${API_BASE}/api/portal/pronunciation/analyze`, {
+  const response = await fetch(`${API_URL}/portal/pronunciation/analyze`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -74,7 +68,7 @@ const analyzePronunciation = async (formData: FormData) => {
 };
 
 const savePronunciationHistory = async (data: unknown) => {
-  const response = await fetch(`${API_BASE}/api/portal/pronunciation/history`, {
+  const response = await fetch(`${API_URL}/portal/pronunciation/history`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(data)

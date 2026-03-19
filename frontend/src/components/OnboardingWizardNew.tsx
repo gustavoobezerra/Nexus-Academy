@@ -6,6 +6,7 @@ import { Step3_SubscriptionPlan } from './onboarding/Step3_SubscriptionPlan';
 import { Step4_Success } from './onboarding/Step4_Success';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { API_URL } from '../services/api.service';
 
 type OnboardingStep = 1 | 2 | 3 | 4;
 
@@ -20,7 +21,6 @@ export const OnboardingWizardNew = ({ onComplete }: OnboardingWizardNewProps) =>
   const [slug, setSlug] = useState('');
   const totalSteps = 4;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const token = localStorage.getItem('token');
 
   // Verificar se já tem slug salvo

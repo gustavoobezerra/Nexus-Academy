@@ -1,19 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { io, Socket } from 'socket.io-client';
-import { 
-  Users, Trophy, Clock, MessageCircle, Eraser, 
-  Play, X, Check, AlertCircle, Sparkles, Copy
-} from 'lucide-react';
+import { io, type Socket } from 'socket.io-client';
+import { AlertCircle, Check, Clock3, Copy, Eraser, MessageCircle, Play, Search, Sparkles, Trophy, Users, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { studentsAPI } from '../lib/api';
+import { getSocketBaseUrl } from '../services/api.service';
+import { createDashboardMockData } from '../mocks/demoData';
+import type { Aluno } from '../types';
 
-interface Player {
-  id: string;
-  name: string;
-  avatar?: string;
-  score: number;
-}
-
-interface GameState {
+type Player = { id: string; name: string; avatar?: string | null; score: number };
+type InvitedStudent = { id: string; name: string; email?: string | null; status: 'pending' | 'joined' };
+type GameState = {
   id: string;
   status: 'waiting' | 'active' | 'won' | 'lost';
   revealedWord: string;
@@ -23,1079 +20,393 @@ interface GameState {
   wrongGuesses: number;
   maxWrongGuesses: number;
   players: Player[];
-  currentPlayerIndex: number;
+  invitedStudents: InvitedStudent[];
+  currentPlayer: Player | null;
   turnBased: boolean;
-  theme: string;
-  startedAt?: Date;
+  turnDurationSeconds: number;
+  currentTurnExpiresAt?: string;
+  roundNumber: number;
   duration: number;
-}
+};
+type ChatEntry = { type: 'system' | 'success' | 'error' | 'chat'; message: string; player?: { name: string }; timestamp: Date };
+type HangmanGameProps = { gameId?: string; isTeacher: boolean; userId: string; userName: string; userAvatar?: string; onClose?: () => void };
 
-interface HangmanGameProps {
-  gameId?: string;
-  isTeacher: boolean;
-  userId: string;
-  userName: string;
-  userAvatar?: string;
-  onClose?: () => void;
-}
-
-const HANGMAN_SUGGESTIONS: Record<string, { word: string; hint: string }[]> = {
-  ingles: [
-    { word: 'SUSTAINABLE', hint: 'Relacionado a sustentabilidade' },
-    { word: 'NEIGHBOR', hint: 'Pessoa que mora perto' },
-    { word: 'LANGUAGE', hint: 'Idioma' },
-    { word: 'EDUCATION', hint: 'Processo de aprendizado' },
-    { word: 'HORIZON', hint: 'Linha onde o mar e o céu se encontram' }
-  ],
-  portugues: [
-    { word: 'APRENDIZADO', hint: 'Processo de aprender' },
-    { word: 'PROFESSOR', hint: 'Quem ensina' },
-    { word: 'ESTUDANTE', hint: 'Quem aprende' },
-    { word: 'CONHECIMENTO', hint: 'Resultado do estudo' },
-    { word: 'DIDÁTICA', hint: 'Arte de ensinar' }
-  ],
-  matematica: [
-    { word: 'EQUAÇÃO', hint: 'Expressão matemática com igualdade' },
-    { word: 'GEOMETRIA', hint: 'Estudo das formas' },
-    { word: 'FRAÇÃO', hint: 'Parte de um todo' },
-    { word: 'FUNÇÃO', hint: 'Relação entre conjuntos' },
-    { word: 'PROBABILIDADE', hint: 'Chance de algo acontecer' }
-  ],
-  ciencias: [
-    { word: 'ENERGIA', hint: 'Capacidade de realizar trabalho' },
-    { word: 'ECOSSISTEMA', hint: 'Conjunto de seres vivos e ambiente' },
-    { word: 'FOTOSSÍNTESE', hint: 'Processo das plantas' },
-    { word: 'MATÉRIA', hint: 'Tudo que tem massa' },
-    { word: 'EVOLUÇÃO', hint: 'Mudanças ao longo do tempo' }
-  ],
-  historia: [
-    { word: 'REVOLUÇÃO', hint: 'Mudança profunda na sociedade' },
-    { word: 'IMPERADOR', hint: 'Chefe de um império' },
-    { word: 'COLONIZAÇÃO', hint: 'Domínio de territórios' },
-    { word: 'REPUBLICA', hint: 'Forma de governo' },
-    { word: 'GUERRA', hint: 'Conflito armado' }
-  ],
-  geografia: [
-    { word: 'CONTINENTE', hint: 'Grande massa de terra' },
-    { word: 'LATITUDE', hint: 'Coordenada geográfica' },
-    { word: 'CLIMA', hint: 'Condições atmosféricas' },
-    { word: 'RELEVO', hint: 'Formas da superfície terrestre' },
-    { word: 'HIDROGRAFIA', hint: 'Estudo das águas' }
-  ],
-  geral: [
-    { word: 'INSPIRAÇÃO', hint: 'Ato de se inspirar' },
-    { word: 'CRIATIVIDADE', hint: 'Capacidade de criar' },
-    { word: 'DISCIPLINA', hint: 'Organização e foco' },
-    { word: 'OBJETIVO', hint: 'Meta a alcançar' },
-    { word: 'PERSISTÊNCIA', hint: 'Manter o esforço' }
-  ]
+const TIME_OPTIONS = [15, 20, 25, 30, 35, 40];
+const CATEGORIES = ['Ingles', 'Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Geral'];
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const SUGGESTIONS: Record<string, { word: string; hint: string }[]> = {
+  ingles: [{ word: 'LANGUAGE', hint: 'Sistema usado para comunicar ideias' }, { word: 'VOCABULARY', hint: 'Conjunto de palavras conhecidas' }],
+  portugues: [{ word: 'APRENDIZADO', hint: 'Processo de aprender' }, { word: 'PROFESSOR', hint: 'Quem conduz a aula' }],
+  matematica: [{ word: 'EQUACAO', hint: 'Expressao matematica com igualdade' }, { word: 'GEOMETRIA', hint: 'Area das formas e espacos' }],
+  ciencias: [{ word: 'ECOSSISTEMA', hint: 'Seres vivos em equilibrio com o ambiente' }, { word: 'ENERGIA', hint: 'Capacidade de realizar trabalho' }],
+  historia: [{ word: 'REVOLUCAO', hint: 'Mudanca profunda em uma sociedade' }],
+  geografia: [{ word: 'CONTINENTE', hint: 'Grande massa de terra' }],
+  geral: [{ word: 'CRIATIVIDADE', hint: 'Capacidade de criar novas ideias' }, { word: 'DISCIPLINA', hint: 'Constancia para seguir um plano' }]
 };
 
-const getSocketBaseUrl = () => {
-  const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const trimmed = raw.replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
-};
-
-const normalizeCategory = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-
-const getSuggestionByCategory = (category: string) => {
-  const key = normalizeCategory(category || 'geral');
-  const list = HANGMAN_SUGGESTIONS[key] || HANGMAN_SUGGESTIONS.geral;
+const normalizeCategory = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const randomSuggestion = (category: string) => {
+  const list = SUGGESTIONS[normalizeCategory(category)] || SUGGESTIONS.geral;
   return list[Math.floor(Math.random() * list.length)];
 };
+const systemEntry = (message: string, type: ChatEntry['type'] = 'system'): ChatEntry => ({ type, message, timestamp: new Date() });
+const clockLabel = (seconds: number) => `${Math.floor(Math.max(seconds, 0) / 60)}:${(Math.max(seconds, 0) % 60).toString().padStart(2, '0')}`;
 
-const HangmanGame: React.FC<HangmanGameProps> = ({
-  gameId: initialGameId,
-  isTeacher,
-  userId,
-  userName,
-  userAvatar,
-  onClose
-}) => {
+/**
+ * O backend passa a ser a fonte de verdade para turnos, timer e convites.
+ * O componente apenas reflete o estado recebido pelos eventos do socket.
+ */
+const HangmanGame: React.FC<HangmanGameProps> = ({ gameId: initialGameId, isTeacher, userId, userName, userAvatar, onClose }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameId, setGameId] = useState<string | null>(initialGameId || null);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [students, setStudents] = useState<Aluno[]>([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatEntry[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [showWhiteboard, setShowWhiteboard] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
+  const [joinCode, setJoinCode] = useState(initialGameId || '');
   const [joinError, setJoinError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [turnTimeLeft, setTurnTimeLeft] = useState(0);
   const [wordGuess, setWordGuess] = useState('');
-
-  // Whiteboard state
+  const [finalWord, setFinalWord] = useState('');
+  const [showWhiteboard, setShowWhiteboard] = useState(false);
+  const [createForm, setCreateForm] = useState({ word: '', hint: '', category: 'Ingles', maxWrongGuesses: 6, turnBased: true, turnDurationSeconds: 20, invitedStudentIds: [] as string[] });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [drawColor, setDrawColor] = useState('#000000');
-  const [lineWidth, setLineWidth] = useState(2);
-  
-  // Create game form (teacher only)
-  const [createForm, setCreateForm] = useState({
-    word: '',
-    hint: '',
-    category: 'Inglês',
-    maxWrongGuesses: 6,
-    turnBased: false
-  });
-  
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-  
-  // Conectar ao Socket.IO
-  useEffect(() => {
-    const socketBaseUrl = getSocketBaseUrl();
-    const token = isTeacher
-      ? localStorage.getItem('token')
-      : (localStorage.getItem('studentToken') || localStorage.getItem('token'));
+  const [drawColor, setDrawColor] = useState('#ffffff');
+  const [lineWidth, setLineWidth] = useState(3);
 
-    const socketInstance = io(`${socketBaseUrl}/hangman`, {
-      auth: token ? { token } : undefined,
-      transports: ['websocket', 'polling']
-    });
-    
-    setSocket(socketInstance);
-    
-    socketInstance.on('connect', () => {
+  useEffect(() => {
+    if (!isTeacher) return;
+    const load = async () => {
+      try {
+        const response = await studentsAPI.getAll() as { students?: Aluno[] };
+        setStudents(Array.isArray(response?.students) && response.students.length > 0 ? response.students : createDashboardMockData().students);
+      } catch (error) {
+        console.error('Erro ao carregar alunos da Forca:', error);
+        setStudents(createDashboardMockData().students);
+        toast.error('Nao foi possivel carregar a base real. Usando exemplos.');
+      }
+    };
+    void load();
+  }, [isTeacher]);
+
+  useEffect(() => {
+    const token = isTeacher ? localStorage.getItem('token') : (localStorage.getItem('studentToken') || localStorage.getItem('token'));
+    const instance = io(`${getSocketBaseUrl()}/hangman`, { auth: token ? { token } : undefined, transports: ['websocket', 'polling'] });
+    setSocket(instance);
+    instance.on('connect', () => {
       setJoinError('');
-      
-      // Se já tem gameId, entrar no jogo
-      if (initialGameId) {
-        socketInstance.emit('join-game', {
-          gameId: initialGameId,
-          studentId: userId,
-          studentName: userName,
-          studentAvatar: userAvatar
-        });
+      if (initialGameId && !isTeacher) {
+        instance.emit('join-game', { gameId: initialGameId, studentName: userName, studentAvatar: userAvatar });
       }
     });
-    
-    socketInstance.on('game-created', ({ gameId: newGameId, gameState: state }) => {
-      setGameId(newGameId);
+    instance.on('game-created', ({ gameId: id, gameState: state }) => {
+      setGameId(id);
       setGameState(state);
+      setChatMessages([systemEntry('Sala criada. Convide os alunos e inicie quando todos estiverem prontos.')]);
     });
-    
-    socketInstance.on('game-joined', ({ gameId: joinedGameId, gameState: state }) => {
-      setGameId(joinedGameId);
+    instance.on('game-joined', ({ gameId: id, gameState: state }) => {
+      setGameId(id);
       setGameState(state);
+      setChatMessages((current) => [...current, systemEntry('Voce entrou na sala.')]);
     });
-    
-    socketInstance.on('player-joined', ({ player, players }) => {
-      setGameState(prev => prev ? { ...prev, players } : null);
-      setChatMessages(prev => [...prev, {
-        type: 'system',
-        message: `${player.name} entrou no jogo`,
-        timestamp: new Date()
-      }]);
+    instance.on('player-joined', ({ player, players, invitedStudents }) => {
+      setGameState((current) => current ? { ...current, players, invitedStudents: invitedStudents || current.invitedStudents } : null);
+      setChatMessages((current) => [...current, systemEntry(`${player.name} entrou na sala.`)]);
     });
-    
-    socketInstance.on('game-started', ({ gameState: state }) => {
+    instance.on('player-left', ({ player }) => setChatMessages((current) => [...current, systemEntry(`${player.name} saiu da sala.`)]));
+    instance.on('game-started', ({ gameState: state }) => {
+      setFinalWord('');
       setGameState(state);
-      setChatMessages(prev => [...prev, {
-        type: 'system',
-        message: 'Jogo iniciado! Boa sorte!',
-        timestamp: new Date()
-      }]);
+      setChatMessages((current) => [...current, systemEntry(state.currentPlayer ? `Rodada iniciada. Vez de ${state.currentPlayer.name}.` : 'Rodada iniciada.')]);
     });
-    
-    socketInstance.on('letter-guessed', ({ letter, correct, wrongGuesses, revealedWord, status, gameState: state, player }) => {
+    instance.on('turn-changed', ({ gameState: state, currentPlayer, reason }) => {
       setGameState(state);
-      setSelectedLetter(null);
-      
-      const message = correct
-        ? `${player.name} acertou a letra ${letter}!`
-        : `${player.name} errou. A letra ${letter} não está na palavra.`;
-      
-      setChatMessages(prev => [...prev, {
-        type: correct ? 'success' : 'error',
-        message,
-        timestamp: new Date()
-      }]);
+      setChatMessages((current) => [...current, systemEntry(reason === 'timeout' ? `Tempo encerrado. Agora e a vez de ${currentPlayer?.name || 'outro aluno'}.` : `Proxima rodada: ${currentPlayer?.name || 'aluno da vez'}.`)]);
     });
-    
-    socketInstance.on('word-guessed', ({ word, correct, wrongGuesses, revealedWord, status, gameState: state, player }) => {
+    instance.on('turn-expired', ({ gameState: state, timedOutPlayer, penaltyApplied }) => {
+      setGameState(state);
+      setChatMessages((current) => [...current, systemEntry(penaltyApplied ? `Tempo de ${timedOutPlayer?.name || 'um aluno'} acabou. Mais uma parte da forca foi desenhada.` : `Tempo de ${timedOutPlayer?.name || 'um aluno'} acabou. A rodada passou para o proximo aluno.`, penaltyApplied ? 'error' : 'system')]);
+    });
+    instance.on('letter-guessed', ({ letter, correct, gameState: state, player }) => {
+      setGameState(state);
+      setChatMessages((current) => [...current, systemEntry(correct ? `${player.name} acertou a letra ${letter}.` : `${player.name} errou a letra ${letter}.`, correct ? 'success' : 'error')]);
+    });
+    instance.on('word-guessed', ({ word, correct, gameState: state, player }) => {
       setGameState(state);
       setWordGuess('');
-
-      const message = correct
-        ? `${player.name} adivinhou a palavra "${word}"!`
-        : `${player.name} tentou "${word}", mas errou`;
-
-      setChatMessages(prev => [...prev, {
-        type: correct ? 'success' : 'error',
-        message,
-        timestamp: new Date()
-      }]);
+      setChatMessages((current) => [...current, systemEntry(correct ? `${player.name} acertou a palavra ${word}.` : `${player.name} tentou ${word}, mas nao acertou.`, correct ? 'success' : 'error')]);
     });
-
-    socketInstance.on('game-ended', ({ status, word, players }) => {
-      const message = status === 'won'
-        ? `Parabéns! A palavra era: ${word}`
-        : `Que pena! A palavra era: ${word}`;
-      
-      setChatMessages(prev => [...prev, {
-        type: 'system',
-        message,
-        timestamp: new Date()
-      }]);
+    instance.on('game-ended', ({ status, word, players }) => {
+      setFinalWord(word);
+      setGameState((current) => current ? { ...current, status, players } : current);
+      setChatMessages((current) => [...current, systemEntry(status === 'won' ? `Fim de jogo. A palavra ${word} foi descoberta.` : `Fim de jogo. A palavra correta era ${word}.`, status === 'won' ? 'success' : 'error')]);
     });
-    
-    socketInstance.on('player-left', ({ player }) => {
-      setChatMessages(prev => [...prev, {
-        type: 'system',
-        message: `${player.name} saiu do jogo`,
-        timestamp: new Date()
-      }]);
-    });
-    
-    socketInstance.on('chat-message', ({ player, message, timestamp }) => {
-      setChatMessages(prev => [...prev, {
-        type: 'chat',
-        player,
-        message,
-        timestamp: new Date(timestamp)
-      }]);
-    });
-    
-    socketInstance.on('whiteboard-update', (drawData) => {
-      drawOnCanvas(drawData);
-    });
-    
-    socketInstance.on('whiteboard-cleared', () => {
-      clearCanvas();
-    });
-    
-    socketInstance.on('connect_error', (error) => {
-      console.error('Erro de conexÆo no Hangman:', error?.message || error);
+    instance.on('chat-message', ({ player, message, timestamp }) => setChatMessages((current) => [...current, { type: 'chat', player, message, timestamp: new Date(timestamp) }]));
+    instance.on('whiteboard-update', (drawData) => drawOnCanvas(drawData));
+    instance.on('whiteboard-cleared', () => clearCanvas());
+    instance.on('connect_error', (error) => {
+      console.error('Erro de conexao no Hangman:', error?.message || error);
       setJoinError('Nao foi possivel conectar ao jogo. Verifique seu login.');
     });
-
-    socketInstance.on('error', ({ message }) => {
-      alert(message);
-    });
-    
+    instance.on('error', ({ message }) => toast.error(message || 'Erro ao interagir com o jogo.'));
     return () => {
-      socketInstance.disconnect();
+      instance.disconnect();
     };
-  }, [initialGameId, userId, userName, userAvatar, isTeacher]);
-  
-  // Criar jogo (professor)
-  const handleCreateGame = () => {
-    if (!socket || !createForm.word.trim()) {
-      alert('Digite uma palavra valida');
+  }, [initialGameId, isTeacher, userAvatar, userName]);
+
+  useEffect(() => {
+    if (!gameState?.currentTurnExpiresAt || gameState.status !== 'active') {
+      setTurnTimeLeft(0);
       return;
     }
-    
-    socket.emit('create-game', {
-      teacherId: userId,
-      word: createForm.word.trim(),
-      hint: createForm.hint.trim(),
-      category: createForm.category,
-      maxWrongGuesses: createForm.maxWrongGuesses,
-      turnBased: createForm.turnBased
-    });
+    const tick = () => setTurnTimeLeft(Math.max(Math.ceil((new Date(gameState.currentTurnExpiresAt as string).getTime() - Date.now()) / 1000), 0));
+    tick();
+    const timer = window.setInterval(tick, 250);
+    return () => window.clearInterval(timer);
+  }, [gameState?.currentTurnExpiresAt, gameState?.status]);
+
+  const filteredStudents = useMemo(() => {
+    const query = studentSearch.trim().toLowerCase();
+    return !query ? students : students.filter((student) => student.name.toLowerCase().includes(query) || (student.email || '').toLowerCase().includes(query));
+  }, [studentSearch, students]);
+  const canGuess = Boolean(!isTeacher && gameState && gameState.status === 'active' && (!gameState.turnBased || gameState.currentPlayer?.id === userId));
+  const timerRatio = gameState?.turnDurationSeconds ? turnTimeLeft / gameState.turnDurationSeconds : 0;
+  const timerTextClass = timerRatio > 0.66 ? 'text-white' : timerRatio > 0.33 ? 'text-amber-300' : 'text-red-400';
+  const timerBarClass = timerRatio > 0.66 ? 'bg-white' : timerRatio > 0.33 ? 'bg-amber-400' : 'bg-red-500';
+
+  const toggleInvite = (studentId: string) => setCreateForm((current) => ({ ...current, invitedStudentIds: current.invitedStudentIds.includes(studentId) ? current.invitedStudentIds.filter((id) => id !== studentId) : [...current.invitedStudentIds, studentId] }));
+  const generateSuggestion = () => {
+    const suggestion = randomSuggestion(createForm.category);
+    setCreateForm((current) => ({ ...current, word: suggestion.word, hint: suggestion.hint }));
   };
-  const handleGenerateSuggestion = () => {
-    const suggestion = getSuggestionByCategory(createForm.category);
-    setCreateForm(prev => ({
-      ...prev,
-      word: suggestion.word,
-      hint: suggestion.hint
-    }));
+  const createGame = () => {
+    if (!socket) return toast.error('Conexao indisponivel no momento.');
+    if (!createForm.word.trim()) return toast.error('Digite uma palavra valida para criar a sala.');
+    socket.emit('create-game', { word: createForm.word.trim().toUpperCase(), hint: createForm.hint.trim(), category: createForm.category, maxWrongGuesses: createForm.maxWrongGuesses, turnBased: createForm.turnBased, turnDurationSeconds: createForm.turnDurationSeconds, invitedStudentIds: createForm.invitedStudentIds });
   };
-
-  const handleJoinGame = () => {
-    if (!socket) {
-      setJoinError('Conexao indisponivel no momento.');
-      return;
-    }
-
-    const trimmed = joinCode.trim();
-    if (!trimmed) {
-      setJoinError('Informe o codigo do jogo.');
-      return;
-    }
-
+  const joinGame = () => {
+    if (!socket) return setJoinError('Conexao indisponivel no momento.');
+    if (!joinCode.trim()) return setJoinError('Informe o codigo da sala.');
     setJoinError('');
-    socket.emit('join-game', {
-      gameId: trimmed,
-      studentId: userId,
-      studentName: userName,
-      studentAvatar: userAvatar
-    });
+    socket.emit('join-game', { gameId: joinCode.trim(), studentName: userName, studentAvatar: userAvatar });
   };
-
-  const handleCopyGameCode = async () => {
+  const startGame = () => {
+    if (!socket || !gameId) return;
+    if ((gameState?.players.length || 0) === 0) return toast.error('Espere pelo menos um aluno entrar antes de iniciar.');
+    socket.emit('start-game', { gameId });
+  };
+  const copyGameCode = async () => {
     if (!gameId) return;
     try {
       await navigator.clipboard.writeText(gameId);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), 1400);
     } catch {
-      alert('Nao foi possivel copiar o codigo do jogo.');
+      toast.error('Nao foi possivel copiar o codigo da sala.');
     }
   };
-  
-  // Iniciar jogo (professor)
-  const handleStartGame = () => {
-    if (!socket || !gameId) return;
-    socket.emit('start-game', { gameId });
+  const guessLetter = (letter: string) => {
+    if (!socket || !gameId || !gameState || !canGuess) return;
+    if (gameState.guessedLetters.includes(letter)) return toast.error('Essa letra ja foi usada.');
+    socket.emit('guess-letter', { gameId, letter });
   };
-  
-  // Tentar letra
-  const handleGuessLetter = (letter: string) => {
-    if (!socket || !gameId || !gameState || gameState.status !== 'active') return;
-    
-    if (gameState.guessedLetters.includes(letter)) {
-      alert('Essa letra já foi tentada!');
-      return;
-    }
-    
-    setSelectedLetter(letter);
-    socket.emit('guess-letter', {
-      gameId,
-      letter,
-      studentId: userId
-    });
+  const guessWord = () => {
+    if (!socket || !gameId || !gameState || !canGuess || !wordGuess.trim()) return;
+    socket.emit('guess-word', { gameId, word: wordGuess.trim().toUpperCase() });
   };
-  
-  // Tentar palavra completa
-  const handleWordGuess = () => {
-    if (!socket || !gameId || !gameState || gameState.status !== 'active') return;
-    const wordLength = gameState.revealedWord.length;
-    if (!wordGuess.trim() || wordGuess.length !== wordLength) return;
-
-    socket.emit('guess-word', {
-      gameId,
-      word: wordGuess.toUpperCase(),
-      studentId: userId
-    });
-  };
-
-  // Enviar mensagem de chat
-  const handleSendChat = () => {
+  const sendChat = () => {
     if (!socket || !gameId || !chatInput.trim()) return;
-    
-    socket.emit('send-chat', {
-      gameId,
-      studentId: userId,
-      message: chatInput.trim()
-    });
-    
+    socket.emit('send-chat', { gameId, message: chatInput.trim() });
     setChatInput('');
   };
-  
-  // Whiteboard drawing
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!showWhiteboard) return;
     setIsDrawing(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.beginPath();
+      context.moveTo(x, y);
     }
-
-    if (socket && gameId) {
-      socket.emit('draw-whiteboard', {
-        gameId,
-        drawData: { x, y, color: drawColor, lineWidth, isStart: true }
-      });
-    }
+    if (socket && gameId) socket.emit('draw-whiteboard', { gameId, drawData: { x, y, color: drawColor, lineWidth, isStart: true } });
   };
-  
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !showWhiteboard) return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.strokeStyle = drawColor;
-      ctx.lineWidth = lineWidth;
-      ctx.lineCap = 'round';
-      ctx.lineTo(x, y);
-      ctx.stroke();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.strokeStyle = drawColor;
+      context.lineWidth = lineWidth;
+      context.lineCap = 'round';
+      context.lineTo(x, y);
+      context.stroke();
     }
-    
-    // Emitir para outros jogadores
-    if (socket && gameId) {
-      socket.emit('draw-whiteboard', {
-        gameId,
-        drawData: { x, y, color: drawColor, lineWidth, isDrawing: true }
-      });
-    }
+    if (socket && gameId) socket.emit('draw-whiteboard', { gameId, drawData: { x, y, color: drawColor, lineWidth, isDrawing: true } });
   };
-  
   const stopDrawing = () => {
     setIsDrawing(false);
-
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (ctx) {
-      ctx.closePath();
-    }
-
-    if (socket && gameId) {
-      socket.emit('draw-whiteboard', {
-        gameId,
-        drawData: { isStop: true }
-      });
-    }
+    const context = canvasRef.current?.getContext('2d');
+    if (context) context.closePath();
+    if (socket && gameId) socket.emit('draw-whiteboard', { gameId, drawData: { isStop: true } });
   };
-  
-  const drawOnCanvas = (drawData: any) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
+  const drawOnCanvas = (drawData: { x?: number; y?: number; color?: string; lineWidth?: number; isStart?: boolean; isDrawing?: boolean; isStop?: boolean }) => {
+    const context = canvasRef.current?.getContext('2d');
+    if (!context) return;
     if (drawData.isStart) {
-      ctx.beginPath();
-      ctx.moveTo(drawData.x, drawData.y);
+      context.beginPath();
+      context.moveTo(drawData.x || 0, drawData.y || 0);
       return;
     }
-
     if (drawData.isStop) {
-      ctx.closePath();
+      context.closePath();
       return;
     }
-
     if (drawData.isDrawing) {
-      ctx.strokeStyle = drawData.color;
-      ctx.lineWidth = drawData.lineWidth;
-      ctx.lineCap = 'round';
-      ctx.lineTo(drawData.x, drawData.y);
-      ctx.stroke();
+      context.strokeStyle = drawData.color || '#ffffff';
+      context.lineWidth = drawData.lineWidth || 3;
+      context.lineCap = 'round';
+      context.lineTo(drawData.x || 0, drawData.y || 0);
+      context.stroke();
     }
   };
-  
   const clearCanvas = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    const context = canvas?.getContext('2d');
+    if (canvas && context) context.clearRect(0, 0, canvas.width, canvas.height);
   };
-  
-  const handleClearWhiteboard = () => {
+  const clearWhiteboard = () => {
     clearCanvas();
-    if (socket && gameId) {
-      socket.emit('clear-whiteboard', { gameId });
-    }
+    if (socket && gameId) socket.emit('clear-whiteboard', { gameId });
   };
-  
-  // Renderizar boneco da forca
-  const renderHangman = () => {
-    const parts = [
-      // Cabeça
-      <motion.circle
-        key="head"
-        cx="200"
-        cy="80"
-        r="20"
-        stroke="currentColor"
-        strokeWidth="3"
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.5 }}
-      />,
-      // Corpo
-      <motion.line
-        key="body"
-        x1="200"
-        y1="100"
-        x2="200"
-        y2="150"
-        stroke="currentColor"
-        strokeWidth="3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.5 }}
-      />,
-      // Braço esquerdo
-      <motion.line
-        key="left-arm"
-        x1="200"
-        y1="120"
-        x2="170"
-        y2="140"
-        stroke="currentColor"
-        strokeWidth="3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.5 }}
-      />,
-      // Braço direito
-      <motion.line
-        key="right-arm"
-        x1="200"
-        y1="120"
-        x2="230"
-        y2="140"
-        stroke="currentColor"
-        strokeWidth="3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.5 }}
-      />,
-      // Perna esquerda
-      <motion.line
-        key="left-leg"
-        x1="200"
-        y1="150"
-        x2="180"
-        y2="190"
-        stroke="currentColor"
-        strokeWidth="3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.5 }}
-      />,
-      // Perna direita
-      <motion.line
-        key="right-leg"
-        x1="200"
-        y1="150"
-        x2="220"
-        y2="190"
-        stroke="currentColor"
-        strokeWidth="3"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.5 }}
-      />
-    ];
-    
-    const wrongGuesses = gameState?.wrongGuesses || 0;
-    return parts.slice(0, wrongGuesses);
-  };
-  
-  // Tela de criação de jogo (professor)
+  const hangmanParts = [
+    <motion.circle key="head" cx="200" cy="84" r="20" stroke="currentColor" strokeWidth="3" fill="none" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />,
+    <motion.line key="body" x1="200" y1="104" x2="200" y2="156" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />,
+    <motion.line key="left-arm" x1="200" y1="122" x2="170" y2="140" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />,
+    <motion.line key="right-arm" x1="200" y1="122" x2="230" y2="140" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />,
+    <motion.line key="left-leg" x1="200" y1="156" x2="178" y2="194" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />,
+    <motion.line key="right-leg" x1="200" y1="156" x2="222" y2="194" stroke="currentColor" strokeWidth="3" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+  ];
+
   if (isTeacher && !gameId) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-8 max-w-md w-full shadow-2xl"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Criar Jogo da Forca</h2>
-            {onClose && (
-              <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-                <X size={24} />
-              </button>
-            )}
+      <div className="fixed inset-0 z-50 bg-slate-950/84 px-4 py-6 backdrop-blur-sm">
+        <div className="mx-auto flex h-full max-w-6xl items-center">
+          <div className="w-full rounded-[32px] border border-white/10 bg-[#0d1524] p-6 text-slate-100 shadow-[0_40px_100px_rgba(2,6,23,0.55)]">
+            <div className="flex items-center justify-between border-b border-white/8 pb-5">
+              <div><p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Forca ao vivo</p><h2 className="mt-2 text-3xl font-semibold text-white">Configurar nova rodada</h2></div>
+              {onClose && <button onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:border-white/20 hover:text-white"><X size={20} /></button>}
+            </div>
+            <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+              <section className="space-y-4 rounded-[28px] border border-white/10 bg-[#11192a] p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div><p className="text-sm font-semibold text-white">Palavra, tempo e regras</p><p className="mt-1 text-xs text-slate-400">Configure a sala antes de convidar a turma.</p></div>
+                  <button type="button" onClick={generateSuggestion} className="inline-flex items-center gap-2 rounded-2xl border border-indigo-400/20 bg-indigo-500/10 px-4 py-2 text-sm font-semibold text-indigo-100 transition hover:border-indigo-300/40 hover:bg-indigo-500/18"><Sparkles size={16} />Sugestao</button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <input value={createForm.word} onChange={(event) => setCreateForm((current) => ({ ...current, word: event.target.value.toUpperCase().replace(/[^A-ZÀ-ÿ\s]/g, '') }))} placeholder="Palavra" className="rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-white outline-none placeholder:text-slate-500" />
+                  <input value={createForm.hint} onChange={(event) => setCreateForm((current) => ({ ...current, hint: event.target.value }))} placeholder="Dica" className="rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-white outline-none placeholder:text-slate-500" />
+                  <select value={createForm.category} onChange={(event) => setCreateForm((current) => ({ ...current, category: event.target.value }))} className="rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-white outline-none">{CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select>
+                  <select value={createForm.turnDurationSeconds} onChange={(event) => setCreateForm((current) => ({ ...current, turnDurationSeconds: Number(event.target.value) }))} className="rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-white outline-none">{TIME_OPTIONS.map((time) => <option key={time} value={time}>{time} segundos</option>)}</select>
+                </div>
+                <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
+                  <input type="number" min={3} max={10} value={createForm.maxWrongGuesses} onChange={(event) => setCreateForm((current) => ({ ...current, maxWrongGuesses: Number(event.target.value) }))} className="rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-white outline-none" />
+                  <button type="button" onClick={() => setCreateForm((current) => ({ ...current, turnBased: !current.turnBased }))} className={`rounded-2xl border px-4 py-3 text-left ${createForm.turnBased ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100' : 'border-white/10 bg-[#0b1220] text-slate-300'}`}>{createForm.turnBased ? 'Rodadas por aluno ativas' : 'Modo livre ativo'}</button>
+                </div>
+                <button onClick={createGame} className="w-full rounded-[24px] bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200">Criar sala da Forca</button>
+              </section>
+              <section className="space-y-4 rounded-[28px] border border-white/10 bg-[#11192a] p-5">
+                <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">Convidar alunos</p><p className="mt-1 text-xs text-slate-400">Cada convite aparece no portal do aluno.</p></div><span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300">{createForm.invitedStudentIds.length} selecionado(s)</span></div>
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-slate-300"><Search size={16} className="text-slate-500" /><input value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} placeholder="Buscar aluno" className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500" /></label>
+                <div className="max-h-[480px] space-y-3 overflow-y-auto pr-1">
+                  {filteredStudents.map((student, index) => {
+                    const id = student._id || student.id || `${student.name}-${index}`;
+                    const invited = createForm.invitedStudentIds.includes(id);
+                    const portalEnabled = student.portalAccess?.enabled !== false;
+                    return <div key={id} className={`rounded-[24px] border px-4 py-4 ${invited ? 'border-indigo-400/40 bg-indigo-500/10' : 'border-white/10 bg-[#0b1220]'}`}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">{student.name}</p><p className="mt-1 text-xs text-slate-400">{student.email || 'Sem email cadastrado'}</p></div><button type="button" onClick={() => toggleInvite(id)} disabled={!portalEnabled} className={`rounded-2xl px-3 py-2 text-sm font-semibold transition ${invited ? 'bg-white text-slate-950' : 'border border-white/10 bg-white/[0.03] text-slate-100'} disabled:cursor-not-allowed disabled:opacity-40`}>{invited ? 'Convidado' : 'Convidar'}</button></div></div>;
+                  })}
+                  {filteredStudents.length === 0 && <div className="rounded-[24px] border border-dashed border-white/10 bg-[#0b1220] px-4 py-8 text-center text-sm text-slate-400">Nenhum aluno encontrado.</div>}
+                </div>
+              </section>
+            </div>
           </div>
-
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-            Defina a palavra, compartilhe o codigo e inicie o jogo quando a turma entrar.
-          </p>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Palavra *</label>
-              <input
-                type="text"
-                value={createForm.word}
-                onChange={(e) => setCreateForm({ ...createForm, word: e.target.value.toUpperCase() })}
-                placeholder="Digite a palavra"
-                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
-                maxLength={20}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGenerateSuggestion}
-              className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
-            >
-              <Sparkles size={18} />
-              Gerar sugestao
-            </button>
-            
-            <div>
-              <label className="block text-sm font-semibold mb-2">Dica</label>
-              <input
-                type="text"
-                value={createForm.hint}
-                onChange={(e) => setCreateForm({ ...createForm, hint: e.target.value })}
-                placeholder="Dica para os alunos"
-                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold mb-2">Categoria</label>
-              <select
-                value={createForm.category}
-                onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
-              >
-                <option>Inglês</option>
-                <option>Português</option>
-                <option>Matemática</option>
-                <option>Ciências</option>
-                <option>História</option>
-                <option>Geografia</option>
-                <option>Geral</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold mb-2">Tentativas Máximas</label>
-              <input
-                type="number"
-                value={createForm.maxWrongGuesses}
-                onChange={(e) => setCreateForm({ ...createForm, maxWrongGuesses: parseInt(e.target.value) })}
-                min={3}
-                max={10}
-                className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="turnBased"
-                checked={createForm.turnBased}
-                onChange={(e) => setCreateForm({ ...createForm, turnBased: e.target.checked })}
-                className="mr-2"
-              />
-              <label htmlFor="turnBased" className="text-sm">Baseado em turnos</label>
-            </div>
-            
-            <button
-              onClick={handleCreateGame}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-            >
-              Criar Jogo
-            </button>
-          </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
-  
-  
+
   if (!isTeacher && !gameId) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-8 max-w-md w-full shadow-2xl"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Entrar no Jogo da Forca</h2>
-            {onClose && (
-              <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-                <X size={24} />
-              </button>
-            )}
+      <div className="fixed inset-0 z-50 bg-slate-950/84 px-4 py-6 backdrop-blur-sm">
+        <div className="mx-auto flex h-full max-w-xl items-center">
+          <div className="w-full rounded-[32px] border border-white/10 bg-[#0d1524] p-6 text-slate-100 shadow-[0_40px_100px_rgba(2,6,23,0.55)]">
+            <div className="flex items-center justify-between">
+              <div><p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Entrar na partida</p><h2 className="mt-2 text-3xl font-semibold text-white">Jogo da Forca</h2></div>
+              {onClose && <button onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:border-white/20 hover:text-white"><X size={20} /></button>}
+            </div>
+            <div className="mt-6 space-y-4">
+              <p className="text-sm text-slate-400">Cole o codigo da sala enviado pelo professor ou use o link recebido no portal.</p>
+              <input value={joinCode} onChange={(event) => setJoinCode(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && joinGame()} placeholder="Codigo da sala" className="w-full rounded-2xl border border-white/10 bg-[#11192a] px-4 py-3 text-white outline-none placeholder:text-slate-500" />
+              {joinError && <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200"><AlertCircle size={18} className="mt-0.5 flex-shrink-0" /><span>{joinError}</span></div>}
+              <button onClick={joinGame} className="w-full rounded-[24px] bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200">Entrar na sala</button>
+            </div>
           </div>
-
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-            Digite o codigo do jogo enviado pelo professor para entrar.
-          </p>
-
-          <div className="space-y-3">
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleJoinGame()}
-              placeholder="Codigo do jogo"
-              className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
-            />
-            {joinError && (
-              <div className="text-sm text-red-500">{joinError}</div>
-            )}
-            <button
-              onClick={handleJoinGame}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
-            >
-              Entrar no jogo
-            </button>
-          </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
-// Tela principal do jogo
+
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-950 dark:to-slate-900 flex flex-col z-50 text-slate-900 dark:text-slate-100">
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 shadow-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Jogo da Forca</h1>
-          {gameState && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-slate-800 dark:text-slate-200 rounded-full text-sm font-semibold">
-              {gameState.category}
-            </span>
-          )}
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#050a13] text-slate-100">
+      <header className="border-b border-white/8 bg-[#0b1220] px-5 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <div><p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Sala interativa</p><h1 className="mt-2 text-2xl font-semibold text-white">Jogo da Forca</h1></div>
+            {gameState && <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-sm text-slate-300">{gameState.category} • Rodada {gameState.roundNumber || 1}</div>}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {gameId && <button onClick={copyGameCode} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-slate-200 transition hover:border-white/20 hover:text-white">{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? 'Codigo copiado' : `Codigo ${gameId}`}</button>}
+            {gameState?.status === 'active' && <div className="min-w-[170px] rounded-2xl border border-white/10 bg-[#11192a] px-4 py-3"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500"><Clock3 size={14} />Timer</div><span className={`text-xl font-semibold ${timerTextClass}`}>{clockLabel(turnTimeLeft)}</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.06]"><div className={`h-full rounded-full ${timerBarClass}`} style={{ width: `${Math.min(((turnTimeLeft || 0) / Math.max(gameState.turnDurationSeconds || 20, 1)) * 100, 100)}%` }} /></div></div>}
+            {onClose && <button onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:border-white/20 hover:text-white"><X size={20} /></button>}
+          </div>
         </div>
-        
-        <div className="flex items-center gap-4">
-          {gameState && (
-            <>
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Users size={20} />
-                <span>{gameState.players.length}</span>
-              </div>
-              
-              {gameState.startedAt && (
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <Clock size={20} />
-                  <span>{Math.floor(gameState.duration / 60)}:{(gameState.duration % 60).toString().padStart(2, '0')}</span>
+      </header>
+      <div className="flex flex-1 overflow-hidden">
+        <main className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="mx-auto flex max-w-6xl flex-col gap-5 xl:flex-row">
+            <section className="flex-1 space-y-5">
+              <div className="rounded-[30px] border border-white/8 bg-[#0b1220] p-6">
+                {gameState?.status === 'waiting' && <div className="mb-5 rounded-[24px] border border-white/8 bg-[#11192a] px-5 py-4">{isTeacher ? <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-sm font-semibold text-white">Sala pronta para iniciar</p><p className="mt-1 text-xs text-slate-400">{(gameState.players.length || 0) > 0 ? `${gameState.players.length} aluno(s) ja entraram.` : 'Envie os convites e espere pelo menos um aluno entrar.'}</p></div><button onClick={startGame} disabled={(gameState.players.length || 0) === 0} className="rounded-[24px] bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"><Play size={16} className="mr-2 inline" />Iniciar rodada</button></div> : <div><p className="text-sm font-semibold text-white">Aguardando o professor iniciar</p><p className="mt-1 text-xs text-slate-400">Sua entrada foi registrada. Fique nesta tela.</p></div>}</div>}
+                {gameState?.status === 'active' && <div className="mb-5 flex flex-col gap-3 rounded-[24px] border border-white/8 bg-[#11192a] px-5 py-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Aluno da vez</p><p className="mt-2 text-xl font-semibold text-white">{gameState.currentPlayer?.name || 'Rodada livre'}</p><p className="mt-1 text-xs text-slate-400">{gameState.turnBased ? 'A rodada troca automaticamente quando o tempo termina.' : 'Modo livre ativo.'}</p></div>{!isTeacher && !canGuess && <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">Aguarde sua vez para responder.</div>}</div>}
+                <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+                  <div className="rounded-[28px] border border-white/8 bg-[#11192a] p-5"><p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Forca</p><svg width="300" height="250" className="mt-5 text-slate-100"><line x1="24" y1="230" x2="150" y2="230" stroke="currentColor" strokeWidth="4" /><line x1="52" y1="230" x2="52" y2="20" stroke="currentColor" strokeWidth="4" /><line x1="52" y1="20" x2="202" y2="20" stroke="currentColor" strokeWidth="4" /><line x1="202" y1="20" x2="202" y2="64" stroke="currentColor" strokeWidth="3" /><AnimatePresence>{hangmanParts.slice(0, gameState?.wrongGuesses || 0)}</AnimatePresence></svg><div className="mt-4 flex items-center justify-between rounded-2xl border border-white/8 bg-[#0b1220] px-4 py-3 text-sm"><span className="text-slate-400">Erros</span><span className="font-semibold text-white">{gameState?.wrongGuesses || 0}/{gameState?.maxWrongGuesses || 6}</span></div></div>
+                  <div className="rounded-[28px] border border-white/8 bg-[#11192a] p-5"><div className="flex min-h-[112px] flex-wrap items-end justify-center gap-3 rounded-[24px] border border-white/8 bg-[#0b1220] px-5 py-6">{gameState?.revealedWord.split('').map((character, index) => character === ' ' ? <div key={`space-${index}`} className="w-5" /> : <div key={`${character}-${index}`} className="flex flex-col items-center gap-1.5"><span className="w-8 text-center font-mono text-2xl font-semibold text-white">{character !== '_' ? character : ''}</span><span className="h-0.5 w-8 rounded-full bg-slate-500/80" /></div>)}</div>{gameState?.hint && <div className="mt-4 rounded-2xl border border-indigo-400/14 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-100">Dica: {gameState.hint}</div>}{gameState?.status === 'active' && <><div className={`mt-5 grid grid-cols-7 gap-2 md:grid-cols-9 ${!canGuess ? 'opacity-55' : ''}`}>{ALPHABET.map((letter) => { const used = gameState.guessedLetters.includes(letter); const correct = used && gameState.revealedWord.includes(letter); return <button key={letter} onClick={() => guessLetter(letter)} disabled={used || !canGuess} className={`h-11 rounded-2xl border text-sm font-semibold transition ${used ? correct ? 'border-emerald-400/25 bg-emerald-500/12 text-emerald-100' : 'border-red-400/25 bg-red-500/12 text-red-100' : 'border-white/10 bg-[#0b1220] text-white hover:border-white/20 hover:bg-white/[0.04]'} disabled:cursor-not-allowed`}>{letter}</button>; })}</div><div className="mt-5 flex flex-col gap-3 lg:flex-row"><input value={wordGuess} onChange={(event) => setWordGuess(event.target.value.toUpperCase().replace(/[^A-ZÀ-ÿ\s]/g, ''))} onKeyDown={(event) => event.key === 'Enter' && guessWord()} placeholder="Tentar palavra inteira" className="flex-1 rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-white outline-none placeholder:text-slate-500 disabled:opacity-50" disabled={!canGuess} /><button onClick={guessWord} disabled={!canGuess || !wordGuess.trim()} className="rounded-[24px] bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Tentar resposta</button></div></>}{(gameState?.status === 'won' || gameState?.status === 'lost') && <div className={`mt-5 rounded-[24px] border px-5 py-5 text-center ${gameState.status === 'won' ? 'border-emerald-400/20 bg-emerald-500/10' : 'border-red-400/20 bg-red-500/10'}`}><p className={`text-3xl font-semibold ${gameState.status === 'won' ? 'text-emerald-100' : 'text-red-100'}`}>{gameState.status === 'won' ? 'Palavra descoberta' : 'Rodada encerrada'}</p><p className="mt-3 text-base text-white">Palavra final: <strong>{finalWord || gameState.revealedWord.replace(/_/g, '')}</strong></p></div>}<button onClick={() => setShowWhiteboard((current) => !current)} className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/20 hover:text-white">{showWhiteboard ? 'Fechar quadro branco' : 'Mostrar quadro branco'}</button></div>
                 </div>
-              )}
-            </>
-          )}
-          
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <X size={24} />
-            </button>
-          )}
-        </div>
+              </div>
+            </section>
+            <aside className="w-full xl:w-[360px]">
+              <div className="flex flex-col gap-5">
+                <section className="rounded-[28px] border border-white/8 bg-[#0b1220] p-5"><div className="flex items-center gap-2"><Trophy size={18} className="text-amber-300" /><p className="text-sm font-semibold text-white">Placar</p></div><div className="mt-4 space-y-3">{(gameState?.players || []).length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 bg-[#11192a] px-4 py-6 text-sm text-slate-400">Nenhum aluno conectado ainda.</div> : gameState?.players.map((player, index) => <div key={player.id} className={`rounded-2xl border px-4 py-3 ${player.id === gameState.currentPlayer?.id ? 'border-indigo-400/25 bg-indigo-500/10' : 'border-white/10 bg-[#11192a]'}`}><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">{player.name}</p><p className="mt-1 text-xs text-slate-400">{index + 1}o no ranking</p></div><span className="text-lg font-semibold text-white">{player.score}</span></div></div>)}</div></section>
+                <section className="rounded-[28px] border border-white/8 bg-[#0b1220] p-5"><div className="flex items-center gap-2"><Users size={18} className="text-slate-300" /><p className="text-sm font-semibold text-white">Convites e presencas</p></div><div className="mt-4 space-y-3">{(gameState?.invitedStudents || []).length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 bg-[#11192a] px-4 py-6 text-sm text-slate-400">Sem convites registrados nesta sala.</div> : gameState?.invitedStudents.map((student) => <div key={student.id} className="rounded-2xl border border-white/10 bg-[#11192a] px-4 py-3"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-semibold text-white">{student.name}</p><p className="mt-1 text-xs text-slate-400">{student.email || 'Portal do aluno'}</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${student.status === 'joined' ? 'bg-emerald-500/12 text-emerald-100' : 'bg-white/[0.05] text-slate-300'}`}>{student.status === 'joined' ? 'Entrou' : 'Convidado'}</span></div></div>)}</div></section>
+                <section className="flex min-h-[260px] flex-col rounded-[28px] border border-white/8 bg-[#0b1220] p-5"><div className="flex items-center gap-2"><MessageCircle size={18} className="text-slate-300" /><p className="text-sm font-semibold text-white">Chat da sala</p></div><div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">{chatMessages.map((entry, index) => <div key={`${entry.message}-${index}`} className={`rounded-2xl px-4 py-3 text-sm ${entry.type === 'success' ? 'bg-emerald-500/10 text-emerald-100' : entry.type === 'error' ? 'bg-red-500/10 text-red-100' : entry.type === 'chat' ? 'bg-[#11192a] text-slate-100' : 'bg-white/[0.04] text-slate-300'}`}>{entry.type === 'chat' && <p className="mb-1 text-xs uppercase tracking-[0.18em] text-slate-500">{entry.player?.name}</p>}<p>{entry.message}</p></div>)}</div><div className="mt-4 flex gap-2"><input value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && sendChat()} placeholder="Escreva uma mensagem" className="flex-1 rounded-2xl border border-white/10 bg-[#11192a] px-4 py-3 text-white outline-none placeholder:text-slate-500" /><button onClick={sendChat} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-200">Enviar</button></div></section>
+              </div>
+            </aside>
+          </div>
+        </main>
       </div>
-
-      {isTeacher && gameId && (
-        <div className="px-6 py-3 bg-blue-50 dark:bg-slate-800/70 border-b border-blue-100 dark:border-slate-700 flex items-center justify-between">
-          <div className="text-sm text-blue-800 dark:text-slate-200">
-            Codigo do jogo: <span className="font-mono font-bold">{gameId}</span>
-          </div>
-          <button
-            onClick={handleCopyGameCode}
-            className="flex items-center gap-2 text-blue-700 hover:text-blue-900 dark:text-slate-200 dark:hover:text-slate-100 text-sm font-semibold"
-          >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? 'Copiado' : 'Copiar'}
-          </button>
-        </div>
-      )}
-      
-      <div className="flex-1 flex overflow-hidden">
-        {/* Área principal do jogo */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          {gameState && gameState.status === 'waiting' && isTeacher && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleStartGame}
-              className="mb-8 bg-green-600 text-white px-8 py-4 rounded-lg font-bold text-lg flex items-center gap-2 shadow-lg"
-            >
-              <Play size={24} />
-              Iniciar Jogo
-            </motion.button>
-          )}
-          
-          {gameState && gameState.status === 'waiting' && !isTeacher && (
-            <div className="mb-8 text-center">
-              <p className="text-xl text-slate-600 dark:text-slate-300">Aguardando o professor iniciar o jogo...</p>
-            </div>
-          )}
-          
-          {/* Forca */}
-          <div className="mb-8">
-            <svg width="300" height="250" className="text-slate-800 dark:text-slate-100">
-              {/* Base */}
-              <line x1="20" y1="230" x2="150" y2="230" stroke="currentColor" strokeWidth="4" />
-              {/* Poste vertical */}
-              <line x1="50" y1="230" x2="50" y2="20" stroke="currentColor" strokeWidth="4" />
-              {/* Poste horizontal */}
-              <line x1="50" y1="20" x2="200" y2="20" stroke="currentColor" strokeWidth="4" />
-              {/* Corda */}
-              <line x1="200" y1="20" x2="200" y2="60" stroke="currentColor" strokeWidth="3" />
-              
-              {/* Boneco */}
-              <AnimatePresence>
-                {renderHangman()}
-              </AnimatePresence>
-            </svg>
-          </div>
-          
-          {/* Palavra revelada — estilo quadro negro */}
-          {gameState && (
-            <div className="mb-8 w-full">
-              <div className="bg-gray-900 border-2 border-gray-600 rounded-xl px-6 py-5 flex flex-wrap gap-3 justify-center items-end shadow-inner min-h-[90px]">
-                {gameState.revealedWord.split('').map((char, index) => (
-                  char === ' ' ? (
-                    <div key={index} className="w-6" />
-                  ) : (
-                    <motion.div
-                      key={index}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: index * 0.04 }}
-                      className="flex flex-col items-center gap-1"
-                    >
-                      <span className="text-2xl font-bold text-yellow-100 font-mono w-8 text-center tracking-wide">
-                        {char !== '_' ? char : ''}
-                      </span>
-                      <div className="w-8 h-0.5 bg-yellow-300/70" />
-                    </motion.div>
-                  )
-                ))}
-              </div>
-
-              {gameState.hint && (
-                <p className="text-center mt-3 text-sm text-slate-500 dark:text-slate-400">
-                  Dica: {gameState.hint}
-                </p>
-              )}
-            </div>
-          )}
-          
-          {/* Teclado */}
-          {gameState && gameState.status === 'active' && (
-            <div className="grid grid-cols-9 gap-2 max-w-3xl">
-              {alphabet.map((letter) => {
-                const isGuessed = gameState.guessedLetters.includes(letter);
-                const isCorrect = isGuessed && gameState.revealedWord.includes(letter);
-                
-                return (
-                  <motion.button
-                    key={letter}
-                    whileHover={!isGuessed ? { scale: 1.1 } : {}}
-                    whileTap={!isGuessed ? { scale: 0.9 } : {}}
-                    onClick={() => handleGuessLetter(letter)}
-                    disabled={isGuessed}
-                    className={`
-                      w-12 h-12 rounded-lg font-bold text-lg transition
-                      ${isGuessed
-                        ? isCorrect
-                          ? 'bg-green-500 text-white'
-                          : 'bg-red-500 text-white'
-                        : 'bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-100 shadow'
-                      }
-                      ${isGuessed ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
-                    `}
-                  >
-                    {letter}
-                  </motion.button>
-                );
-              })}
-            </div>
-          )}
-          
-          {/* Campo para tentar a palavra inteira */}
-          {gameState && gameState.status === 'active' && (
-            <div className="mt-5 flex gap-2 items-center w-full max-w-md">
-              <input
-                type="text"
-                value={wordGuess}
-                onChange={(e) => setWordGuess(e.target.value.toUpperCase().replace(/[^\p{L}\s]/gu, ''))}
-                maxLength={gameState.revealedWord.length}
-                placeholder={`Tente a palavra (${gameState.revealedWord.length} letras)`}
-                className="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-yellow-100 placeholder-gray-500 font-mono uppercase tracking-widest focus:outline-none focus:border-indigo-400 text-sm"
-                onKeyDown={(e) => e.key === 'Enter' && handleWordGuess()}
-              />
-              <button
-                onClick={handleWordGuess}
-                disabled={wordGuess.length !== gameState.revealedWord.length}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors"
-              >
-                Tentar
-              </button>
-            </div>
-          )}
-
-          {/* Status do jogo */}
-          {gameState && (gameState.status === 'won' || gameState.status === 'lost') && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className={`mt-8 p-6 rounded-xl text-center ${
-                gameState.status === 'won' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'
-              }`}
-            >
-              <h2 className={`text-3xl font-bold mb-2 ${
-                gameState.status === 'won' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
-              }`}>
-                {gameState.status === 'won' ? 'Vitória!' : 'Derrota!'}
-              </h2>
-              <p className="text-lg">
-                A palavra era: <strong>{gameState.revealedWord.replace(/_/g, '')}</strong>
-              </p>
-            </motion.div>
-          )}
-          
-          {/* Botão do quadro branco */}
-          {gameState && (
-            <button
-              onClick={() => setShowWhiteboard(!showWhiteboard)}
-              className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
-            >
-              {showWhiteboard ? 'Esconder' : 'Mostrar'} Quadro Branco
-            </button>
-          )}
-        </div>
-        
-        {/* Sidebar direita */}
-        <div className="w-80 bg-white dark:bg-slate-900 shadow-lg flex flex-col">
-          {/* Placar */}
-          <div className="p-4 border-b">
-            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-              <Trophy className="text-yellow-500" />
-              Placar
-            </h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {gameState?.players.map((player, index) => (
-                <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-800 rounded">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">#{index + 1}</span>
-                    <span className="text-sm">{player.name}</span>
-                  </div>
-                  <span className="font-bold text-blue-600 dark:text-blue-400">{player.score}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Chat */}
-          <div className="flex-1 flex flex-col p-4">
-            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-              <MessageCircle />
-              Chat
-            </h3>
-            
-            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-              {chatMessages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`p-2 rounded text-sm ${
-                    msg.type === 'system' ? 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-center' :
-                    msg.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' :
-                    msg.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' :
-                    'bg-blue-50 dark:bg-slate-800/60'
-                  }`}
-                >
-                  {msg.type === 'chat' && (
-                    <span className="font-semibold">{msg.player.name}: </span>
-                  )}
-                  {msg.message}
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendChat()}
-                placeholder="Digite uma mensagem..."
-                className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 text-sm"
-              />
-              <button
-                onClick={handleSendChat}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Enviar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Quadro Branco Modal */}
-      <AnimatePresence>
-        {showWhiteboard && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-6 max-w-4xl w-full shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Quadro Branco Colaborativo</h3>
-                <button
-                  onClick={() => setShowWhiteboard(false)}
-                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              <div className="flex gap-4 mb-4">
-                <input
-                  type="color"
-                  value={drawColor}
-                  onChange={(e) => setDrawColor(e.target.value)}
-                  className="w-12 h-12 rounded cursor-pointer"
-                />
-                
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  value={lineWidth}
-                  onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                  className="flex-1"
-                />
-                
-                <button
-                  onClick={handleClearWhiteboard}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
-                >
-                  <Eraser size={20} />
-                  Limpar
-                </button>
-              </div>
-              
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={500}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                className="border-2 border-gray-300 dark:border-slate-700 rounded-lg cursor-crosshair bg-white dark:bg-slate-950"
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AnimatePresence>{showWhiteboard && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-slate-950/88 px-4 py-6 backdrop-blur-sm"><div className="mx-auto flex h-full max-w-6xl items-center"><div className="w-full rounded-[32px] border border-white/10 bg-[#0d1524] p-6 shadow-[0_40px_100px_rgba(2,6,23,0.55)]"><div className="flex items-center justify-between"><div><p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Ferramenta colaborativa</p><h3 className="mt-2 text-2xl font-semibold text-white">Quadro branco</h3></div><button onClick={() => setShowWhiteboard(false)} className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:border-white/20 hover:text-white"><X size={20} /></button></div><div className="mt-5 flex flex-wrap items-center gap-4 rounded-[24px] border border-white/10 bg-[#11192a] px-4 py-4"><label className="flex items-center gap-3 text-sm text-slate-300">Cor<input type="color" value={drawColor} onChange={(event) => setDrawColor(event.target.value)} className="h-10 w-12 rounded-xl border border-white/10 bg-transparent" /></label><label className="flex min-w-[180px] flex-1 items-center gap-3 text-sm text-slate-300">Espessura<input type="range" min="1" max="10" value={lineWidth} onChange={(event) => setLineWidth(Number(event.target.value))} className="flex-1" /></label><button onClick={clearWhiteboard} className="inline-flex items-center gap-2 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-100 transition hover:bg-red-500/16"><Eraser size={16} />Limpar</button></div><div className="mt-5 overflow-hidden rounded-[28px] border border-white/10 bg-white"><canvas ref={canvasRef} width={1100} height={560} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} className="h-[65vh] w-full cursor-crosshair" /></div></div></div></motion.div>}</AnimatePresence>
     </div>
   );
 };
 
 export default HangmanGame;
-
-
-
-
-

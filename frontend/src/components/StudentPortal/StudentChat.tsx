@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Paperclip, Smile, MoreVertical, Phone, Video, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
-import apiService from '../../services/api.service';
+import apiService, { getSocketBaseUrl } from '../../services/api.service';
 import { io, Socket } from 'socket.io-client';
 
 interface Message {
@@ -46,9 +46,8 @@ export const StudentChat = ({ student, teacher, isDark }: StudentChatProps) => {
 
   const initializeSocket = () => {
     const token = localStorage.getItem('studentToken');
-    const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
     
-    const newSocket = io(socketUrl, {
+    const newSocket = io(getSocketBaseUrl(), {
       auth: {
         userId: student._id,
         userType: 'student',

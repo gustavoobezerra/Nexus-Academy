@@ -1,475 +1,476 @@
-import { useState } from 'react';
-import { 
-  Star, Trophy, Gift, Zap, Award, Lock, Unlock, 
-  Target, Flame, BookOpen, Activity
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Activity,
+  Gift,
+  RefreshCcw,
+  Search,
+  Sparkles,
+  Star,
+  Target,
+  Trophy,
+  Users,
+  Zap
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { studentsAPI } from '../lib/api';
+import { createDashboardMockData } from '../mocks/demoData';
+import {
+  buildStudentActivities,
+  buildStudentPointsSnapshot,
+  createRewardCatalog,
+  POINTS_ACTIONS,
+  type PointsAction,
+  type RewardItem,
+  type StudentActivityEntry
+} from '../mocks/gamificationData';
+import type { Aluno } from '../types';
 
-interface StudentPoints {
-  studentId: string;
-  studentName: string;
-  totalPoints: number;
-  level: number;
-  achievements: string[];
-  lastUpdate: string;
-}
+type LoadState = 'idle' | 'loading' | 'ready';
 
-interface Reward {
-  id: string;
-  name: string;
-  description: string;
-  points: number;
-  icon: string;
-  available: boolean;
-}
-
-interface Activity {
-  id: string;
-  studentId: string;
-  studentName: string;
-  type: string;
-  description: string;
-  points: number;
-  date: string;
-  icon: string;
-}
-
-const getIconComponent = (iconName: string, size: number = 20, color: string = 'currentColor') => {
-  const icons: { [key: string]: any } = {
-    star: <Star size={size} color={color} />,
-    trophy: <Trophy size={size} color={color} />,
-    gift: <Gift size={size} color={color} />,
-    zap: <Zap size={size} color={color} />,
-    award: <Award size={size} color={color} />,
-    check: <Unlock size={size} color={color} />,
-    book: <BookOpen size={size} color={color} />
-  };
-  return icons[iconName] || <Award size={size} color={color} />;
+const actionToneClasses: Record<PointsAction['tone'], string> = {
+  neutral: 'border-white/12 bg-white/[0.03] text-slate-100 hover:border-indigo-400/40 hover:bg-indigo-500/10',
+  accent: 'border-indigo-400/30 bg-indigo-500/12 text-indigo-100 hover:border-indigo-300 hover:bg-indigo-500/18',
+  success: 'border-emerald-400/30 bg-emerald-500/12 text-emerald-100 hover:border-emerald-300 hover:bg-emerald-500/18'
 };
 
-const LevelBadge = ({ level }: { level: number }) => {
-  const levelNames = ['Bronze', 'Prata', 'Ouro', 'Platina', 'Diamante', 'Lendário', 'Épico', 'Supremo'];
-  const levelColors = [
-    'from-orange-400 to-orange-600',
-    'from-slate-400 to-slate-600',
-    'from-yellow-400 to-yellow-600',
-    'from-purple-400 to-purple-600',
-    'from-blue-400 to-blue-600',
-    'from-pink-400 to-pink-600',
-    'from-red-400 to-red-600',
-    'from-indigo-600 to-purple-600'
-  ];
-
-  return (
-    <div className={`bg-gradient-to-r ${levelColors[Math.min(level - 1, 7)]} text-white px-4 py-2 rounded-full inline-flex items-center gap-2 font-bold`}>
-      <Trophy size={18} />
-      <span>Nível {level} - {levelNames[Math.min(level - 1, 7)]}</span>
-    </div>
-  );
-};
-
-const AchievementBadge = ({ name, icon }: { name: string; icon: string }) => {
-  return (
-    <div className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 rounded-2xl p-4 flex flex-col items-center justify-center text-center hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-lg transition-all">
-      <div className="bg-gradient-to-br from-indigo-400 to-purple-500 p-3 rounded-xl mb-2">
-        {getIconComponent(icon, 24, 'white')}
-      </div>
-      <p className="font-semibold text-slate-800 dark:text-white text-sm">{name}</p>
-    </div>
-  );
-};
-
-const ProgressBar = ({ current, total, label }: { current: number; total: number; label: string }) => {
-  const percentage = Math.min((current / total) * 100, 100);
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-slate-100">{label}</span>
-        <span className="text-sm font-bold text-white">{current}/{total}</span>
-      </div>
-      <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-white to-indigo-200 transition-all duration-500"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-export const PaginaPontos = ({ studentPoints, activities, rewards }: { 
-  studentPoints: StudentPoints | null; 
-  activities: Activity[];
-  rewards: Reward[];
-}) => {
-  const [abaAtiva, setAbaAtiva] = useState('visao-geral');
-  const [resgateModalAberto, setResgateModalAberto] = useState<Reward | null>(null);
-
-  if (!studentPoints) {
-    return (
-      <div className="p-4 md:p-6 text-center py-16">
-        <Trophy size={64} className="mx-auto text-slate-300 mb-4" />
-        <p className="text-slate-500 text-lg">Selecione um aluno para ver seus pontos</p>
-      </div>
-    );
+const rewardIcon = (icon: string) => {
+  switch (icon) {
+    case 'star':
+      return <Star size={18} />;
+    case 'zap':
+      return <Zap size={18} />;
+    case 'trophy':
+      return <Trophy size={18} />;
+    default:
+      return <Gift size={18} />;
   }
+};
 
-  const proximoLevelPontos = studentPoints.level * 500;
-  const pontosParaProximo = proximoLevelPontos - studentPoints.totalPoints;
+/**
+ * A plataforma ainda nao possui um extrato historico de gamificacao no backend.
+ * Esta tela mistura dados reais dos alunos com um contexto mock consistente
+ * para manter a operacao do professor utilizavel agora.
+ */
+export const PaginaPontos = () => {
+  const [students, setStudents] = useState<Aluno[]>([]);
+  const [activities, setActivities] = useState<StudentActivityEntry[]>([]);
+  const [loadState, setLoadState] = useState<LoadState>('idle');
+  const [search, setSearch] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [awardingActionId, setAwardingActionId] = useState<string | null>(null);
 
-  const studentActivities = activities.filter(a => a.studentId === studentPoints.studentId);
-  const atividadesRecentes = studentActivities.slice(0, 10);
+  const loadStudents = async () => {
+    setLoadState('loading');
 
-  const rewardsDisponiveis = rewards.filter(r => r.points <= studentPoints.totalPoints);
+    try {
+      const response = await studentsAPI.getAll() as { students?: Aluno[] };
+      const nextStudents = Array.isArray(response?.students) && response.students.length > 0
+        ? response.students
+        : createDashboardMockData().students;
+
+      setStudents(nextStudents);
+      setActivities(buildStudentActivities(nextStudents));
+      setSelectedStudentId((currentSelectedId) => {
+        if (currentSelectedId && nextStudents.some((student) => (student._id || student.id) === currentSelectedId)) {
+          return currentSelectedId;
+        }
+
+        return nextStudents[0]?._id || nextStudents[0]?.id || '';
+      });
+      setLoadState('ready');
+    } catch (error) {
+      console.error('Erro ao carregar alunos para pontuacao:', error);
+      const fallbackStudents = createDashboardMockData().students;
+      setStudents(fallbackStudents);
+      setActivities(buildStudentActivities(fallbackStudents));
+      setSelectedStudentId(fallbackStudents[0]?.id || '');
+      setLoadState('ready');
+      toast.error('Nao foi possivel carregar a base real. Exibindo dados de exemplo.');
+    }
+  };
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  const sortedStudents = useMemo(
+    () => [...students].sort((left, right) => (right.points || 0) - (left.points || 0)),
+    [students]
+  );
+
+  const filteredStudents = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    if (!normalizedSearch) {
+      return sortedStudents;
+    }
+
+    return sortedStudents.filter((student) =>
+      student.name.toLowerCase().includes(normalizedSearch) ||
+      (student.email || '').toLowerCase().includes(normalizedSearch) ||
+      (student.subject || '').toLowerCase().includes(normalizedSearch)
+    );
+  }, [search, sortedStudents]);
+
+  const selectedStudent = useMemo(() => {
+    const lookupId = selectedStudentId || filteredStudents[0]?._id || filteredStudents[0]?.id;
+    return students.find((student) => (student._id || student.id) === lookupId) || null;
+  }, [filteredStudents, selectedStudentId, students]);
+
+  const selectedSnapshot = useMemo(
+    () => (selectedStudent ? buildStudentPointsSnapshot(selectedStudent) : null),
+    [selectedStudent]
+  );
+
+  const selectedActivities = useMemo(
+    () => activities.filter((activity) => activity.studentId === selectedSnapshot?.studentId).slice(0, 6),
+    [activities, selectedSnapshot]
+  );
+
+  const rewards = useMemo<RewardItem[]>(
+    () => createRewardCatalog(selectedSnapshot?.totalPoints || 0),
+    [selectedSnapshot]
+  );
+
+  const topStudent = sortedStudents[0] || null;
+  const averagePoints = sortedStudents.length > 0
+    ? Math.round(sortedStudents.reduce((sum, student) => sum + (student.points || 0), 0) / sortedStudents.length)
+    : 0;
+
+  const handleAwardPoints = async (action: PointsAction) => {
+    if (!selectedStudent || !selectedSnapshot) {
+      return;
+    }
+
+    const studentId = selectedStudent._id || selectedStudent.id;
+    if (!studentId) {
+      toast.error('Aluno sem identificador valido para pontuacao.');
+      return;
+    }
+
+    setAwardingActionId(action.id);
+
+    try {
+      await studentsAPI.addPoints(studentId, action.amount, action.id, action.reason);
+
+      const nextStudents = students.map((student) => {
+        const currentId = student._id || student.id;
+        if (currentId !== studentId) {
+          return student;
+        }
+
+        const nextPoints = (student.points || 0) + action.amount;
+        return {
+          ...student,
+          points: nextPoints,
+          level: student.level || Math.max(1, Math.floor(nextPoints / 250) + 1)
+        };
+      });
+
+      setStudents(nextStudents);
+      setActivities((currentActivities) => [
+        {
+          id: `${studentId}-${Date.now()}`,
+          studentId,
+          studentName: selectedStudent.name,
+          type: action.id,
+          description: action.reason,
+          points: action.amount,
+          date: new Date().toISOString(),
+          icon: action.amount >= 25 ? 'zap' : 'star'
+        },
+        ...currentActivities
+      ]);
+
+      toast.success(`${selectedStudent.name} recebeu ${action.amount} pontos.`);
+    } catch (error) {
+      console.error('Erro ao pontuar aluno:', error);
+      toast.error('Nao foi possivel registrar a pontuacao.');
+    } finally {
+      setAwardingActionId(null);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header com Perfil */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl p-8 text-white shadow-xl">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex-1">
-            <h2 className="text-4xl font-bold mb-3">{studentPoints.studentName}</h2>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <div>
-                <p className="text-indigo-100 text-sm">Pontos Totais</p>
-                <p className="text-5xl font-black text-white">{studentPoints.totalPoints}</p>
-              </div>
-              <div className="h-16 w-px bg-white/30 hidden sm:block"></div>
-              <div>
-                <LevelBadge level={studentPoints.level} />
-              </div>
-            </div>
+      <section className="rounded-[28px] border border-white/10 bg-[#0b1220] text-slate-100 shadow-[0_24px_60px_rgba(2,6,23,0.35)]">
+        <div className="grid gap-4 border-b border-white/8 px-5 py-5 md:grid-cols-3 md:px-7">
+          <div className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-4">
+            <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Base ativa</p>
+            <p className="mt-3 text-3xl font-semibold text-white">{sortedStudents.length}</p>
+            <p className="mt-1 text-sm text-slate-400">Alunos prontos para pontuacao</p>
           </div>
-          <div className="text-right">
-            <p className="text-indigo-100 text-sm mb-2">Progresso para Próximo Nível</p>
-            <div className="text-3xl font-bold">{Math.max(pontosParaProximo, 0)}</div>
-            <p className="text-indigo-200 text-xs">Pontos faltando</p>
+          <div className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-4">
+            <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Media</p>
+            <p className="mt-3 text-3xl font-semibold text-white">{averagePoints}</p>
+            <p className="mt-1 text-sm text-slate-400">Pontos medios por aluno</p>
+          </div>
+          <div className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-4">
+            <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Lider</p>
+            <p className="mt-3 text-xl font-semibold text-white">{topStudent?.name || 'Sem dados'}</p>
+            <p className="mt-1 text-sm text-slate-400">{topStudent ? `${topStudent.points || 0} pontos acumulados` : 'Nenhum aluno encontrado'}</p>
           </div>
         </div>
 
-        {/* Progress Bar para próximo nível */}
-        <div className="mt-6 pt-6 border-t border-white/20">
-          <ProgressBar 
-            current={studentPoints.totalPoints} 
-            total={proximoLevelPontos}
-            label={`Nível ${studentPoints.level} → Nível ${studentPoints.level + 1}`}
-          />
-        </div>
-      </div>
-
-      {/* Abas */}
-      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
-        {[
-          { id: 'visao-geral', label: 'Visão Geral', icon: Target },
-          { id: 'conquistas', label: 'Conquistas', icon: Trophy },
-          { id: 'atividades', label: 'Atividades', icon: Activity },
-          { id: 'recompensas', label: 'Recompensas', icon: Gift }
-        ].map(aba => {
-          const Icon = aba.icon;
-          return (
-            <button
-              key={aba.id}
-              onClick={() => setAbaAtiva(aba.id)}
-              className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-all whitespace-nowrap ${
-                abaAtiva === aba.id
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Icon size={18} />
-              {aba.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* VISÃO GERAL */}
-      {abaAtiva === 'visao-geral' && (
-        <div className="space-y-6">
-          {/* Cards de Estatísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-slate-700 dark:text-slate-300 font-semibold">Aulas Completas</h3>
-                <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
-                  <Award className="text-green-600 dark:text-green-400" size={20} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-slate-800 dark:text-white">{studentActivities.filter(a => a.type === 'class_completed').length}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Aulas finalizadas com sucesso</p>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-slate-700 dark:text-slate-300 font-semibold">Exercícios Resolvidos</h3>
-                <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
-                  <Zap className="text-purple-600 dark:text-purple-400" size={20} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-slate-800 dark:text-white">{studentActivities.filter(a => a.type === 'exercise_submitted').length}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Exercícios enviados</p>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-slate-700 dark:text-slate-300 font-semibold">Conquistas</h3>
-                <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
-                  <Trophy className="text-amber-600 dark:text-amber-400" size={20} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-slate-800 dark:text-white">{studentPoints.achievements.length}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Desbloqueadas</p>
-            </div>
-          </div>
-
-          {/* Streaks e Metas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl p-6 border border-orange-200 dark:border-orange-800">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-orange-500 p-3 rounded-lg">
-                  <Flame className="text-white" size={24} />
-                </div>
-                <h3 className="font-bold text-slate-800 dark:text-white text-lg">Sequência de Atividade</h3>
-              </div>
-              <div className="space-y-3">
+        <div className="grid gap-6 px-5 py-5 md:grid-cols-[320px_minmax(0,1fr)] md:px-7">
+          <aside className="space-y-4">
+            <div className="rounded-[26px] border border-white/10 bg-[#11192a] p-4">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-2xl font-black text-orange-600 dark:text-orange-400">7 dias</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Sequência atual ativa</p>
+                  <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Lista de alunos</p>
+                  <p className="mt-2 text-lg font-semibold text-white">Pontuar e acompanhar</p>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Continue participando para manter a sequência!</p>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-indigo-600 p-3 rounded-lg">
-                  <Target className="text-white" size={24} />
-                </div>
-                <h3 className="font-bold text-slate-800 dark:text-white text-lg">Meta da Semana</h3>
-              </div>
-              <div className="space-y-3">
-                <ProgressBar current={3} total={5} label="Aulas da semana" />
-                <p className="text-xs text-slate-500">Faltam 2 aulas para ganhar 250 pontos bônus!</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONQUISTAS */}
-      {abaAtiva === 'conquistas' && (
-        <div className="space-y-6">
-          {studentPoints.achievements.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-              <Lock size={48} className="mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500">Nenhuma conquista desbloqueada ainda</p>
-              <p className="text-slate-400 text-sm mt-2">Complete aulas e exercícios para desbloquear</p>
-            </div>
-          ) : (
-            <>
-              <h3 className="text-xl font-bold text-slate-800">Conquistas Desbloqueadas</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {studentPoints.achievements.map(achievement => (
-                  <AchievementBadge 
-                    key={achievement} 
-                    name={achievement} 
-                    icon="trophy"
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Próximas Conquistas</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {['Presença Perfeita', 'Estudioso', 'Superstar', 'Mestre'].map(name => (
-                <div key={name} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-slate-200 dark:border-slate-700 opacity-50 flex flex-col items-center justify-center text-center">
-                  <Lock className="text-slate-400 mb-2" size={24} />
-                  <p className="font-semibold text-slate-600 text-sm">{name}</p>
-                  <p className="text-xs text-slate-400 mt-1">Bloqueado</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ATIVIDADES */}
-      {abaAtiva === 'atividades' && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold text-slate-800">Histórico de Atividades</h3>
-          {atividadesRecentes.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-              <Activity size={48} className="mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500">Nenhuma atividade registrada</p>
-            </div>
-          ) : (
-            atividadesRecentes.map(activity => (
-              <div key={activity.id} className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-md transition-all">
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-lg flex-shrink-0 ${
-                    activity.points > 0 
-                      ? 'bg-green-100' 
-                      : 'bg-orange-100'
-                  }`}>
-                    {getIconComponent(activity.icon, 20, activity.points > 0 ? '#16a34a' : '#ea580c')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800">{activity.description}</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {new Date(activity.date).toLocaleDateString('pt-BR', { 
-                        day: 'numeric', 
-                        month: 'short', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
-                  <div className={`text-lg font-bold flex-shrink-0 ${
-                    activity.points > 0 ? 'text-green-600' : 'text-orange-600'
-                  }`}>
-                    {activity.points > 0 ? '+' : ''}{activity.points}
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* RECOMPENSAS */}
-      {abaAtiva === 'recompensas' && (
-        <div className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
-            <Gift className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
-            <div>
-              <p className="font-semibold text-blue-900">Resgate de Recompensas</p>
-              <p className="text-sm text-blue-700 mt-1">Você tem <span className="font-bold">{studentPoints.totalPoints} pontos</span> disponíveis para resgate</p>
-            </div>
-          </div>
-
-          {rewardsDisponiveis.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-              <Lock size={48} className="mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500">Nenhuma recompensa disponível</p>
-              <p className="text-slate-400 text-sm mt-2">Acumule pontos para desbloquear recompensas</p>
-            </div>
-          ) : (
-            <>
-              <h3 className="text-xl font-bold text-slate-800">Recompensas Disponíveis</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {rewardsDisponiveis.map(reward => (
-                  <div 
-                    key={reward.id}
-                    className="bg-white dark:bg-slate-800 rounded-2xl p-6 border-2 border-green-200 dark:border-green-700 hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-3 rounded-lg">
-                          {getIconComponent(reward.icon, 24, '#16a34a')}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-800">{reward.name}</h4>
-                          <p className="text-sm text-slate-500">{reward.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                      <span className="flex items-center gap-2 text-lg font-bold text-indigo-600">
-                        <Star size={18} />
-                        {reward.points} pontos
-                      </span>
-                      <button
-                        onClick={() => setResgateModalAberto(reward)}
-                        className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-all"
-                      >
-                        Resgatar
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Recompensas Bloqueadas */}
-          <div>
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Próximas Recompensas</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {rewards.filter(r => r.points > studentPoints.totalPoints).slice(0, 2).map(reward => (
-                <div 
-                  key={reward.id}
-                  className="bg-slate-50 rounded-2xl p-6 border-2 border-slate-300 opacity-60"
+                <button
+                  type="button"
+                  onClick={loadStudents}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-200 transition hover:border-indigo-400/40 hover:text-white"
+                  aria-label="Atualizar alunos"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-slate-200 p-3 rounded-lg">
-                        <Lock className="text-slate-500" size={24} />
-                      </div>
+                  <RefreshCcw size={18} />
+                </button>
+              </div>
+
+              <label className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0b1220] px-4 py-3 text-slate-300">
+                <Search size={16} className="text-slate-500" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar por nome, email ou materia"
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                />
+              </label>
+            </div>
+
+            <div className="max-h-[540px] space-y-3 overflow-y-auto pr-1">
+              {loadState === 'loading' && (
+                <div className="rounded-[26px] border border-white/10 bg-[#11192a] px-5 py-10 text-center text-sm text-slate-400">
+                  Carregando base de alunos...
+                </div>
+              )}
+
+              {loadState === 'ready' && filteredStudents.length === 0 && (
+                <div className="rounded-[26px] border border-dashed border-white/10 bg-[#11192a] px-5 py-10 text-center">
+                  <Users size={28} className="mx-auto text-slate-500" />
+                  <p className="mt-3 text-sm text-slate-300">Nenhum aluno encontrado para esse filtro.</p>
+                </div>
+              )}
+
+              {filteredStudents.map((student, index) => {
+                const studentId = student._id || student.id || `${student.name}-${index}`;
+                const isSelected = studentId === selectedSnapshot?.studentId;
+
+                return (
+                  <button
+                    key={studentId}
+                    type="button"
+                    onClick={() => setSelectedStudentId(studentId)}
+                    className={`w-full rounded-[26px] border px-4 py-4 text-left transition ${
+                      isSelected
+                        ? 'border-indigo-400/60 bg-indigo-500/12 shadow-[0_18px_40px_rgba(79,70,229,0.18)]'
+                        : 'border-white/10 bg-[#11192a] hover:border-white/20 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="font-bold text-slate-600">{reward.name}</h4>
-                        <p className="text-sm text-slate-500">{reward.description}</p>
+                        <p className="text-base font-semibold text-white">{student.name}</p>
+                        <p className="mt-1 text-sm text-slate-400">{student.subject || 'Materia nao definida'}</p>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-slate-300">
+                        #{index + 1}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between text-sm">
+                      <span className="text-slate-400">{student.grade}</span>
+                      <span className="font-semibold text-white">{student.points || 0} pts</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          <section className="space-y-6">
+            {!selectedSnapshot ? (
+              <div className="rounded-[28px] border border-dashed border-white/12 bg-[#11192a] px-6 py-20 text-center">
+                <Trophy size={32} className="mx-auto text-slate-500" />
+                <p className="mt-4 text-lg font-semibold text-white">Selecione um aluno para pontuar</p>
+                <p className="mt-2 text-sm text-slate-400">A lista da esquerda agora mostra a base real do professor.</p>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-[30px] border border-white/10 bg-[#11192a] p-6">
+                  <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Aluno em foco</p>
+                      <h2 className="mt-3 text-4xl font-semibold text-white">{selectedSnapshot.studentName}</h2>
+                      <p className="mt-2 max-w-2xl text-sm text-slate-400">
+                        Use as acoes rapidas para registrar pontuacao e acompanhe um panorama de recompensas e engajamento.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-3xl border border-white/10 bg-[#0b1220] px-4 py-4">
+                        <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Total</p>
+                        <p className="mt-2 text-3xl font-semibold text-white">{selectedSnapshot.totalPoints}</p>
+                      </div>
+                      <div className="rounded-3xl border border-white/10 bg-[#0b1220] px-4 py-4">
+                        <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Nivel</p>
+                        <p className="mt-2 text-3xl font-semibold text-white">{selectedSnapshot.level}</p>
+                      </div>
+                      <div className="rounded-3xl border border-white/10 bg-[#0b1220] px-4 py-4">
+                        <p className="text-[11px] uppercase tracking-[0.28em] text-slate-500">Conquistas</p>
+                        <p className="mt-2 text-3xl font-semibold text-white">{selectedSnapshot.achievements.length}</p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-300">
-                    <span className="flex items-center gap-2 text-lg font-bold text-slate-500">
-                      <Star size={18} />
-                      {reward.points} pontos
-                    </span>
-                    <span className="text-xs font-semibold text-slate-500">
-                      +{reward.points - studentPoints.totalPoints}
-                    </span>
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)]">
+                  <div className="space-y-6">
+                    <div className="rounded-[28px] border border-white/10 bg-[#11192a] p-5">
+                      <div className="flex items-center gap-3">
+                        <Sparkles size={18} className="text-indigo-300" />
+                        <div>
+                          <p className="text-sm font-semibold text-white">Acoes rapidas de pontuacao</p>
+                          <p className="text-xs text-slate-400">Cada acao atualiza o aluno selecionado e adiciona um registro visivel logo abaixo.</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        {POINTS_ACTIONS.map((action) => (
+                          <button
+                            key={action.id}
+                            type="button"
+                            onClick={() => handleAwardPoints(action)}
+                            disabled={awardingActionId === action.id}
+                            className={`rounded-[24px] border px-4 py-4 text-left transition ${actionToneClasses[action.tone]} disabled:cursor-wait disabled:opacity-60`}
+                          >
+                            <p className="text-sm font-semibold">{action.label}</p>
+                            <p className="mt-2 text-3xl font-semibold">+{action.amount}</p>
+                            <p className="mt-2 text-xs text-slate-400">{action.reason}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[28px] border border-white/10 bg-[#11192a] p-5">
+                      <div className="flex items-center gap-3">
+                        <Activity size={18} className="text-slate-300" />
+                        <div>
+                          <p className="text-sm font-semibold text-white">Historico recente</p>
+                          <p className="text-xs text-slate-400">Contexto visual gerado a partir dos dados atuais do aluno.</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-3">
+                        {selectedActivities.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="flex items-start justify-between gap-3 rounded-[22px] border border-white/10 bg-[#0b1220] px-4 py-4"
+                          >
+                            <div>
+                              <p className="text-sm font-semibold text-white">{entry.description}</p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {new Date(entry.date).toLocaleString('pt-BR', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                              +{entry.points}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="rounded-[28px] border border-white/10 bg-[#11192a] p-5">
+                      <div className="flex items-center gap-3">
+                        <Target size={18} className="text-amber-300" />
+                        <div>
+                          <p className="text-sm font-semibold text-white">Progresso de nivel</p>
+                          <p className="text-xs text-slate-400">Meta sugerida baseada no total de pontos atual.</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 rounded-[24px] border border-white/10 bg-[#0b1220] px-4 py-4">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <p className="text-sm text-slate-400">Nivel {selectedSnapshot.level}</p>
+                          <p className="text-lg font-semibold text-white">
+                            {Math.max(selectedSnapshot.level * 250 - selectedSnapshot.totalPoints, 0)} pts restantes
+                          </p>
+                        </div>
+                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/[0.06]">
+                          <div
+                            className="h-full rounded-full bg-indigo-400 transition-all"
+                            style={{
+                              width: `${Math.min((selectedSnapshot.totalPoints / Math.max(selectedSnapshot.level * 250, 1)) * 100, 100)}%`
+                            }}
+                          />
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {selectedSnapshot.achievements.map((achievement) => (
+                            <span
+                              key={achievement}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-200"
+                            >
+                              {achievement}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-[28px] border border-white/10 bg-[#11192a] p-5">
+                      <div className="flex items-center gap-3">
+                        <Gift size={18} className="text-emerald-300" />
+                        <div>
+                          <p className="text-sm font-semibold text-white">Recompensas sugeridas</p>
+                          <p className="text-xs text-slate-400">Catalogo exemplo para orientar o uso da gamificacao.</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 space-y-3">
+                        {rewards.map((reward) => (
+                          <div
+                            key={reward.id}
+                            className={`rounded-[22px] border px-4 py-4 ${
+                              reward.available
+                                ? 'border-emerald-400/20 bg-emerald-500/10'
+                                : 'border-white/10 bg-[#0b1220]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-3">
+                                <div className={`mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl ${
+                                  reward.available ? 'bg-emerald-500/18 text-emerald-100' : 'bg-white/[0.04] text-slate-300'
+                                }`}>
+                                  {rewardIcon(reward.icon)}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-white">{reward.name}</p>
+                                  <p className="mt-1 text-xs text-slate-400">{reward.description}</p>
+                                </div>
+                              </div>
+                              <span className="text-sm font-semibold text-white">{reward.points} pts</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </>
+            )}
+          </section>
         </div>
-      )}
-
-      {/* Modal de Resgate */}
-      {resgateModalAberto && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="bg-gradient-to-br from-green-400 to-emerald-500 p-4 rounded-2xl inline-block mb-4">
-                {getIconComponent(resgateModalAberto.icon, 40, 'white')}
-              </div>
-              <h3 className="text-2xl font-bold text-slate-800">{resgateModalAberto.name}</h3>
-              <p className="text-slate-600 mt-2">{resgateModalAberto.description}</p>
-            </div>
-
-            <div className="bg-indigo-50 rounded-xl p-4 mb-6 text-center">
-              <p className="text-slate-600 text-sm">Custo em Pontos</p>
-              <p className="text-3xl font-bold text-indigo-600 flex items-center justify-center gap-2 mt-2">
-                <Star size={28} />
-                {resgateModalAberto.points}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  // Aqui você implementaria a lógica de resgate
-                  alert(`Recompensa "${resgateModalAberto.name}" resgatada com sucesso!`);
-                  setResgateModalAberto(null);
-                }}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all"
-              >
-                Confirmar Resgate
-              </button>
-              <button
-                onClick={() => setResgateModalAberto(null)}
-                className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 };

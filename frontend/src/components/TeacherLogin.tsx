@@ -1,13 +1,45 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowLeft, Eye, EyeOff, User, Phone } from 'lucide-react';
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Phone,
+  User
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { formatPhoneBR } from '../utils/security';
-import { FadeContent, BlurText, GradientText, StaggerContainer, StaggerItem, MagneticButton } from './ui/Animations';
+import { FadeContent, BlurText } from './ui/Animations';
 import { authAPI } from '../lib/api';
+import { DEMO_TEACHER_CREDENTIALS } from '../mocks/demoData';
 import BrandLogo from './BrandLogo';
 
+type AuthError = {
+  message?: string;
+};
+
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return (error as AuthError).message || fallbackMessage;
+  }
+
+  return fallbackMessage;
+};
+
+const registerHighlights = [
+  'Cadastro com onboarding imediato.',
+  'Persistência de autenticação preservada.',
+  'Mesmo fluxo de validação já existente.'
+];
+
+/**
+ * Tela do professor alinhada ao novo sistema editorial. O formulário continua
+ * cumprindo as mesmas rotas e contratos, mas a hierarquia visual passa a
+ * comunicar melhor o papel do painel autenticado.
+ */
 export const TeacherLogin = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -15,17 +47,22 @@ export const TeacherLogin = () => {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
-  // Login fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Register fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const showDemoAccess = import.meta.env.DEV;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fillDemoCredentials = () => {
+    setIsRegistering(false);
+    setEmail(DEMO_TEACHER_CREDENTIALS.email);
+    setPassword(DEMO_TEACHER_CREDENTIALS.password);
+    setShowPassword(false);
+  };
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setLoading(true);
 
     try {
@@ -34,23 +71,21 @@ export const TeacherLogin = () => {
       setAuth(data.user, data.token);
       toast.success('Login realizado com sucesso!');
 
-      // Redirecionar para onboarding se não foi completado
       if (data.user.status === 'pending_setup' || !data.user.onboardingCompletedAt) {
         navigate('/onboarding');
-      } else {
-        navigate('/');
+        return;
       }
-    } catch (error: any) {
-      // Mostrar erro específico ou mensagem genérica
-      const message = error?.message || 'Erro ao fazer login. Verifique suas credenciais.';
-      toast.error(message);
+
+      navigate('/');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Erro ao fazer login. Verifique suas credenciais.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (password !== confirmPassword) {
       toast.error('As senhas não coincidem');
@@ -86,111 +121,172 @@ export const TeacherLogin = () => {
       setAuth(data.user, data.token);
       toast.success('Conta criada com sucesso!');
 
-      // Redirecionar para onboarding se é novo usuário
       if (data.user.status === 'pending_setup' || !data.user.onboardingCompletedAt) {
         navigate('/onboarding');
-      } else {
-        navigate('/');
+        return;
       }
-    } catch (error: any) {
-      // Mostrar erro específico ou mensagem genérica
-      const message = error?.message || 'Erro ao criar conta. Tente novamente.';
-      toast.error(message);
+
+      navigate('/');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Erro ao criar conta. Tente novamente.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClasses = "w-full pl-12 pr-4 py-3.5 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:outline-none transition-all duration-200";
+  const inputSpacingClass = 'pl-12 pr-4';
 
   return (
-    <div className="min-h-screen bg-[#0f0f13] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-25%] left-[-15%] w-[600px] h-[600px] bg-purple-600/8 rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-25%] right-[-15%] w-[500px] h-[500px] bg-indigo-500/8 rounded-full blur-[150px]" />
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
-            `,
-            backgroundSize: '80px 80px'
-          }}
-        />
+    <div className="nexus-shell relative min-h-screen overflow-x-hidden px-4 py-6 md:px-8 md:py-8 lg:px-10">
+      <div className="nexus-grid-bg absolute inset-0 opacity-70" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.08),transparent_28%)]" />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between">
+        <BrandLogo variant="horizontal" theme="auto" size="md" />
+        <button type="button" onClick={() => navigate('/')} className="nexus-button-ghost">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
-        {/* Back Button */}
-        <FadeContent delay={0} duration={0.4}>
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors group"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-200" />
-            <span className="text-sm">Voltar</span>
-          </button>
-        </FadeContent>
-
-        <FadeContent delay={0.1} duration={0.6} blur>
-          <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="mb-4 flex justify-center">
-                <BrandLogo variant="mark" theme="dark" size="md" />
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-2">
-                {isRegistering ? 'Criar Conta' : (
-                  <GradientText
-                    text="Área do Professor"
-                    colors={['#a78bfa', '#c4b5fd', '#a78bfa']}
-                    animationSpeed={5}
-                  />
-                )}
+      <div className="relative z-10 mx-auto mt-6 grid w-full max-w-6xl gap-6 lg:grid-cols-[1fr_0.95fr]">
+        <FadeContent delay={0} duration={0.55}>
+          <section className="nexus-panel-strong nexus-rule-card flex h-full flex-col justify-between rounded-[2rem] p-8 md:p-10 lg:p-12">
+            <div className="space-y-6">
+              <p className="nexus-kicker">Área do professor</p>
+              <h1 className="max-w-xl text-[clamp(2.8rem,5vw,4.8rem)] leading-[0.94]">
+                O centro de operação da sua rotina pedagógica.
               </h1>
+              <p className="max-w-xl text-base leading-7 text-[var(--text-muted)] md:text-lg">
+                Entre para gerenciar agenda, alunos, analytics e automações em uma
+                superfície pensada para uso contínuo, com menos ruído e mais hierarquia.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-3 md:grid-cols-3">
+              {registerHighlights.map((highlight, index) => (
+                <div
+                  key={highlight}
+                  className="rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-4"
+                >
+                  <p className="text-sm font-extrabold uppercase tracking-[0.24em] text-[var(--brand-indigo)]">
+                    0{index + 1}
+                  </p>
+                  <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
+                    {highlight}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10 border-t border-[var(--border-soft)] pt-6">
               <BlurText
-                text={isRegistering ? 'Preencha os dados para começar' : 'Entre na sua plataforma de gestão'}
-                className="text-slate-400 text-sm"
+                text="Cadastro e login continuam apontando para os mesmos endpoints e mantêm a mesma persistência de autenticação do projeto."
+                className="block max-w-xl text-sm leading-6 text-[var(--text-muted)]"
                 delay={0.2}
               />
             </div>
+          </section>
+        </FadeContent>
 
-            {/* Form */}
-            <form onSubmit={isRegistering ? handleRegister : handleLogin}>
-              <div className="space-y-4">
+        <FadeContent delay={0.1} duration={0.55}>
+          <section className="nexus-panel rounded-[2rem] p-6 md:p-8 lg:p-10">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="nexus-kicker">Acesso</p>
+                  <h2 className="mt-3 text-4xl leading-none">
+                    {isRegistering ? 'Criar conta' : 'Entrar'}
+                  </h2>
+                </div>
+                <div className="flex h-10 items-center rounded-full border border-[var(--border-soft)] bg-[var(--surface-soft)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsRegistering(false)}
+                    className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
+                      !isRegistering
+                        ? 'bg-[var(--brand-indigo)] text-white'
+                        : 'text-[var(--text-muted)]'
+                    }`}
+                  >
+                    Entrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsRegistering(true)}
+                    className={`rounded-full px-4 py-1.5 text-sm font-bold transition-colors ${
+                      isRegistering
+                        ? 'bg-[var(--brand-indigo)] text-white'
+                        : 'text-[var(--text-muted)]'
+                    }`}
+                  >
+                    Criar conta
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-sm leading-6 text-[var(--text-muted)]">
+                {isRegistering
+                  ? 'Preencha os dados para iniciar o onboarding e configurar sua área de trabalho.'
+                  : 'Use seu email e senha para acessar o painel autenticado do professor.'}
+              </p>
+
+              {showDemoAccess && !isRegistering && (
+                <div className="rounded-[1.5rem] border border-[rgba(79,70,229,0.18)] bg-[rgba(79,70,229,0.06)] p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="nexus-kicker">Conta demo local</p>
+                      <p className="mt-3 text-sm font-semibold text-[var(--text-strong)]">
+                        {DEMO_TEACHER_CREDENTIALS.email}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        Senha: {DEMO_TEACHER_CREDENTIALS.password}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fillDemoCredentials}
+                      className="nexus-button-secondary self-start"
+                    >
+                      Usar dados de exemplo
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
                 {isRegistering && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Nome Completo
+                      <label className="mb-2 block text-sm font-semibold text-[var(--text-muted)]">
+                        Nome completo
                       </label>
                       <div className="relative">
-                        <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                        <User className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-soft)]" />
                         <input
                           type="text"
                           value={name}
-                          onChange={(e) => setName(e.target.value)}
+                          onChange={(event) => setName(event.target.value)}
                           required
                           autoComplete="name"
-                          className={inputClasses}
+                          className={`nexus-input ${inputSpacingClass}`}
                           placeholder="Seu nome completo"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label className="mb-2 block text-sm font-semibold text-[var(--text-muted)]">
                         Telefone (opcional)
                       </label>
                       <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                        <Phone className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-soft)]" />
                         <input
                           type="tel"
                           value={phone}
-                          onChange={(e) => setPhone(formatPhoneBR(e.target.value))}
+                          onChange={(event) => setPhone(formatPhoneBR(event.target.value))}
                           autoComplete="tel"
-                          className={inputClasses}
+                          className={`nexus-input ${inputSpacingClass}`}
                           placeholder="(99) 99999-9999"
                         />
                       </div>
@@ -199,104 +295,98 @@ export const TeacherLogin = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-muted)]">
                     Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-soft)]" />
                     <input
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(event) => setEmail(event.target.value)}
                       required
                       autoComplete="email"
-                      className={inputClasses}
+                      className={`nexus-input ${inputSpacingClass}`}
                       placeholder="professor@email.com"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-muted)]">
                     Senha
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-soft)]" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(event) => setPassword(event.target.value)}
                       required
                       autoComplete={isRegistering ? 'new-password' : 'current-password'}
-                      className={`${inputClasses} pr-12`}
+                      className={`nexus-input ${inputSpacingClass} pr-12`}
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                      onClick={() => setShowPassword((previousValue) => !previousValue)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-soft)] transition-colors hover:text-[var(--text-strong)]"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
 
                 {isRegistering && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Confirmar Senha
+                    <label className="mb-2 block text-sm font-semibold text-[var(--text-muted)]">
+                      Confirmar senha
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500" />
+                      <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--text-soft)]" />
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
                         required
                         autoComplete="new-password"
-                        className={inputClasses}
+                        className={`nexus-input ${inputSpacingClass}`}
                         placeholder="••••••••"
                       />
                     </div>
                   </div>
                 )}
 
-                <div className="mt-2">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3.5 rounded-xl font-semibold hover:from-purple-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30"
-                  >
+                {isRegistering && (
+                  <div className="rounded-[1.5rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-4">
+                    <p className="text-sm font-bold text-[var(--text-strong)]">
+                      Regras da senha
+                    </p>
+                    <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--text-muted)]">
+                      <li>Pelo menos 8 caracteres.</li>
+                      <li>Inclua uma letra maiúscula, uma minúscula e um número.</li>
+                      <li>Adicione ao menos um símbolo para concluir o cadastro.</li>
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  <button type="submit" disabled={loading} className="nexus-button-primary flex-1">
                     {loading
                       ? (isRegistering ? 'Criando...' : 'Entrando...')
-                      : (isRegistering ? 'Criar Conta' : 'Entrar')}
+                      : (isRegistering ? 'Criar conta' : 'Entrar')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsRegistering((previousValue) => !previousValue)}
+                    className="nexus-button-secondary flex-1"
+                  >
+                    {isRegistering ? 'Já tenho conta' : 'Criar uma conta'}
                   </button>
                 </div>
-              </div>
-            </form>
-
-            {/* Toggle Register/Login */}
-            <FadeContent delay={0.6} duration={0.4}>
-              <div className="mt-6 text-center">
-                <p className="text-slate-400 text-sm">
-                  {isRegistering ? 'Já tem uma conta?' : 'Ainda não tem conta?'}
-                  <button
-                    onClick={() => setIsRegistering(!isRegistering)}
-                    className="ml-2 text-purple-400 hover:text-purple-300 font-medium transition-colors"
-                  >
-                    {isRegistering ? 'Fazer login' : 'Criar conta'}
-                  </button>
-                </p>
-              </div>
-            </FadeContent>
-          </div>
-        </FadeContent>
-
-        {/* Footer */}
-        <FadeContent delay={0.8} duration={0.4}>
-          <p className="text-center text-slate-600 text-sm mt-6">
-            Nexus Academy © 2025
-          </p>
+              </form>
+            </div>
+          </section>
         </FadeContent>
       </div>
     </div>

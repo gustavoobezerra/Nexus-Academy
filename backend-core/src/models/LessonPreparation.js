@@ -109,6 +109,11 @@ const lessonPreparationSchema = new mongoose.Schema({
       detectedDifficulties: [String]
     },
     generatedAt: Date,
+    providerMode: {
+      type: String,
+      enum: ['live', 'fallback'],
+      default: 'fallback'
+    },
     confidence: {
       type: Number,
       min: 0,

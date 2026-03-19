@@ -70,14 +70,19 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
         ? ''
         : (selectedClassData as any)?.notes || (selectedClassData as any)?.description || '';
 
-      const result = await aiAPI.generateActivity({ lessonTopic, lessonSubject, lessonDescription });
+      const result = await aiAPI.generateActivity({
+        mode: inputMode === 'manual' ? 'manual' : 'class',
+        lessonTopic,
+        lessonSubject,
+        lessonDescription
+      });
 
-      if (!result || !result.questions || result.questions.length === 0) {
+      if (!result || !result.activityTemplate?.questions || result.activityTemplate.questions.length === 0) {
         toast.error('IA não configurada ou sem resposta. Configure GEMINI_API_KEY no servidor.', { id: 'generating' });
         return;
       }
 
-      const questions: Question[] = result.questions;
+      const questions: Question[] = result.activityTemplate.questions;
 
       const activity: Activity = {
         _id: `activity_${Date.now()}`,

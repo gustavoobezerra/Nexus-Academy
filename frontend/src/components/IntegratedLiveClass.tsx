@@ -4,6 +4,7 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, Users, MessageSquare, Save } fr
 import toast from 'react-hot-toast';
 import { useAudioTranscription } from '../hooks/useAudioTranscription';
 import { liveClassAPI } from '../lib/api';
+import { getSocketBaseUrl } from '../services/api.service';
 
 interface IntegratedLiveClassProps {
   sessionId: string;
@@ -34,15 +35,9 @@ export const IntegratedLiveClass = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const { transcript: audioTranscript, startListening } = useAudioTranscription();
 
-  const SOCKET_URL = (() => {
-    const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const trimmed = raw.replace(/\/+$/, '');
-    return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
-  })();
-
   useEffect(() => {
     // Conectar Socket.IO
-    const newSocket = io(SOCKET_URL, {
+    const newSocket = io(getSocketBaseUrl(), {
       auth: { userId, userType }
     });
 

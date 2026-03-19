@@ -303,13 +303,7 @@ function App() {
               {abaAtiva === 'hub' && <ComprehensiveHub />}
               {abaAtiva === 'ai-hub' && <AIHub onNavigate={handleNavegar} />}
               {abaAtiva === 'advanced' && <AdvancedFeatures />}
-              {abaAtiva === 'points' && (
-                <PaginaPontos
-                  studentPoints={null}
-                  activities={[]}
-                  rewards={[]}
-                />
-              )}
+              {abaAtiva === 'points' && <PaginaPontos />}
               {abaAtiva === 'online' && <OnlineStudents />}
 
               {/* Novos componentes de Automação IA */}

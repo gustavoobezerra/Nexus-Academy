@@ -5,7 +5,8 @@ const activitySchema = new mongoose.Schema({
   class: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Class',
-    required: true
+    required: false,
+    default: null
   },
   student: {
     type: mongoose.Schema.Types.ObjectId,
@@ -100,6 +101,24 @@ const activitySchema = new mongoose.Schema({
     sourceTranscript: String,
     topics: [String],
     generatedAt: Date,
+    providerMode: {
+      type: String,
+      enum: ['live', 'fallback'],
+      default: 'fallback'
+    },
+    sourceType: {
+      type: String,
+      enum: ['class', 'manual'],
+      default: 'manual'
+    },
+    batchId: String,
+    targetMode: {
+      type: String,
+      enum: ['specific', 'group', 'all'],
+      default: 'specific'
+    },
+    gradeLevel: String,
+    learningObjective: String,
     reviewed: {
       type: Boolean,
       default: false

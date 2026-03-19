@@ -20,9 +20,18 @@ const sizeClasses: Record<BrandLogoProps['size'], string> = {
 };
 
 const getIsDark = (theme: BrandLogoProps['theme']) => {
-  if (theme === 'dark') return true;
-  if (theme === 'light') return false;
-  if (typeof document === 'undefined') return false;
+  if (theme === 'dark') {
+    return true;
+  }
+
+  if (theme === 'light') {
+    return false;
+  }
+
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
   return document.documentElement.classList.contains('dark');
 };
 
@@ -30,12 +39,19 @@ const getLogoSrc = (variant: BrandLogoProps['variant'], isDark: boolean) => {
   if (variant === 'mark') {
     return isDark ? markDark : markLight;
   }
+
   if (variant === 'stacked') {
     return isDark ? logoStackedDark : logoStackedLight;
   }
+
   return isDark ? logoHorizontalDark : logoHorizontalLight;
 };
 
+/**
+ * Resolve a versão correta do logo a partir do tema ativo. A camada visual usa
+ * este componente em vez de referenciar assets diretamente para manter a marca
+ * consistente em telas claras, escuras e superfícies híbridas.
+ */
 export const BrandLogo = ({ variant, theme, size, className }: BrandLogoProps) => {
   const isDark = getIsDark(theme);
   const src = getLogoSrc(variant, isDark);

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, X, Trash2, Clock, Calendar } from 'lucide-react';
+import { Plus, X, Trash2, Clock, Calendar, Loader2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { automationEngine } from '../services/automationEngine';
-import { classesAPI, studentsAPI } from '../lib/api';
+import { aiAPI, classesAPI, studentsAPI } from '../lib/api';
 import { Skeleton, ModalConfirmacao } from './Common';
-import type { Aula, Aluno } from '../types';
+import { SearchableSelect } from './ui/SearchableSelect';
+import type { Aula, Aluno, SubjectSuggestion } from '../types';
 
 interface ClassesPageProps {
   onStartLive?: (classId: string, title: string) => void;
@@ -16,6 +17,21 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
   const [carregando, setCarregando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [aulaParaExcluir, setAulaParaExcluir] = useState<Aula | null>(null);
+  const [formularioAula, setFormularioAula] = useState({
+    title: '',
+    studentId: '',
+    subject: '',
+    topic: '',
+    scheduledAt: '',
+    duration: 60,
+    notes: ''
+  });
+  const [subjectSuggestion, setSubjectSuggestion] = useState<{
+    confidence: number;
+    providerMode: 'live' | 'fallback';
+    suggestion: SubjectSuggestion;
+  } | null>(null);
+  const [sugerindoMateria, setSugerindoMateria] = useState(false);
   
   // Paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -48,16 +64,30 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
     buscarDados();
   }, [buscarDados]);
 
+  const resetFormulario = () => {
+    setFormularioAula({
+      title: '',
+      studentId: '',
+      subject: '',
+      topic: '',
+      scheduledAt: '',
+      duration: 60,
+      notes: ''
+    });
+    setSubjectSuggestion(null);
+  };
+
   const handleCriarAula = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    const title = formData.get('title') as string;
-    const studentId = formData.get('studentId') as string;
-    const subject = formData.get('subject') as string;
-    const scheduledAt = formData.get('scheduledAt') as string;
-    const duration = Number(formData.get('duration')) || 60;
-    const notes = formData.get('notes') as string;
+    const {
+      title,
+      studentId,
+      subject,
+      topic,
+      scheduledAt,
+      duration,
+      notes
+    } = formularioAula;
 
     if (!title || !studentId || !subject || !scheduledAt) {
       toast.error('Preencha todos os campos obrigatórios');
@@ -71,9 +101,10 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
     }
 
     const dados = {
-      title,
+      title: title.trim(),
       studentId,
-      subject,
+      subject: subject.trim(),
+      topic: topic.trim() || undefined,
       scheduledAt: scheduledDate.toISOString(),
       duration,
       notes
@@ -89,10 +120,36 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
       });
       toast.success('Aula agendada com sucesso!');
       setMostrarFormulario(false);
+      resetFormulario();
       buscarDados();
     } catch (error) {
       toast.error('Erro ao criar aula');
       console.error(error);
+    }
+  };
+
+  const sugerirMateria = async () => {
+    if (!formularioAula.studentId) {
+      toast.error('Selecione um aluno antes de pedir a sugestão pedagógica.');
+      return;
+    }
+
+    setSugerindoMateria(true);
+
+    try {
+      const response = await aiAPI.getStudentSubjectSuggestion(formularioAula.studentId);
+      setSubjectSuggestion(response);
+      setFormularioAula((currentForm) => ({
+        ...currentForm,
+        subject: response.suggestion.subject,
+        topic: response.suggestion.topic,
+        title: currentForm.title || `${response.suggestion.subject} - ${response.suggestion.topic}`
+      }));
+      toast.success('Sugestão pedagógica aplicada ao formulário.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao sugerir a matéria.');
+    } finally {
+      setSugerindoMateria(false);
     }
   };
 
@@ -182,7 +239,10 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
           Aulas
         </h3>
         <button
-          onClick={() => setMostrarFormulario(true)}
+          onClick={() => {
+            resetFormulario();
+            setMostrarFormulario(true);
+          }}
           className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-colors flex items-center gap-2"
         >
           <Plus size={20} /> Agendar Aula
@@ -212,40 +272,76 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
               <input
                 name="title"
                 required
+                value={formularioAula.title}
+                onChange={(event) => setFormularioAula((currentForm) => ({ ...currentForm, title: event.target.value }))}
                 className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Aluno *
-              </label>
-              <select
-                name="studentId"
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
-              >
-                <option value="" className="dark:bg-slate-700">
-                  Selecione
-                </option>
-                {alunos.map((a) => (
-                  <option
-                    key={a._id || a.id}
-                    value={a._id || a.id}
-                    className="dark:bg-slate-700"
-                  >
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+            <div className="md:col-span-2">
+              <SearchableSelect
+                label="Aluno *"
+                placeholder="Clique para ver sugestões e filtre por nome, série ou matéria..."
+                options={alunos.map((aluno) => ({
+                  id: aluno._id || aluno.id || '',
+                  label: aluno.name,
+                  description: `${aluno.grade} • ${aluno.subject || 'Matéria não informada'}`,
+                  meta: `Desempenho ${aluno.performance?.overall || 0}%`,
+                  group: 'Alunos ativos',
+                  keywords: [
+                    aluno.grade || '',
+                    aluno.subject || '',
+                    ...(aluno.performance?.weaknesses || [])
+                  ],
+                  recent: true
+                }))}
+                value={formularioAula.studentId}
+                onChange={(studentId) => {
+                  setFormularioAula((currentForm) => ({
+                    ...currentForm,
+                    studentId,
+                    subject: currentForm.subject || (alunos.find((aluno) => (aluno._id || aluno.id) === studentId)?.subject || '')
+                  }));
+                  setSubjectSuggestion(null);
+                }}
+                helperText="Ao focar, aparecem sugestões da base ativa; ao digitar, filtra por nome, série, matéria e fraquezas registradas."
+                emptyLabel="Nenhum aluno ativo disponível para agendamento."
+              />
+            </div>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[1fr,auto] gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Materia *
+                </label>
+                <input
+                  name="subject"
+                  required
+                  value={formularioAula.subject}
+                  onChange={(event) => setFormularioAula((currentForm) => ({ ...currentForm, subject: event.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={sugerirMateria}
+                  disabled={!formularioAula.studentId || sugerindoMateria}
+                  className="px-4 py-2.5 border border-indigo-500 text-indigo-600 dark:text-indigo-300 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {sugerindoMateria ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  Sugerir matéria
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Materia *
+                Topico
               </label>
               <input
-                name="subject"
-                required
+                name="topic"
+                value={formularioAula.topic}
+                onChange={(event) => setFormularioAula((currentForm) => ({ ...currentForm, topic: event.target.value }))}
                 className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
+                placeholder="Ex: Frações equivalentes"
               />
             </div>
             <div>
@@ -256,6 +352,8 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                 name="scheduledAt"
                 type="datetime-local"
                 required
+                value={formularioAula.scheduledAt}
+                onChange={(event) => setFormularioAula((currentForm) => ({ ...currentForm, scheduledAt: event.target.value }))}
                 className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
               />
             </div>
@@ -268,16 +366,42 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
                 type="number"
                 min="15"
                 max="480"
-                defaultValue={60}
+                value={formularioAula.duration}
+                onChange={(event) => setFormularioAula((currentForm) => ({ ...currentForm, duration: Number(event.target.value) || 60 }))}
                 className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
               />
             </div>
+            {subjectSuggestion ? (
+              <div className="md:col-span-2 p-4 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10">
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/60 text-xs font-semibold text-indigo-700 dark:text-indigo-200">
+                    confiança {subjectSuggestion.confidence}%
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/60 text-xs font-semibold text-indigo-700 dark:text-indigo-200">
+                    {subjectSuggestion.providerMode}
+                  </span>
+                </div>
+                <p className="mt-3 font-semibold text-slate-800 dark:text-white">
+                  {subjectSuggestion.suggestion.subject} • {subjectSuggestion.suggestion.topic}
+                </p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  {subjectSuggestion.suggestion.explanation}
+                </p>
+                <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                  {subjectSuggestion.suggestion.evidence.map((evidence) => (
+                    <p key={evidence}>• {evidence}</p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Observacoes
               </label>
               <textarea
                 name="notes"
+                value={formularioAula.notes}
+                onChange={(event) => setFormularioAula((currentForm) => ({ ...currentForm, notes: event.target.value }))}
                 className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 outline-none transition-all"
                 rows={3}
               ></textarea>
@@ -285,7 +409,10 @@ export const ClassesPage: React.FC<ClassesPageProps> = ({ onStartLive }) => {
             <div className="md:col-span-2 flex justify-end gap-3 mt-2">
               <button
                 type="button"
-                onClick={() => setMostrarFormulario(false)}
+                onClick={() => {
+                  setMostrarFormulario(false);
+                  resetFormulario();
+                }}
                 className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancelar

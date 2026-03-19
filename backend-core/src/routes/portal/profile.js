@@ -6,8 +6,74 @@ import User from '../../models/User.js';
 import { authenticateStudent } from '../../middleware/studentAuth.js';
 import emailService from '../../services/emailService.js';
 import cacheService from '../../services/cacheService.js';
+import {
+  recordActivitySubmissionSignals
+} from '../../services/learningSignalsService.js';
 
 const router = express.Router();
+const OBJECTIVE_QUESTION_TYPES = new Set(['multiple_choice', 'true_false', 'fill_blank']);
+
+const toId = (value) => value?._id?.toString?.() || value?.id || value?.toString?.() || '';
+
+const serializeSubmission = (submission) => ({
+  submittedAt: submission.submittedAt,
+  answers: Array.isArray(submission.answers)
+    ? submission.answers.map((answer) => ({
+      questionNumber: answer.questionNumber,
+      answer: answer.answer,
+      isCorrect: answer.isCorrect,
+      pointsEarned: answer.pointsEarned,
+      feedback: answer.feedback
+    }))
+    : [],
+  score: submission.score || 0,
+  percentage: submission.percentage || 0,
+  autoGraded: Boolean(submission.autoGraded),
+  gradedAt: submission.gradedAt,
+  teacherFeedback: submission.teacherFeedback
+});
+
+const serializeActivityForPortal = (activity, options = { includeQuestions: false }) => {
+  const latestSubmission = Array.isArray(activity.submissions) && activity.submissions.length > 0
+    ? activity.submissions[activity.submissions.length - 1]
+    : null;
+  const revealCorrections = Boolean(latestSubmission);
+
+  return {
+    _id: toId(activity),
+    title: activity.title || 'Atividade',
+    description: activity.description || '',
+    type: activity.type || 'exercise',
+    dueDate: activity.dueDate,
+    status: activity.status || 'published',
+    totalPoints: activity.totalPoints || 0,
+    totalQuestions: Array.isArray(activity.questions) ? activity.questions.length : 0,
+    createdAt: activity.createdAt,
+    updatedAt: activity.updatedAt,
+    aiMetadata: activity.aiMetadata || null,
+    submissionCount: Array.isArray(activity.submissions) ? activity.submissions.length : 0,
+    latestSubmission: latestSubmission ? serializeSubmission(latestSubmission) : null,
+    questions: options.includeQuestions
+      ? (activity.questions || []).map((question) => ({
+        questionNumber: question.questionNumber,
+        type: question.type,
+        question: question.question,
+        difficulty: question.difficulty,
+        points: question.points,
+        options: Array.isArray(question.options)
+          ? question.options.map((option) => ({
+            letter: option.letter,
+            text: option.text,
+            isCorrect: revealCorrections ? option.isCorrect : undefined
+          }))
+          : [],
+        correctAnswer: revealCorrections ? question.correctAnswer : undefined,
+        explanation: revealCorrections ? question.explanation : undefined,
+        topics: question.topics || []
+      }))
+      : undefined
+  };
+};
 
 // GET /api/portal/profile
 router.get('/profile', authenticateStudent, async (req, res) => {
@@ -200,17 +266,109 @@ router.get('/activities', authenticateStudent, async (req, res) => {
 
     res.json({
       success: true,
-      activities: activities.map(a => ({
-        _id: a._id,
-        title: a.title || 'Atividade',
-        type: a.type || 'exercise',
-        dueDate: a.dueDate,
-        status: a.status || 'pending'
-      }))
+      activities: activities.map((activity) => serializeActivityForPortal(activity))
     });
   } catch (error) {
     console.error('[StudentPortal] Error fetching activities:', error);
     res.status(500).json({ success: false, message: 'Erro ao carregar atividades' });
+  }
+});
+
+// GET /api/portal/activities/:activityId
+router.get('/activities/:activityId', authenticateStudent, async (req, res) => {
+  try {
+    const activity = await Activity.findOne({
+      _id: req.params.activityId,
+      student: req.studentId
+    }).lean();
+
+    if (!activity) {
+      return res.status(404).json({ success: false, message: 'Atividade não encontrada' });
+    }
+
+    res.json({
+      success: true,
+      activity: serializeActivityForPortal(activity, { includeQuestions: true })
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error fetching activity detail:', error);
+    res.status(500).json({ success: false, message: 'Erro ao carregar atividade' });
+  }
+});
+
+// POST /api/portal/activities/:activityId/submissions
+router.post('/activities/:activityId/submissions', authenticateStudent, async (req, res) => {
+  try {
+    const submittedAnswers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+
+    if (submittedAnswers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Envie pelo menos uma resposta para submeter a atividade'
+      });
+    }
+
+    const activity = await Activity.findOne({
+      _id: req.params.activityId,
+      student: req.studentId
+    });
+
+    if (!activity) {
+      return res.status(404).json({ success: false, message: 'Atividade não encontrada' });
+    }
+
+    if (activity.status === 'draft') {
+      return res.status(400).json({
+        success: false,
+        message: 'A atividade ainda não foi publicada'
+      });
+    }
+
+    const answersByQuestion = new Map(
+      submittedAnswers.map((answer) => [Number(answer.questionNumber), String(answer.answer || '').trim()])
+    );
+
+    const normalizedAnswers = activity.questions.map((question) => ({
+      questionNumber: question.questionNumber,
+      answer: answersByQuestion.get(Number(question.questionNumber)) || ''
+    }));
+
+    const hasAnyAnswer = normalizedAnswers.some((answer) => answer.answer.trim().length > 0);
+    if (!hasAnyAnswer) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nenhuma resposta válida foi enviada'
+      });
+    }
+
+    activity.submissions.push({
+      submittedAt: new Date(),
+      answers: normalizedAnswers
+    });
+
+    await activity.save();
+    const submissionIndex = activity.submissions.length - 1;
+    await activity.autoGradeSubmission(submissionIndex);
+
+    const latestSubmission = activity.submissions[submissionIndex];
+    const requiresManualReview = activity.questions.some((question) => !OBJECTIVE_QUESTION_TYPES.has(question.type));
+
+    activity.status = requiresManualReview ? 'completed' : 'graded';
+    await activity.save();
+
+    await recordActivitySubmissionSignals({
+      activity,
+      submission: latestSubmission
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Atividade enviada com sucesso',
+      activity: serializeActivityForPortal(activity, { includeQuestions: true })
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error submitting activity:', error);
+    res.status(500).json({ success: false, message: 'Erro ao enviar atividade' });
   }
 });
 

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Layout, Wallet, Users, LogOut, UserCircle,
   Menu, Video, Star, CalendarDays, Moon, Sun, BarChart3, Bell, BookOpen, Zap,
-  MessageSquare, Brain
+  MessageSquare, Brain, type LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from './store/authStore';
 import { useTheme } from './context/ThemeContext';
@@ -42,21 +42,195 @@ import { SmartOnboarding } from './components/StudentPortal/SmartOnboarding';
 import { StudentProfilePage } from './components/StudentPortal/StudentProfile';
 import { StudentRegister } from './components/StudentPortal/StudentRegister';
 import { PronunciationTest } from './components/StudentPortal/PronunciationTest';
-import AIHub from './components/AIHub';
 import TeacherSettings from './components/TeacherSettings';
 import HangmanGame from './components/HangmanGame';
 import BrandLogo from './components/BrandLogo';
 
 // NOVOS COMPONENTES DE AUTOMAÇÃO COM IA
 import { HourBankManagement } from './components/HourBankManagement';
-import { AIActivityGenerator } from './components/AIActivityGenerator';
-import { AIInsightsDashboard } from './components/AIInsightsDashboard';
-import { SmartScheduling } from './components/SmartScheduling';
-import { LessonPrepAI } from './components/LessonPrepAI';
 import { ContractManager } from './components/ContractManager';
-import { StudentGroupsManager } from './components/StudentGroupsManager';
 import MessageTemplatesManager from './components/MessageTemplatesManager';
+import useTeacherWorkspaceData from './hooks/useTeacherWorkspaceData';
+import TeacherAIHub from './components/ai-hub/TeacherAIHub';
+import TeacherAssistantWorkspace from './components/ai-hub/TeacherAssistantWorkspace';
+import TeacherAIActivityWorkspace from './components/ai-hub/TeacherAIActivityWorkspace';
+import TeacherLessonPrepWorkspace from './components/ai-hub/TeacherLessonPrepWorkspace';
+import TeacherAIInsightsWorkspace from './components/ai-hub/TeacherAIInsightsWorkspace';
+import TeacherSmartSchedulingWorkspace from './components/ai-hub/TeacherSmartSchedulingWorkspace';
+import TeacherStudentGroupsWorkspace from './components/ai-hub/TeacherStudentGroupsWorkspace';
+import type { Aluno } from './types';
 
+type TeacherShellUser = {
+  avatar?: string | null;
+  onboardingCompletedAt?: string;
+  subscriptionStatus?: string;
+  status?: string;
+};
+
+type NavigationItem = {
+  id: string;
+  label: string;
+  note: string;
+  icon: LucideIcon;
+};
+
+type NavigationSection = {
+  label: string;
+  items: NavigationItem[];
+};
+
+type ShellSectionMeta = {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+};
+
+const navigationSections: NavigationSection[] = [
+  {
+    label: 'Principal',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', note: 'Visão diária', icon: Layout },
+      { id: 'ai-hub', label: 'AI Hub', note: 'Assistência inteligente', icon: Brain },
+      { id: 'aulas', label: 'Aulas', note: 'Agenda e execução', icon: Video },
+      { id: 'students', label: 'Alunos', note: 'Base ativa', icon: Users },
+      { id: 'calendar', label: 'Calendário', note: 'Planejamento', icon: CalendarDays }
+    ]
+  },
+  {
+    label: 'Operação',
+    items: [
+      { id: 'student-groups', label: 'Grupos', note: 'Organização de turmas', icon: Users },
+      { id: 'points', label: 'Pontos', note: 'Gamificação', icon: Star },
+      { id: 'online', label: 'Online', note: 'Presença atual', icon: Users },
+      { id: 'finance', label: 'Financeiro', note: 'Receita e pendências', icon: Wallet },
+      { id: 'analytics', label: 'Analytics', note: 'Métricas de negócio', icon: BarChart3 },
+      { id: 'automation', label: 'Mensagens', note: 'Comunicação ativa', icon: Bell },
+      { id: 'templates', label: 'Templates', note: 'Padrões de mensagem', icon: MessageSquare },
+      { id: 'automation-manager', label: 'Motor de Automacao', note: 'Regras e rotinas', icon: Zap },
+      { id: 'hub', label: 'Hub', note: 'Recursos pedagógicos', icon: BookOpen },
+      { id: 'advanced', label: 'Avançados', note: 'Ferramentas extras', icon: Zap }
+    ]
+  }
+];
+
+const shellSectionMeta: Record<string, ShellSectionMeta> = {
+  dashboard: {
+    eyebrow: 'Painel central',
+    title: 'Painel de Controle',
+    subtitle: 'Leitura rápida da operação diária, agenda e saúde financeira.'
+  },
+  aulas: {
+    eyebrow: 'Agenda pedagógica',
+    title: 'Gestão de Aulas',
+    subtitle: 'Organize a rotina de aulas, inicie sessões e acompanhe horários.'
+  },
+  students: {
+    eyebrow: 'Base ativa',
+    title: 'Gestão de Alunos',
+    subtitle: 'Cadastros, convite público e acompanhamento da carteira de alunos.'
+  },
+  calendar: {
+    eyebrow: 'Planejamento',
+    title: 'Calendário',
+    subtitle: 'Visualize compromissos e ajuste a agenda pedagógica.'
+  },
+  'hour-bank': {
+    eyebrow: 'Operação avançada',
+    title: 'Banco de Horas',
+    subtitle: 'Controle o saldo de horas e a distribuição da carga docente.'
+  },
+  'ai-activities': {
+    eyebrow: 'IA aplicada',
+    title: 'Gerador de Atividades IA',
+    subtitle: 'Crie atividades com apoio de IA sem sair da área operacional.'
+  },
+  'ai-assistant': {
+    eyebrow: 'IA aplicada',
+    title: 'Assistente de Ensino',
+    subtitle: 'Converse com o assistente canônico do professor usando dados reais do workspace.'
+  },
+  'ai-insights': {
+    eyebrow: 'IA aplicada',
+    title: 'Dashboard de Insights IA',
+    subtitle: 'Resumo automatizado de sinais e comportamento pedagógico.'
+  },
+  'smart-schedule': {
+    eyebrow: 'IA aplicada',
+    title: 'Agendamento Inteligente',
+    subtitle: 'Sugestões automáticas para encaixe, recorrência e ritmo.'
+  },
+  'lesson-prep': {
+    eyebrow: 'IA aplicada',
+    title: 'Preparação Automática de Aulas',
+    subtitle: 'Apoio na preparação de aulas, materiais e tópicos.'
+  },
+  contracts: {
+    eyebrow: 'Operação avançada',
+    title: 'Gerenciador de Contratos',
+    subtitle: 'Centralize contratos e acompanhe o ciclo comercial.'
+  },
+  'student-groups': {
+    eyebrow: 'Operação avançada',
+    title: 'Grupos de Alunos',
+    subtitle: 'Agrupe turmas e organize contextos coletivos.'
+  },
+  points: {
+    eyebrow: 'Engajamento',
+    title: 'Pontos',
+    subtitle: 'Acompanhe regras e recompensas ligadas à gamificação.'
+  },
+  online: {
+    eyebrow: 'Monitoramento',
+    title: 'Alunos Online',
+    subtitle: 'Veja quem está ativo agora dentro do ecossistema.'
+  },
+  finance: {
+    eyebrow: 'Financeiro',
+    title: 'Financeiro',
+    subtitle: 'Receita, pendências e visão geral de pagamentos.'
+  },
+  analytics: {
+    eyebrow: 'Inteligência de negócio',
+    title: 'Dashboard de Negócios',
+    subtitle: 'Métricas amplas para decisões sobre crescimento e retenção.'
+  },
+  automation: {
+    eyebrow: 'Comunicação',
+    title: 'Centro de Mensagens',
+    subtitle: 'Mensagens ativas, alertas e rotinas de contato.'
+  },
+  templates: {
+    eyebrow: 'Comunicação',
+    title: 'Templates de Mensagens',
+    subtitle: 'Padronize mensagens para ganhar consistência e velocidade.'
+  },
+  'automation-manager': {
+    eyebrow: 'Automação',
+    title: 'Motor de Automacao Central',
+    subtitle: 'Gerencie regras, gatilhos e ações automáticas do sistema.'
+  },
+  'ai-hub': {
+    eyebrow: 'Núcleo inteligente',
+    title: 'Nexus AI Hub',
+    subtitle: 'Ferramentas assistidas por IA reunidas em uma camada dedicada.'
+  },
+  hub: {
+    eyebrow: 'Recursos',
+    title: 'Hub Educacional',
+    subtitle: 'Biblioteca de apoio e recursos didáticos integrados.'
+  },
+  advanced: {
+    eyebrow: 'Recursos extras',
+    title: 'Recursos Avançados',
+    subtitle: 'Ferramentas complementares para fluxos especializados.'
+  }
+};
+
+/**
+ * Orquestra as rotas públicas, o portal do aluno e o shell autenticado do
+ * professor. O redesign desta rodada atua apenas na camada visual do shell,
+ * preservando redirecionamentos, tokens, rotas públicas e comportamento de auth.
+ */
 function AppWithRouter() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,6 +246,12 @@ function AppWithRouter() {
   const [preferDaily] = useState(false); // Jitsi como padrão enquanto o Daily permanece instável no ambiente atual
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
   const [mostrarHangman, setMostrarHangman] = useState(false);
+  const teacherUser = user as (typeof user & TeacherShellUser) | null;
+  const activeSectionMeta = shellSectionMeta[abaAtiva] || {
+    eyebrow: 'Nexus Academy',
+    title: 'Nexus Academy',
+    subtitle: 'Área principal da plataforma.'
+  };
 
   // Verificar rotas
   const isLoginPage = location.pathname === '/' || location.pathname === '/login';
@@ -87,6 +267,8 @@ function AppWithRouter() {
 
   // Verificar se é uma rota pública (login)
   const isPublicRoute = isLoginPage || isTeacherLogin || location.pathname === '/portal/login' || isTeacherSlugPage || isTutorialPage;
+  const shouldLoadTeacherWorkspace = Boolean(teacherToken) && !isStudentPortal && !isPublicRoute;
+  const teacherWorkspace = useTeacherWorkspaceData(shouldLoadTeacherWorkspace);
 
   useEffect(() => {
     // Se está no portal e não tem token, redirecionar para login
@@ -112,9 +294,9 @@ function AppWithRouter() {
 
       const onboardingConcluido = localStorage.getItem('onboarding_concluido') === 'true'
         || localStorage.getItem('onboarding_completed') === 'true'
-        || Boolean((user as any)?.onboardingCompletedAt)
-        || ['active', 'trialing'].includes((user as any)?.subscriptionStatus || '')
-        || (user as any)?.status === 'active';
+        || Boolean(teacherUser?.onboardingCompletedAt)
+        || ['active', 'trialing'].includes(teacherUser?.subscriptionStatus || '')
+        || teacherUser?.status === 'active';
       if (!onboardingConcluido && isAuthenticated) {
         // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
         setMostrarOnboarding(true);
@@ -122,7 +304,7 @@ function AppWithRouter() {
         setMostrarOnboarding(false);
       }
     }
-  }, [isStudentPortal, isPublicRoute, isAuthenticated, user]);
+  }, [isStudentPortal, isPublicRoute, isAuthenticated, teacherUser]);
 
   const handleNavegar = useCallback((tab: string) => {
     if (tab === 'hangman') {
@@ -218,16 +400,18 @@ function AppWithRouter() {
     }
     if (location.pathname === '/portal/hangman') {
       const storedStudentRaw = localStorage.getItem('student') || localStorage.getItem('studentData');
-      let storedStudent: any = null;
+      const routeGameId = new URLSearchParams(location.search).get('gameId') || undefined;
+      let storedStudent: Partial<Aluno> | null = null;
       if (storedStudentRaw) {
         try {
-          storedStudent = JSON.parse(storedStudentRaw);
+          storedStudent = JSON.parse(storedStudentRaw) as Partial<Aluno>;
         } catch {
           storedStudent = null;
         }
       }
       return (
         <HangmanGame
+          gameId={routeGameId}
           isTeacher={false}
           userId={storedStudent?.id || storedStudent?._id || 'student'}
           userName={storedStudent?.name || 'Aluno'}
@@ -291,34 +475,42 @@ function AppWithRouter() {
 
   if (!inicializado) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-cyan-500 to-indigo-700 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="mx-auto mb-4 flex justify-center animate-pulse">
-            <BrandLogo variant="mark" theme="dark" size="lg" />
+      <div className="nexus-shell relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+        <div className="nexus-grid-bg absolute inset-0 opacity-70" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.08),transparent_28%)]" />
+        <div className="nexus-panel-strong relative z-10 rounded-[2rem] px-10 py-12 text-center">
+          <div className="mx-auto mb-5 flex justify-center">
+            <BrandLogo variant="mark" theme="auto" size="lg" />
           </div>
-          <p className="text-lg font-medium">Carregando Nexus Academy...</p>
+          <p className="nexus-kicker">Inicializando sistema</p>
+          <p className="mt-4 text-3xl">Carregando Nexus Academy...</p>
         </div>
       </div>
     );
   }
 
-  const ItemNavegacao = ({ icon, label, id }: { icon: React.ReactNode; label: string; id: string }) => (
-    <button
-      onClick={() => handleNavegar(id)}
-      className={`
-        w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium
-        ${abaAtiva === id
-          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg'
-          : isDark
-            ? 'text-gray-400 hover:bg-slate-700 hover:text-white'
-            : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-        }
-      `}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
+  const ItemNavegacao = ({ item }: { item: NavigationItem }) => {
+    const Icon = item.icon;
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleNavegar(item.id)}
+        className="nexus-sidebar-link"
+        data-active={abaAtiva === item.id}
+        aria-label={item.label}
+        title={item.label}
+      >
+        <div className="rounded-[1rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-2.5 text-[var(--brand-indigo)]">
+          <Icon size={18} />
+        </div>
+        <div className="min-w-0">
+          <span className="block text-sm font-bold">{item.label}</span>
+          <span className="nexus-sidebar-note">{item.note}</span>
+        </div>
+      </button>
+    );
+  };
 
   const handleLogout = () => {
     logout();
@@ -326,59 +518,82 @@ function AppWithRouter() {
     navigate('/');
   };
 
+  const userInitial = teacherUser?.name?.charAt(0).toUpperCase() || 'P';
+  const renderAiWorkspace = (view: ReactNode) => {
+    if (teacherWorkspace.loading) {
+      return (
+        <div className="nexus-panel rounded-[2rem] p-8">
+          <p className="nexus-kicker">AI Hub</p>
+          <p className="mt-3 text-lg text-[var(--text-muted)]">Carregando dados reais do professor...</p>
+        </div>
+      );
+    }
+
+    if (teacherWorkspace.error) {
+      return (
+        <div className="nexus-panel rounded-[2rem] p-8">
+          <p className="nexus-kicker">AI Hub</p>
+          <p className="mt-3 text-lg text-[var(--brand-red)]">{teacherWorkspace.error}</p>
+          <button type="button" onClick={() => void teacherWorkspace.refresh()} className="nexus-button-secondary mt-5">
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+
+    return view;
+  };
+
   return (
     <>
-      <div className={`flex h-screen w-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
-        {/* Sidebar */}
-        <aside className={`fixed md:static inset-y-0 left-0 z-40 w-64 p-4 flex flex-col transform transition-transform duration-300 border-r ${isDark ? 'bg-slate-900 text-white border-slate-800' : 'bg-white text-slate-900 border-slate-200'} ${menuMobileAberto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-          <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="sm:hidden">
-              <BrandLogo variant="mark" theme="dark" size="md" />
+      <div className={`nexus-shell flex h-screen w-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
+        <aside
+          className={`nexus-panel fixed inset-y-0 left-0 z-40 flex w-[18.75rem] flex-col p-4 transition-transform duration-300 md:static ${
+            menuMobileAberto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
+        >
+          <div className="rounded-[1.8rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-4">
+            <div className="flex items-center justify-between gap-4">
+              <BrandLogo variant="horizontal" theme="auto" size="md" />
+              <span className="nexus-kicker">Operacao</span>
             </div>
-            <div className="hidden sm:flex">
-              <BrandLogo variant="horizontal" theme="dark" size="md" />
-            </div>
+            <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
+              Navegação principal do professor com foco em agenda, base ativa e operação contínua.
+            </p>
           </div>
 
-          <nav className="space-y-2 flex-1 overflow-y-auto">
-            <div className={`text-xs font-semibold uppercase tracking-wider px-4 mb-2 ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Principal</div>
-            <ItemNavegacao icon={<Layout size={20} />} label="Dashboard" id="dashboard" />
-            <ItemNavegacao icon={<Brain size={20} />} label="AI Hub" id="ai-hub" />
-            <ItemNavegacao icon={<Video size={20} />} label="Aulas" id="aulas" />
-            <ItemNavegacao icon={<Users size={20} />} label="Alunos" id="students" />
-            <ItemNavegacao icon={<CalendarDays size={20} />} label="Calendário" id="calendar" />
-
-            <div className={`text-xs font-semibold uppercase tracking-wider px-4 mb-2 mt-4 ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Gestão</div>
-            <ItemNavegacao icon={<Users size={20} />} label="Grupos" id="student-groups" />
-            <ItemNavegacao icon={<Star size={20} />} label="Pontos" id="points" />
-            <ItemNavegacao icon={<Users size={20} />} label="Online" id="online" />
-            <ItemNavegacao icon={<Wallet size={20} />} label="Financeiro" id="finance" />
-            <ItemNavegacao icon={<BarChart3 size={20} />} label="Analytics" id="analytics" />
-            <ItemNavegacao icon={<Bell size={20} />} label="Mensagens" id="automation" />
-            <ItemNavegacao icon={<MessageSquare size={20} />} label="Templates" id="templates" />
-            <ItemNavegacao icon={<Zap size={20} />} label="Motor de Automacao" id="automation-manager" />
-            <ItemNavegacao icon={<BookOpen size={20} />} label="Hub" id="hub" />
-            <ItemNavegacao icon={<Zap size={20} />} label="Avançados" id="advanced" />
+          <nav className="mt-6 flex-1 space-y-6 overflow-y-auto pr-1">
+            {navigationSections.map((section) => (
+              <div key={section.label}>
+                <p className="nexus-kicker px-2">{section.label}</p>
+                <div className="mt-3 space-y-2">
+                  {section.items.map((item) => (
+                    <ItemNavegacao key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </nav>
 
-          <div className={`border-t pt-4 mt-4 space-y-3 ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
-            <div className={`px-4 py-3 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Logado como</p>
-              <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{user?.name || 'Professor'}</p>
+          <div className="mt-6 space-y-3 border-t border-[var(--border-soft)] pt-4">
+            <div className="rounded-[1.6rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-4">
+              <p className="nexus-kicker">Conta ativa</p>
+              <p className="mt-3 truncate text-lg font-semibold text-[var(--text-strong)]">
+                {teacherUser?.name || 'Professor'}
+              </p>
+              <p className="mt-1 truncate text-sm text-[var(--text-muted)]">
+                {teacherUser?.email || 'Sem email'}
+              </p>
             </div>
-            <button
-              onClick={toggleTheme}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900'}`}
-            >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
-              <span>{isDark ? 'Modo Claro' : 'Modo Escuro'}</span>
+
+            <button type="button" onClick={toggleTheme} className="nexus-button-secondary w-full justify-start">
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+              {isDark ? 'Modo Claro' : 'Modo Escuro'}
             </button>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-900/20 hover:text-red-300 font-medium transition-colors"
-            >
-              <LogOut size={20} />
-              <span>Sair</span>
+
+            <button type="button" onClick={handleLogout} className="nexus-button-secondary w-full justify-start text-red-500">
+              <LogOut size={18} />
+              Sair
             </button>
           </div>
         </aside>
@@ -387,82 +602,78 @@ function AppWithRouter() {
           <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setMenuMobileAberto(false)} />
         )}
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <button
             onClick={() => setMenuMobileAberto(!menuMobileAberto)}
-            className={`md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg shadow-lg ${isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 border border-slate-200'}`}
+            className="nexus-panel md:hidden fixed left-4 top-4 z-50 rounded-full p-3"
           >
-            <Menu size={24} />
+            <Menu size={22} />
           </button>
 
-          <header className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} border-b p-4 md:p-6 sticky top-0 z-10 shadow-sm`}>
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className={`text-xl md:text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                  {abaAtiva === 'dashboard' ? 'Painel de Controle' :
-                    abaAtiva === 'aulas' ? 'Gestão de Aulas' :
-                      abaAtiva === 'students' ? 'Gestão de Alunos' :
-                        abaAtiva === 'calendar' ? 'Calendário' :
-                          abaAtiva === 'hour-bank' ? 'Banco de Horas' :
-                            abaAtiva === 'ai-activities' ? 'Gerador de Atividades IA' :
-                              abaAtiva === 'ai-insights' ? 'Dashboard de Insights IA' :
-                                abaAtiva === 'smart-schedule' ? 'Agendamento Inteligente' :
-                                  abaAtiva === 'lesson-prep' ? 'Preparação Automática de Aulas' :
-                                    abaAtiva === 'contracts' ? 'Gerenciador de Contratos' :
-                                      abaAtiva === 'student-groups' ? 'Grupos de Alunos' :
-                                        abaAtiva === 'points' ? 'Pontos' :
-                                          abaAtiva === 'online' ? 'Alunos Online' :
-                                            abaAtiva === 'finance' ? 'Financeiro' :
-                                              abaAtiva === 'analytics' ? 'Dashboard de Negócios' :
-                                                abaAtiva === 'automation' ? 'Centro de Mensagens' :
-                                                  abaAtiva === 'templates' ? 'Templates de Mensagens' :
-                                                    abaAtiva === 'automation-manager' ? 'Motor de Automacao Central' :
-                                                      abaAtiva === 'ai-hub' ? 'Nexus AI Hub' :
-                                                        abaAtiva === 'hub' ? 'Hub Educacional' :
-                                                          abaAtiva === 'advanced' ? 'Recursos Avançados' : 'Nexus Academy'}
-                </h2>
-              </div>
-              <div className="flex items-center gap-4 relative">
-                <button
-                  onClick={() => setMostrarAlertas(!mostrarAlertas)}
-                  className={`p-2 rounded-xl transition-all relative ${mostrarAlertas
-                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
-                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+          <header className="sticky top-0 z-10 p-3 pb-0 md:p-4 md:pb-0">
+            <div className="nexus-panel rounded-[1.8rem] p-4 md:px-6 md:py-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div className="min-w-0">
+                  <p className="nexus-kicker">{activeSectionMeta.eyebrow}</p>
+                  <h2 className="mt-2 text-3xl leading-none md:text-4xl">
+                    {activeSectionMeta.title}
+                  </h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-muted)] md:text-base">
+                    {activeSectionMeta.subtitle}
+                  </p>
+                </div>
+
+                <div className="relative flex items-center gap-3 self-start md:self-auto">
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="nexus-button-ghost hidden md:inline-flex"
+                  >
+                    {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                    {isDark ? 'Claro' : 'Escuro'}
+                  </button>
+
+                  <button
+                    onClick={() => setMostrarAlertas(!mostrarAlertas)}
+                    className={`relative rounded-full border border-[var(--border-soft)] bg-[var(--surface-soft)] p-3 transition-colors ${
+                      mostrarAlertas ? 'text-[var(--brand-indigo)]' : 'text-[var(--text-muted)]'
                     }`}
-                >
-                  <Bell size={22} />
-                  {unreadAlerts > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800">
-                      {unreadAlerts}
-                    </span>
+                  >
+                    <Bell size={20} />
+                    {unreadAlerts > 0 && (
+                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-red)] text-[10px] font-bold text-white">
+                        {unreadAlerts}
+                      </span>
+                    )}
+                  </button>
+
+                  {mostrarAlertas && (
+                    <AlertsPanel
+                      onClose={() => setMostrarAlertas(false)}
+                      onNavigate={handleNavegar}
+                    />
                   )}
-                </button>
 
-                {mostrarAlertas && (
-                  <AlertsPanel
-                    onClose={() => setMostrarAlertas(false)}
-                    onNavigate={handleNavegar}
-                  />
-                )}
-
-                <button
-                  onClick={() => setMostrarConfiguracoes(true)}
-                  className="flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl p-2 transition-colors cursor-pointer"
-                >
-                  <div className="text-right hidden sm:block">
-                    <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{user?.name}</p>
-                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{user?.email}</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                    <UserCircle className="text-white" size={24} />
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarConfiguracoes(true)}
+                    className="flex items-center gap-3 rounded-full border border-[var(--border-soft)] bg-[var(--surface-soft)] px-3 py-2 transition-colors hover:border-[rgba(79,70,229,0.2)]"
+                  >
+                    <div className="hidden text-right sm:block">
+                      <p className="text-sm font-semibold text-[var(--text-strong)]">{teacherUser?.name}</p>
+                      <p className="text-xs text-[var(--text-soft)]">{teacherUser?.email}</p>
+                    </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-indigo)] text-sm font-bold text-white">
+                      {teacherUser?.avatar ? <UserCircle size={20} /> : userInitial}
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 overflow-auto">
-            <div className={`min-h-full ${isDark ? 'bg-slate-950' : 'bg-slate-50'}`}>
+          <main className="flex-1 overflow-auto px-3 pb-3 md:px-4 md:pb-4">
+            <div className="min-h-full rounded-[2rem]">
               {abaAtiva === 'dashboard' && <Dashboard onNavegar={handleNavegar} />}
               {abaAtiva === 'aulas' && (
                 <ClassesPage
@@ -504,26 +715,61 @@ function AppWithRouter() {
               {abaAtiva === 'automation' && <AutomationCenter />}
               {abaAtiva === 'templates' && <MessageTemplatesManager />}
               {abaAtiva === 'automation-manager' && <AutomationManager />}
-              {abaAtiva === 'ai-hub' && <AIHub onNavigate={handleNavegar} />}
+              {abaAtiva === 'ai-hub' && renderAiWorkspace(
+                <TeacherAIHub data={teacherWorkspace.data} onNavigate={handleNavegar} />
+              )}
               {abaAtiva === 'hub' && <ComprehensiveHub />}
               {abaAtiva === 'advanced' && <AdvancedFeatures />}
-              {abaAtiva === 'points' && (
-                <PaginaPontos
-                  studentPoints={null}
-                  activities={[]}
-                  rewards={[]}
-                />
-              )}
+              {abaAtiva === 'points' && <PaginaPontos />}
               {abaAtiva === 'online' && <OnlineStudents />}
 
               {/* Novos componentes de Automação IA */}
               {abaAtiva === 'hour-bank' && <HourBankManagement />}
-              {abaAtiva === 'ai-activities' && <AIActivityGenerator />}
-              {abaAtiva === 'ai-insights' && <AIInsightsDashboard />}
-              {abaAtiva === 'smart-schedule' && <SmartScheduling />}
-              {abaAtiva === 'lesson-prep' && <LessonPrepAI />}
+              {abaAtiva === 'ai-assistant' && renderAiWorkspace(
+                <TeacherAssistantWorkspace data={teacherWorkspace.data} />
+              )}
+              {abaAtiva === 'ai-activities' && renderAiWorkspace(
+                <TeacherAIActivityWorkspace
+                  classes={teacherWorkspace.data.classes}
+                  students={teacherWorkspace.data.students}
+                  studentGroups={teacherWorkspace.data.studentGroups}
+                  activities={teacherWorkspace.data.activities}
+                  onRefresh={teacherWorkspace.refresh}
+                />
+              )}
+              {abaAtiva === 'ai-insights' && renderAiWorkspace(
+                <TeacherAIInsightsWorkspace
+                  students={teacherWorkspace.data.students}
+                  classes={teacherWorkspace.data.classes}
+                  payments={teacherWorkspace.data.payments}
+                  activities={teacherWorkspace.data.activities}
+                  learningSnapshots={teacherWorkspace.data.learningSnapshots}
+                />
+              )}
+              {abaAtiva === 'smart-schedule' && renderAiWorkspace(
+                <TeacherSmartSchedulingWorkspace
+                  students={teacherWorkspace.data.students}
+                  classes={teacherWorkspace.data.classes}
+                  onRefresh={teacherWorkspace.refresh}
+                />
+              )}
+              {abaAtiva === 'lesson-prep' && renderAiWorkspace(
+                <TeacherLessonPrepWorkspace
+                  classes={teacherWorkspace.data.classes}
+                  students={teacherWorkspace.data.students}
+                  lessonPreparations={teacherWorkspace.data.lessonPreparations}
+                  onRefresh={teacherWorkspace.refresh}
+                />
+              )}
               {abaAtiva === 'contracts' && <ContractManager />}
-              {abaAtiva === 'student-groups' && <StudentGroupsManager />}
+              {abaAtiva === 'student-groups' && renderAiWorkspace(
+                <TeacherStudentGroupsWorkspace
+                  students={teacherWorkspace.data.students}
+                  payments={teacherWorkspace.data.payments}
+                  studentGroups={teacherWorkspace.data.studentGroups}
+                  onRefresh={teacherWorkspace.refresh}
+                />
+              )}
             </div>
           </main>
         </div>
@@ -545,7 +791,7 @@ function AppWithRouter() {
           isTeacher
           userId={user?.id || 'teacher'}
           userName={user?.name || 'Professor'}
-          userAvatar={(user as any)?.avatar}
+          userAvatar={teacherUser?.avatar}
           onClose={() => setMostrarHangman(false)}
         />
       )}

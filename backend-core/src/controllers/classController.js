@@ -99,9 +99,19 @@ export const createClass = async (req, res) => {
   try {
     const { studentId, ...rest } = req.body;
     const studentRef = studentId || req.body.student;
+    const normalizedTitle = String(rest.title || '').trim();
+    const normalizedSubject = String(rest.subject || '').trim();
 
     if (!studentRef) {
       return res.status(400).json({ success: false, message: 'Aluno é obrigatório.' });
+    }
+
+    if (!normalizedTitle) {
+      return res.status(400).json({ success: false, message: 'Título da aula é obrigatório.' });
+    }
+
+    if (!normalizedSubject) {
+      return res.status(400).json({ success: false, message: 'Matéria da aula é obrigatória.' });
     }
 
     const student = await Student.findOne({
@@ -116,6 +126,8 @@ export const createClass = async (req, res) => {
 
     const classData = {
       ...rest,
+      title: normalizedTitle,
+      subject: normalizedSubject,
       student: student._id,
       teacher: req.user._id,
       studentName: student.name,
@@ -138,7 +150,7 @@ export const createClass = async (req, res) => {
 
 export const updateClass = async (req, res) => {
   try {
-    const allowedFields = ['title', 'description', 'scheduledAt', 'duration', 'status', 'student', 'subject', 'notes', 'materials', 'homework', 'grade'];
+    const allowedFields = ['title', 'description', 'scheduledAt', 'duration', 'status', 'student', 'subject', 'notes', 'materials', 'homework', 'grade', 'topic'];
     const updateData = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
@@ -148,6 +160,20 @@ export const updateClass = async (req, res) => {
 
     if (req.body.studentId !== undefined) {
       updateData.student = req.body.studentId;
+    }
+
+    if (updateData.title !== undefined) {
+      updateData.title = String(updateData.title || '').trim();
+      if (!updateData.title) {
+        return res.status(400).json({ success: false, message: 'Título da aula é obrigatório.' });
+      }
+    }
+
+    if (updateData.subject !== undefined) {
+      updateData.subject = String(updateData.subject || '').trim();
+      if (!updateData.subject) {
+        return res.status(400).json({ success: false, message: 'Matéria da aula é obrigatória.' });
+      }
     }
 
     if (updateData.student) {

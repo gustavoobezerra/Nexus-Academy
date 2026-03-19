@@ -1,13 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { liveClassAPI } from '../lib/api';
+import { getSocketBaseUrl } from '../services/api.service';
 import type { LiveSession } from '../types';
-
-const SOCKET_URL = (() => {
-  const raw = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const trimmed = raw.replace(/\/+$/, '');
-  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
-})();
 
 const getStoredUser = (): { id?: string; name?: string } | null => {
   if (typeof window === 'undefined') {
@@ -38,7 +33,7 @@ export const useLiveClass = (classId: string) => {
       const token = localStorage.getItem('token');
       const currentUser = getStoredUser();
 
-      socketRef.current = io(SOCKET_URL, {
+      socketRef.current = io(getSocketBaseUrl(), {
         auth: { token },
         transports: ['websocket'],
       });

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { FadeContent, BlurText, GradientText, MagneticButton } from '../ui/Animations';
 import { portalAPI } from '../../lib/api';
 import { formatPhoneBR } from '../../utils/security';
+import { DEMO_STUDENT_CREDENTIALS } from '../../mocks/demoData';
 import BrandLogo from '../BrandLogo';
 
 interface SavedStudent {
@@ -37,6 +38,7 @@ export const StudentPortalLogin = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const parsedAge = parseInt(age, 10);
   const isMinor = age ? !Number.isNaN(parsedAge) && parsedAge < 18 : true;
+  const showDemoAccess = import.meta.env.DEV;
 
   const location = useLocation();
   // Check for saved student on mount
@@ -66,6 +68,14 @@ export const StudentPortalLogin = () => {
     setSavedStudent(null);
     setEmail('');
     setShowFullLogin(false);
+  };
+
+  const applyDemoCredentials = () => {
+    setIsRegistering(false);
+    setShowFullLogin(true);
+    setShowPassword(false);
+    setEmail(DEMO_STUDENT_CREDENTIALS.email);
+    setPassword(DEMO_STUDENT_CREDENTIALS.password);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -194,7 +204,7 @@ export const StudentPortalLogin = () => {
   // Quick login view for returning students
   if (savedStudent && !showFullLogin && !isRegistering) {
     return (
-      <div className="min-h-screen bg-[#0f0f13] flex flex-col relative overflow-hidden">
+      <div className="min-h-screen bg-[#0f0f13] flex flex-col relative overflow-x-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[-25%] left-[-15%] w-[600px] h-[600px] bg-indigo-600/8 rounded-full blur-[150px]" />
@@ -225,7 +235,7 @@ export const StudentPortalLogin = () => {
             </FadeContent>
 
             <FadeContent delay={0.1} duration={0.6} blur>
-              <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
+              <div className="bg-[#0c1423] rounded-[32px] p-8 border border-white/10 shadow-[0_32px_90px_rgba(2,6,23,0.52)]">
                 {/* Header */}
                 <div className="text-center mb-6">
                   <div className="mb-4 flex justify-center">
@@ -304,7 +314,7 @@ export const StudentPortalLogin = () => {
 
                 {/* Info */}
                 <FadeContent delay={0.4} duration={0.4}>
-                  <div className="mt-5 p-3.5 bg-slate-800/40 border border-slate-700/40 rounded-xl flex items-start gap-3">
+                  <div className="mt-5 p-3.5 bg-white/[0.03] border border-white/10 rounded-2xl flex items-start gap-3">
                     <AlertCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-slate-400 leading-relaxed">
                       Sua conta está salva neste dispositivo. Clique para entrar rapidamente.
@@ -324,7 +334,7 @@ export const StudentPortalLogin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f13] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#0f0f13] flex flex-col relative overflow-x-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-25%] left-[-15%] w-[600px] h-[600px] bg-indigo-600/8 rounded-full blur-[150px]" />
@@ -341,8 +351,34 @@ export const StudentPortalLogin = () => {
         />
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10">
+        <div className="w-full max-w-5xl grid gap-6 lg:grid-cols-[0.82fr_1.18fr] items-start">
+          <aside className="hidden lg:flex min-h-[640px] flex-col justify-between rounded-[32px] border border-white/10 bg-[#0b1220] p-8 shadow-[0_30px_80px_rgba(2,6,23,0.45)]">
+            <div>
+              <div className="inline-flex rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-slate-400">
+                Portal editorial
+              </div>
+              <h2 className="mt-6 text-4xl font-semibold leading-tight text-white">
+                Área do aluno com acesso direto a aulas, metas e convites ao vivo.
+              </h2>
+              <p className="mt-4 max-w-md text-sm leading-6 text-slate-400">
+                Entre para acompanhar progresso, responder atividades e abrir jogos enviados pelo professor sem perder o contexto da turma.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-sm font-semibold text-white">Fluxo revisado</p>
+                <p className="mt-2 text-sm text-slate-400">Acesso mais limpo, dados de exemplo visíveis e leitura melhor em telas grandes e pequenas.</p>
+              </div>
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-sm font-semibold text-white">Novo foco</p>
+                <p className="mt-2 text-sm text-slate-400">Convites de Forca e notificações agora aparecem no próprio portal do aluno.</p>
+              </div>
+            </div>
+          </aside>
+
+          <div className="w-full max-w-md lg:max-w-none lg:justify-self-end">
           {/* Back Button */}
           <FadeContent delay={0} duration={0.4}>
             <button
@@ -355,7 +391,7 @@ export const StudentPortalLogin = () => {
           </FadeContent>
 
           <FadeContent delay={0.1} duration={0.6} blur>
-            <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/60 shadow-2xl">
+            <div className="bg-[#0c1423] rounded-[32px] p-8 border border-white/10 shadow-[0_32px_90px_rgba(2,6,23,0.52)]">
               {/* Header */}
               <div className="text-center mb-6">
                 <div className="mb-4 flex justify-center">
@@ -376,6 +412,31 @@ export const StudentPortalLogin = () => {
                   delay={0.2}
                 />
               </div>
+
+              {showDemoAccess && !isRegistering && (
+                <div className="mb-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/8 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-300">
+                        Aluno demo local
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-white">
+                        {DEMO_STUDENT_CREDENTIALS.email}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Senha: {DEMO_STUDENT_CREDENTIALS.password}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={applyDemoCredentials}
+                      className="rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-indigo-400 hover:bg-slate-800"
+                    >
+                      Usar dados de exemplo
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Form */}
               <form onSubmit={isRegistering ? handleRegister : handleLogin} noValidate>
@@ -579,7 +640,7 @@ export const StudentPortalLogin = () => {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3.5 rounded-xl font-semibold hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
+                      className="w-full bg-indigo-500 text-white py-3.5 rounded-xl font-semibold hover:bg-indigo-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
                     >
                       {loading
                         ? (isRegistering ? 'Criando...' : 'Entrando...')
@@ -607,7 +668,7 @@ export const StudentPortalLogin = () => {
 
             {/* Info */}
             <FadeContent delay={0.7} duration={0.4}>
-              <div className="mt-5 p-3.5 bg-slate-800/40 border border-slate-700/40 rounded-xl flex items-start gap-3">
+              <div className="mt-5 p-3.5 bg-white/[0.03] border border-white/10 rounded-2xl flex items-start gap-3">
                 <AlertCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {isRegistering
@@ -616,10 +677,11 @@ export const StudentPortalLogin = () => {
                 </p>
               </div>
             </FadeContent>
-          </div>
-        </FadeContent>
+            </div>
+          </FadeContent>
 
         {/* Footer */}
+        </div>
         </div>
       </div>
 

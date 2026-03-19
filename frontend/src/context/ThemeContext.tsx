@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 interface ThemeContextType {
   isDark: boolean;
@@ -7,59 +7,46 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Aplica o tema no documento inteiro e sincroniza o fundo do body com os
+ * tokens CSS globais para evitar flashes de cor na primeira pintura.
+ */
+const applyThemeToDocument = (isDark: boolean) => {
+  const html = document.documentElement;
+  const body = document.body;
+
+  html.classList.toggle('dark', isDark);
+  html.classList.toggle('light', !isDark);
+  body.classList.toggle('dark', isDark);
+  body.classList.toggle('light', !isDark);
+  body.style.backgroundColor = 'var(--page-bg)';
+  body.style.color = 'var(--text-strong)';
+};
+
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
+    if (saved) {
+      return saved === 'dark';
+    }
+
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  // Aplicar tema no html e body
   useEffect(() => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    const html = document.documentElement;
-    const body = document.body;
-
-    if (isDark) {
-      html.classList.add('dark');
-      html.classList.remove('light');
-      body.classList.add('dark');
-      body.classList.remove('light');
-      // Definir cor de fundo padrão para dark mode
-      body.style.backgroundColor = '#0f172a';
-      body.style.color = '#f8fafc';
-    } else {
-      html.classList.remove('dark');
-      html.classList.add('light');
-      body.classList.remove('dark');
-      body.classList.add('light');
-      // Definir cor de fundo padrão para light mode
-      body.style.backgroundColor = '#f8fafc';
-      body.style.color = '#0f172a';
-    }
+    applyThemeToDocument(isDark);
   }, [isDark]);
 
-  // Aplicar tema imediatamente na montagem para evitar flash
   useEffect(() => {
     const saved = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = saved ? saved === 'dark' : prefersDark;
-
-    const html = document.documentElement;
-    const body = document.body;
-
-    if (shouldBeDark) {
-      html.classList.add('dark');
-      body.classList.add('dark');
-      body.style.backgroundColor = '#0f172a';
-    } else {
-      html.classList.add('light');
-      body.classList.add('light');
-      body.style.backgroundColor = '#f8fafc';
-    }
+    applyThemeToDocument(saved ? saved === 'dark' : prefersDark);
   }, []);
 
-  const toggleTheme = useCallback(() => setIsDark(prev => !prev), []);
+  const toggleTheme = useCallback(() => {
+    setIsDark((previousTheme) => !previousTheme);
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
@@ -71,8 +58,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
+
   if (!context) {
     throw new Error('useTheme deve ser usado dentro de ThemeProvider');
   }
+
   return context;
 };
