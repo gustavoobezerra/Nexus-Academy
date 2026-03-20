@@ -76,6 +76,53 @@ test.describe('AI Hub', () => {
 
   test('should generate and publish an activity, then expose it in the student portal', async ({ browser, page, request }) => {
     await primeTeacherSession(page, request);
+    await page.route('**/api/ai/generate-activity', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          providerMode: 'fallback',
+          providerModel: 'local-fallback',
+          qualityReport: {
+            source: 'fallback',
+            validated: true,
+            issues: []
+          },
+          activityTemplate: {
+            title: 'Atividade: Equações do 2o grau',
+            description: 'Revise delta, raízes reais e interpretação do enunciado.',
+            batchId: `e2e-batch-${Date.now()}`,
+            questions: [
+              {
+                questionNumber: 1,
+                type: 'multiple_choice',
+                question: 'Em uma equação do 2o grau, o delta indica:',
+                difficulty: 'easy',
+                points: 10,
+                options: [
+                  { letter: 'A', text: 'A quantidade e o tipo de raízes da equação.', isCorrect: true },
+                  { letter: 'B', text: 'A soma dos coeficientes apenas.', isCorrect: false }
+                ],
+                explanation: 'O delta mostra se existem duas, uma ou nenhuma raiz real.',
+                topics: ['Bhaskara', 'Delta']
+              },
+              {
+                questionNumber: 2,
+                type: 'fill_blank',
+                question: 'Quando delta é positivo, a equação possui ____ raízes reais.',
+                difficulty: 'easy',
+                points: 10,
+                correctAnswer: 'duas',
+                explanation: 'Delta positivo produz duas raízes reais distintas.',
+                topics: ['Bhaskara', 'Delta']
+              }
+            ]
+          }
+        })
+      });
+    });
+
     await page.goto(`${FRONTEND_URL}/ai-hub`);
 
     await page.getByRole('button', { name: /Criação de atividades/i }).click();
@@ -114,7 +161,7 @@ test.describe('AI Hub', () => {
 
     await openSearchSuggestions(page, 'Buscar por aula, aluno ou matéria...');
     await page.getByPlaceholder('Buscar por aula, aluno ou matéria...').fill('Reforco');
-    await page.getByRole('button', { name: /Reforco de Algebra.*19\/03\/2026/i }).click();
+    await page.getByRole('button', { name: /Reforco de Algebra.*Lia Demo.*Matematica/i }).click();
     await page.getByRole('button', { name: 'Gerar preparação' }).click();
 
     await expect(page.getByRole('button', { name: 'Aprovar plano' })).toBeEnabled();

@@ -155,17 +155,227 @@ test.describe('Student Portal', () => {
     await pendingActivityCard.click();
     await expect(page.getByText('Selecione uma atividade')).toHaveCount(0);
 
-    const answerButtons = page.locator('section').last().locator('article').first().locator('button');
-    if (await answerButtons.count()) {
-      await answerButtons.first().click();
-    }
+    const detailPanel = page.locator('section').filter({
+      has: page.getByRole('heading', { name: new RegExp(activityTitle, 'i') })
+    }).first();
 
-    const textareas = page.locator('textarea');
-    if (await textareas.count()) {
-      await textareas.first().fill('Resposta enviada pelo portal E2E.');
-    }
+    await detailPanel.getByRole('button', { name: /^A\./i }).click();
+    await detailPanel.getByPlaceholder('Digite sua resposta.').fill('organizado');
 
-    await page.getByRole('button', { name: 'Enviar atividade' }).click();
-    await expect(page.getByText(/Último resultado:/i)).toBeVisible();
+    await detailPanel.getByRole('button', { name: 'Enviar atividade' }).click();
+    await expect(detailPanel.getByText(/Último resultado:/i)).toBeVisible();
+  });
+
+  test('should analyze pronunciation and show the real provider state explicitly', async ({ page }) => {
+    await page.addInitScript(() => {
+      const createFakeAudioBuffer = (length = 16000, sampleRate = 16000) => {
+        const data = new Float32Array(length);
+        for (let index = 0; index < length; index += 1) {
+          data[index] = Math.sin((2 * Math.PI * 440 * index) / sampleRate) * 0.4;
+        }
+
+        return {
+          duration: length / sampleRate,
+          length,
+          sampleRate,
+          numberOfChannels: 1,
+          getChannelData: () => data
+        };
+      };
+
+      const buildWavBytes = () => {
+        const sampleRate = 16000;
+        const durationSeconds = 1;
+        const totalSamples = sampleRate * durationSeconds;
+        const dataSize = totalSamples * 2;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+
+        const writeString = (offset, value) => {
+          for (let index = 0; index < value.length; index += 1) {
+            view.setUint8(offset + index, value.charCodeAt(index));
+          }
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, dataSize, true);
+
+        for (let index = 0; index < totalSamples; index += 1) {
+          const sample = Math.sin((2 * Math.PI * 440 * index) / sampleRate);
+          view.setInt16(44 + (index * 2), Math.round(sample * 0x3fff), true);
+        }
+
+        return buffer;
+      };
+
+      class FakeAudioContext {
+        async decodeAudioData() {
+          return createFakeAudioBuffer();
+        }
+
+        async close() {
+          return undefined;
+        }
+      }
+
+      class FakeOfflineAudioContext {
+        constructor(_channels, length, sampleRate) {
+          this.length = length;
+          this.sampleRate = sampleRate;
+          this.destination = {};
+        }
+
+        createBuffer(_channels, length, sampleRate) {
+          return createFakeAudioBuffer(length, sampleRate);
+        }
+
+        createBufferSource() {
+          return {
+            connect: () => undefined,
+            start: () => undefined,
+            set buffer(value) {
+              this._buffer = value;
+            }
+          };
+        }
+
+        async startRendering() {
+          return createFakeAudioBuffer(this.length, this.sampleRate);
+        }
+      }
+
+      class FakeMediaRecorder {
+        constructor(stream) {
+          this.stream = stream;
+          this.ondataavailable = null;
+          this.onstop = null;
+          this.state = 'inactive';
+        }
+
+        start() {
+          this.state = 'recording';
+        }
+
+        stop() {
+          this.state = 'inactive';
+          const wavBlob = new Blob([buildWavBytes()], { type: 'audio/wav' });
+          if (this.ondataavailable) {
+            this.ondataavailable({ data: wavBlob });
+          }
+          if (this.onstop) {
+            this.onstop();
+          }
+        }
+      }
+
+      Object.defineProperty(window, 'MediaRecorder', {
+        configurable: true,
+        writable: true,
+        value: FakeMediaRecorder
+      });
+
+      Object.defineProperty(window, 'AudioContext', {
+        configurable: true,
+        writable: true,
+        value: FakeAudioContext
+      });
+
+      Object.defineProperty(window, 'OfflineAudioContext', {
+        configurable: true,
+        writable: true,
+        value: FakeOfflineAudioContext
+      });
+
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: {
+          getUserMedia: async () => ({
+            getTracks: () => [{ stop: () => undefined }]
+          })
+        }
+      });
+    });
+
+    await page.route('**/api/portal/pronunciation/generate', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            phrase: 'Practice makes perfect.',
+            source: 'gemini',
+            providerMode: 'live',
+            providerModel: 'gemini-2.5-flash'
+          }
+        })
+      });
+    });
+
+    await page.route('**/api/portal/pronunciation/analyze', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            analysis: {
+              accuracyScore: 0.84,
+              fluencyScore: 0.81,
+              pronunciationScore: 0.83,
+              feedback: 'Resultado beta útil para treino e histórico, sem contaminar os insights do professor.',
+              wordScores: [
+                { word: 'Practice', score: 0.82, syllables: [{ text: 'Prac', score: 0.82 }] },
+                { word: 'makes', score: 0.84, syllables: [{ text: 'makes', score: 0.84 }] },
+                { word: 'perfect.', score: 0.83, syllables: [{ text: 'perfect', score: 0.83 }] }
+              ],
+              mock: false,
+              source: 'assemblyai-beta',
+              providerMode: 'beta',
+              providerModel: 'universal-3-pro',
+              configurationPending: false,
+              metadata: {
+                service: 'assemblyai',
+                recognizedText: 'Practice makes perfect.'
+              }
+            }
+          }
+        })
+      });
+    });
+
+    await page.goto(`${FRONTEND_URL}/portal/login`);
+    await page.fill('input[type="email"]', 'aluno.demo@nexus.com');
+    await page.fill('input[type="password"]', 'Aluno@123');
+    await page.click('button:has-text("Entrar")');
+    await expect(page).toHaveURL(/\/portal\/dashboard|\/portal\/onboarding/);
+
+    await page.goto(`${FRONTEND_URL}/portal/pronunciation-test`);
+    await expect(page.getByRole('heading', { name: 'Pronunciation Test' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Practice makes perfect.' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Gravar' }).click();
+    await expect(page.getByRole('button', { name: 'Parar' })).toBeVisible();
+    await page.getByRole('button', { name: 'Parar' }).click();
+    await expect(page.locator('audio')).toBeVisible();
+    const analyzeRequest = page.waitForRequest('**/api/portal/pronunciation/analyze');
+    const analyzeResponse = page.waitForResponse('**/api/portal/pronunciation/analyze');
+    await page.getByRole('button', { name: 'Analisar' }).click();
+    await analyzeRequest;
+    await analyzeResponse;
+
+    await expect(page.getByRole('heading', { name: 'Resultados' })).toBeVisible();
+    await expect(page.getByText(/AssemblyAI beta/)).toBeVisible();
   });
 });

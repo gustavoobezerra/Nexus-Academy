@@ -69,9 +69,13 @@ export const StudentDashboard = () => {
     return () => window.clearInterval(interval);
   }, []);
 
-  const fetchStudentData = useCallback(async () => {
+  const fetchStudentData = useCallback(async (options: { silent?: boolean } = {}) => {
+    const { silent = false } = options;
+
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const [studentRes, activitiesRes, classesRes] = await Promise.all([
         apiService.get('/portal/me'),
         portalAPI.getActivities(),
@@ -91,9 +95,13 @@ export const StudentDashboard = () => {
       await fetchNotifications(true);
     } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
-      toast.error('Erro ao carregar dados do painel');
+      if (!silent) {
+        toast.error('Erro ao carregar dados do painel');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -410,7 +418,11 @@ export const StudentDashboard = () => {
               </div>
             )}
             {activeTab === 'activities' && (
-              <StudentActivitiesWorkspace activities={activities} isDark={isDark} onRefresh={fetchStudentData} />
+              <StudentActivitiesWorkspace
+                activities={activities}
+                isDark={isDark}
+                onRefresh={() => fetchStudentData({ silent: true })}
+              />
             )}
             {activeTab === 'calendar' && (
               <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>

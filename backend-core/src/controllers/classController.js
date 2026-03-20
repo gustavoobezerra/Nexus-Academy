@@ -1,7 +1,7 @@
 import Class from '../models/Class.js';
 import Student from '../models/Student.js';
-import axios from 'axios';
 import emailService from '../services/emailService.js';
+import aiAssistantService from '../services/aiAssistantService.js';
 
 const populateClass = (query) => query.populate('student', 'name grade');
 
@@ -230,19 +230,21 @@ export const generateAISummary = async (req, res) => {
       return res.status(404).json({ message: 'Aula não encontrada.' });
     }
 
-    const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5001';
-
-    const response = await axios.post(`${AI_SERVICE_URL}/api/generate-summary`, {
-      transcript: transcript || classData.transcript
+    const summaryResponse = await aiAssistantService.generateClassSummary({
+      classData,
+      transcript: transcript || classData.transcript || classData.notes || classData.description || ''
     });
 
-    classData.aiSummary = response.data.result;
+    classData.aiSummary = summaryResponse.summary;
     classData.transcript = transcript || classData.transcript;
     await classData.save();
 
     res.json({
       success: true,
-      aiSummary: response.data.result
+      aiSummary: summaryResponse.summary,
+      providerMode: summaryResponse.providerMode,
+      providerModel: summaryResponse.providerModel,
+      fallbackReason: summaryResponse.fallbackReason
     });
   } catch (error) {
     console.error('Erro ao gerar resumo com IA:', error);

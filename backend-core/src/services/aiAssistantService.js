@@ -6,15 +6,19 @@ import axios from 'axios';
 
 const GEMINI_API_URL = process.env.GEMINI_API_URL || 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
+const PRIMARY_GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+const FALLBACK_GEMINI_MODELS = String(
+  process.env.GEMINI_MODEL_FALLBACKS || 'gemini-2.5-flash-lite,gemini-2.5-pro,gemini-2.0-flash'
+)
+  .split(',')
+  .map((model) => String(model || '').trim())
+  .filter(Boolean);
 const GEMINI_MODELS = [
-  process.env.GEMINI_MODEL,
-  ...(process.env.GEMINI_MODEL_FALLBACKS || '')
-    .split(',')
-    .map((model) => model.trim()),
-  'gemini-2.5-pro',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash'
+  PRIMARY_GEMINI_MODEL,
+  ...FALLBACK_GEMINI_MODELS
 ].filter(Boolean).filter((model, index, models) => models.indexOf(model) === index);
+const LOCAL_FALLBACK_MODEL = 'local-fallback';
+const LIVE_PROVIDER_HEALTH = ['healthy', 'degraded'];
 
 const PLACEHOLDER_PATTERN = /op(c|ç)(a|ã)o\s+[a-d]|placeholder|alternativa correta|conceito principal/i;
 const STOPWORDS = new Set([
@@ -25,6 +29,11 @@ const STOPWORDS = new Set([
 ]);
 
 const normalizeWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+const normalizeRichText = (value) => String(value || '')
+  .replace(/\r/g, '')
+  .replace(/[ \t]+\n/g, '\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim();
 const createBatchId = () => `aih_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 const uniqueNonEmpty = (values) => {
@@ -98,6 +107,73 @@ const buildQuestionMix = (questionCount, questionMix = {}) => {
   }
 
   return result;
+};
+
+const isRetriableProviderError = (error) => {
+  const status = Number(error?.response?.status || 0);
+  const code = String(error?.code || '').toUpperCase();
+
+  if (status >= 500) {
+    return true;
+  }
+
+  return ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN'].includes(code);
+};
+
+const isProviderModelFallbackError = (error) => {
+  const status = Number(error?.response?.status || 0);
+  const providerCode = String(error?.response?.data?.error?.status || '').toUpperCase();
+  const providerMessage = String(
+    error?.response?.data?.error?.message
+    || error?.response?.data?.message
+    || error?.message
+    || ''
+  ).toLowerCase();
+
+  if (isRetriableProviderError(error)) {
+    return true;
+  }
+
+  if ([400, 404, 408, 409, 425, 429].includes(status)) {
+    return true;
+  }
+
+  return providerCode === 'RESOURCE_EXHAUSTED'
+    || providerCode === 'NOT_FOUND'
+    || providerCode === 'FAILED_PRECONDITION'
+    || /quota|resource exhausted|rate limit|model|not found|unsupported/.test(providerMessage);
+};
+
+const isFatalProviderConfigurationError = (error) => {
+  const status = Number(error?.response?.status || 0);
+  return [401, 403].includes(status);
+};
+
+const isRetriableProviderFailure = (failure) => {
+  const status = Number(failure?.status || 0);
+  const code = String(failure?.code || '').toUpperCase();
+
+  if (status >= 500 || [404, 408, 409, 425, 429].includes(status)) {
+    return true;
+  }
+
+  return ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'RESOURCE_EXHAUSTED', 'NOT_FOUND'].includes(code);
+};
+
+const serializeProviderFailure = (error, model) => {
+  const status = Number(error?.response?.status || 0) || null;
+  const providerMessage = error?.response?.data?.error?.message
+    || error?.response?.data?.message
+    || error?.message
+    || 'Provider request failed';
+
+  return {
+    model,
+    status,
+    code: String(error?.code || error?.response?.data?.error?.status || 'UNKNOWN_ERROR'),
+    message: String(providerMessage),
+    capturedAt: new Date().toISOString()
+  };
 };
 
 const sanitizeQuestion = (question, index, input) => {
@@ -184,6 +260,10 @@ class AIAssistantService {
   constructor() {
     this.conversationHistory = new Map();
     this.maxHistoryLength = 20;
+    this.providerHealth = this.isConfigured() ? 'degraded' : 'fallback-only';
+    this.lastProviderCheckAt = null;
+    this.lastSuccessfulModel = null;
+    this.lastProviderFailure = null;
   }
 
   isConfigured() {
@@ -191,12 +271,21 @@ class AIAssistantService {
   }
 
   getProviderStatus() {
+    const configured = this.isConfigured();
+    const health = configured ? this.providerHealth : 'fallback-only';
+
     return {
       provider: 'gemini',
-      configured: this.isConfigured(),
-      available: this.isConfigured(),
-      mode: this.isConfigured() ? 'live' : 'fallback',
-      models: GEMINI_MODELS
+      configured,
+      available: configured && LIVE_PROVIDER_HEALTH.includes(health),
+      mode: configured && LIVE_PROVIDER_HEALTH.includes(health) ? 'live' : 'fallback',
+      health,
+      primaryModel: PRIMARY_GEMINI_MODEL,
+      fallbackModels: GEMINI_MODELS.filter((model) => model !== PRIMARY_GEMINI_MODEL),
+      models: GEMINI_MODELS,
+      lastCheckedAt: this.lastProviderCheckAt,
+      providerModel: this.lastSuccessfulModel,
+      lastError: this.lastProviderFailure
     };
   }
 
@@ -206,12 +295,17 @@ class AIAssistantService {
 
   async requestTextCompletion(prompt, options = {}) {
     if (!this.isConfigured()) {
+      this.registerProviderFallback({
+        code: 'NOT_CONFIGURED',
+        message: 'Provider not configured'
+      });
       throw new Error('Provider not configured');
     }
 
     let lastError = null;
+    const failures = [];
 
-    for (const model of GEMINI_MODELS) {
+    for (const [index, model] of GEMINI_MODELS.entries()) {
       try {
         const response = await axios.post(
           `${GEMINI_API_URL}/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
@@ -233,15 +327,43 @@ class AIAssistantService {
         const text = response?.data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n').trim();
 
         if (text) {
+          this.registerProviderSuccess(model, {
+            degraded: index > 0,
+            previousFailure: failures[0] || null
+          });
           return {
             text,
             model
           };
         }
+
+        const emptyResponseError = new Error('Provider returned empty content');
+        const failure = serializeProviderFailure(emptyResponseError, model);
+        failures.push(failure);
+        this.registerProviderFailure(failure);
+        lastError = emptyResponseError;
       } catch (error) {
+        const failure = serializeProviderFailure(error, model);
+        failures.push(failure);
+        this.registerProviderFailure(failure);
         lastError = error;
+
+        if (isFatalProviderConfigurationError(error)) {
+          break;
+        }
+
+        if (isProviderModelFallbackError(error)) {
+          continue;
+        }
+
+        break;
       }
     }
+
+    this.registerProviderFallback({
+      code: failures[failures.length - 1]?.code || 'PROVIDER_CHAIN_FAILED',
+      message: failures[failures.length - 1]?.message || lastError?.message || 'Provider chain exhausted'
+    });
 
     throw lastError || new Error('No provider response');
   }
@@ -256,6 +378,33 @@ class AIAssistantService {
     return {
       model: response.model,
       json: JSON.parse(rawText)
+    };
+  }
+
+  registerProviderSuccess(model, options = {}) {
+    this.providerHealth = options.degraded ? 'degraded' : 'healthy';
+    this.lastProviderCheckAt = new Date().toISOString();
+    this.lastSuccessfulModel = model;
+    this.lastProviderFailure = options.degraded ? options.previousFailure || null : null;
+  }
+
+  registerProviderFailure(failure) {
+    this.providerHealth = isRetriableProviderFailure(failure)
+      ? 'degraded'
+      : 'fallback-only';
+    this.lastProviderCheckAt = new Date().toISOString();
+    this.lastProviderFailure = failure;
+  }
+
+  registerProviderFallback(failure) {
+    this.providerHealth = 'fallback-only';
+    this.lastProviderCheckAt = new Date().toISOString();
+    this.lastProviderFailure = {
+      model: LOCAL_FALLBACK_MODEL,
+      status: null,
+      code: failure.code || 'FALLBACK_ONLY',
+      message: failure.message || 'Fallback local em uso',
+      capturedAt: new Date().toISOString()
     };
   }
 
@@ -479,6 +628,7 @@ class AIAssistantService {
         message: fallbackMessage,
         timestamp: new Date().toISOString(),
         providerMode: 'fallback',
+        providerModel: LOCAL_FALLBACK_MODEL,
         mock: true
       };
     }
@@ -527,6 +677,7 @@ class AIAssistantService {
         message: fallbackMessage,
         timestamp: new Date().toISOString(),
         providerMode: 'fallback',
+        providerModel: LOCAL_FALLBACK_MODEL,
         mock: true
       };
     }
@@ -841,6 +992,7 @@ REGRAS:
       description: summaryText,
       questions: normalizedQuestions,
       providerMode: 'fallback',
+      providerModel: LOCAL_FALLBACK_MODEL,
       qualityReport: {
         source: 'fallback',
         validated: true,
@@ -952,7 +1104,8 @@ RETORNE APENAS JSON VÁLIDO com:
             providerMode: 'fallback'
           }
         },
-        providerMode: 'fallback'
+        providerMode: 'fallback',
+        providerModel: LOCAL_FALLBACK_MODEL
       };
     }
 
@@ -1019,7 +1172,93 @@ RETORNE APENAS JSON VÁLIDO com:
             providerMode: 'fallback'
           }
         },
-        providerMode: 'fallback'
+        providerMode: 'fallback',
+        providerModel: LOCAL_FALLBACK_MODEL
+      };
+    }
+  }
+
+  buildClassSummaryPrompt({ classData, transcript }) {
+    return `Você é um coordenador pedagógico do Nexus Academy.
+
+Gere um resumo de aula em português brasileiro, claro e pronto para compartilhar com professor ou responsável.
+
+CONTEXTO DA AULA
+- Título: ${classData.title || 'Aula sem título'}
+- Matéria: ${classData.subject || 'Não informada'}
+- Série/Nível: ${classData.grade || 'Não informado'}
+- Tópico: ${classData.topic || 'Não informado'}
+- Duração prevista: ${classData.duration || 60} minutos
+- Status: ${classData.status || 'completed'}
+- Aluno: ${classData.studentName || 'Aluno'}
+
+TRANSCRIÇÃO / ANOTAÇÕES
+${normalizeRichText(transcript || classData.transcript || classData.notes || classData.description || 'Sem transcrição detalhada disponível.')}
+
+INSTRUÇÕES
+1. Entregue um texto corrido com 3 a 5 parágrafos curtos.
+2. Explique objetivo da aula, principais tópicos, sinais de entendimento ou dificuldade e próximo passo recomendado.
+3. Não invente fatos fora do contexto fornecido.
+4. Se a transcrição estiver curta, assuma postura conservadora e diga que o resumo foi feito com contexto parcial.
+5. Não use markdown, tabelas ou listas.`;
+  }
+
+  buildFallbackClassSummary({ classData, transcript }) {
+    const cleanTranscript = normalizeRichText(transcript || classData.transcript || '');
+    const firstTranscriptSentence = firstSentence(cleanTranscript);
+    const topic = capitalize(classData.topic || classData.subject || classData.title || 'o conteúdo principal');
+    const studentName = classData.studentName || 'o aluno';
+    const subject = classData.subject || 'a matéria';
+    const grade = classData.grade || 'nível não informado';
+    const contextWasPartial = cleanTranscript.length < 80;
+
+    const paragraphs = [
+      `A aula "${classData.title || 'Sem título'}" trabalhou ${topic} com ${studentName}, dentro de ${subject}, para a faixa ${grade}. ${contextWasPartial ? 'O resumo foi montado com contexto parcial, então prioriza os dados estruturados da aula e os trechos disponíveis da transcrição.' : 'O resumo considera a transcrição e os dados estruturados da aula para sintetizar o encontro de forma objetiva.'}`,
+      firstTranscriptSentence
+        ? `Pelo registro disponível, o encontro passou por este eixo principal: ${firstTranscriptSentence}`
+        : `O foco aparente foi consolidar o tema principal da aula, revisar o conteúdo essencial e observar como o aluno responde quando precisa aplicar o conceito em contexto.`,
+      `Como próximo passo, vale revisar rapidamente ${topic.toLowerCase()} no início da próxima aula, retomar qualquer ponto em que ${studentName} tenha demonstrado insegurança e fechar o encontro seguinte com uma checagem curta de aplicação prática.`,
+    ];
+
+    return paragraphs.join('\n\n');
+  }
+
+  async generateClassSummary({ classData, transcript }) {
+    const fallbackSummary = this.buildFallbackClassSummary({ classData, transcript });
+
+    if (!this.isConfigured()) {
+      return {
+        summary: fallbackSummary,
+        providerMode: 'fallback',
+        providerModel: LOCAL_FALLBACK_MODEL,
+        fallbackReason: 'provider_not_configured'
+      };
+    }
+
+    try {
+      const response = await this.requestTextCompletion(
+        this.buildClassSummaryPrompt({ classData, transcript }),
+        {
+          temperature: 0.35,
+          maxOutputTokens: 900
+        }
+      );
+
+      const summary = normalizeRichText(response.text) || fallbackSummary;
+
+      return {
+        summary,
+        providerMode: 'live',
+        providerModel: response.model,
+        fallbackReason: null
+      };
+    } catch (error) {
+      console.error('[AI] class summary provider error:', error?.response?.data || error?.message || error);
+      return {
+        summary: fallbackSummary,
+        providerMode: 'fallback',
+        providerModel: LOCAL_FALLBACK_MODEL,
+        fallbackReason: this.lastProviderFailure?.code || 'provider_error'
       };
     }
   }

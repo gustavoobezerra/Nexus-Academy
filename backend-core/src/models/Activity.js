@@ -186,7 +186,7 @@ activitySchema.methods.autoGradeSubmission = function(submissionIndex = 0) {
 
   submission.answers = gradedAnswers;
   submission.score = totalScore;
-  submission.percentage = (totalScore / this.totalPoints) * 100;
+  submission.percentage = this.totalPoints > 0 ? (totalScore / this.totalPoints) * 100 : 0;
   submission.autoGraded = true;
   submission.gradedAt = new Date();
 

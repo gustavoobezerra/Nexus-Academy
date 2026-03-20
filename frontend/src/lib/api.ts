@@ -37,7 +37,13 @@ export const classesAPI = {
   start: (id: string) => apiService.post<{ success: boolean; class: Aula }>(`/classes/${id}/start`),
   end: (id: string) => apiService.post<{ success: boolean; class: Aula }>(`/classes/${id}/end`),
   delete: (id: string) => apiService.delete<void>(`/classes/${id}`),
-  generateSummary: (classId: string, transcript: string) => apiService.post<{ success: boolean; aiSummary: string }>(`/classes/${classId}/generate-summary`, { transcript }),
+  generateSummary: (classId: string, transcript: string) => apiService.post<{
+    success: boolean;
+    aiSummary: string;
+    providerMode: 'live' | 'fallback';
+    providerModel?: string;
+    fallbackReason?: string | null;
+  }>(`/classes/${classId}/generate-summary`, { transcript }),
   sendSummary: (classId: string, data: { parentEmail: string; studentName: string; summary: string; keyPoints: string[]; homework: string[]; className: string }) =>
     apiService.post<{ success: boolean; message: string }>(`/classes/${classId}/send-summary`, data),
 };

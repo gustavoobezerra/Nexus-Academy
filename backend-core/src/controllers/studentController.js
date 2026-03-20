@@ -174,7 +174,7 @@ export const createStudent = async (req, res) => {
 
         if (emailResult.success) {
           // DEBUG: console.log('✅ Email de boas-vindas enviado para:', student.name);
-        } else {
+        } else if (emailResult.error !== 'RESEND_API_KEY não configurada') {
           console.warn('⚠️  Falha ao enviar email de boas-vindas:', emailResult.error);
         }
       }

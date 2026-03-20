@@ -5,12 +5,17 @@ import Class from '../models/Class.js';
 import Payment from '../models/Payment.js';
 import Activity from '../models/Activity.js';
 import PronunciationTest from '../models/PronunciationTest.js';
+import LessonPreparation from '../models/LessonPreparation.js';
+import LearningSignal from '../models/LearningSignal.js';
 import {
   recordActivitySubmissionSignals,
   recordPronunciationSignals
 } from '../services/learningSignalsService.js';
 
 const DEMO_TAG = 'DEV_DEMO_SEED';
+const shouldResetDemoOnBoot = () => ['1', 'true', 'yes'].includes(
+  String(process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT || '').toLowerCase()
+);
 const DEMO_TEACHER = {
   name: 'Professor Demo',
   email: 'demo@nexus.com',
@@ -525,9 +530,28 @@ const createQuestionSet = (subject, topic) => ([
   }
 ]);
 
+const getLessonTitles = (student, blueprint) => {
+  if (student.email === DEMO_STUDENT.email.toLowerCase()) {
+    return {
+      completedTitle: 'Reforco de Algebra',
+      completedTopic: 'Equacoes do 2o grau',
+      scheduledTitle: 'Matematica - probabilidade aplicada',
+      scheduledTopic: blueprint.reinforcementTopic
+    };
+  }
+
+  return {
+    completedTitle: `${blueprint.subject} - revisão de ${blueprint.focusTopic}`,
+    completedTopic: blueprint.focusTopic,
+    scheduledTitle: `${blueprint.subject} - prática de ${blueprint.reinforcementTopic}`,
+    scheduledTopic: blueprint.reinforcementTopic
+  };
+};
+
 const ensureClassesForStudent = async (teacher, student, blueprint, index) => {
-  const completedTitle = `${blueprint.subject} - revisão de ${blueprint.focusTopic}`;
-  const scheduledTitle = `${blueprint.subject} - prática de ${blueprint.reinforcementTopic}`;
+  const titles = getLessonTitles(student, blueprint);
+  const completedTitle = titles.completedTitle;
+  const scheduledTitle = titles.scheduledTitle;
 
   const completedClass = await Class.findOne({
     teacher: teacher._id,
@@ -543,7 +567,7 @@ const ensureClassesForStudent = async (teacher, student, blueprint, index) => {
       title: completedTitle,
       subject: blueprint.subject,
       grade: blueprint.grade,
-      topic: blueprint.focusTopic,
+      topic: titles.completedTopic,
       scheduledAt: createRelativeDate(-Math.max(1, index + 1), 14 + (index % 4), 0),
       duration: 60,
       status: 'completed',
@@ -566,7 +590,7 @@ const ensureClassesForStudent = async (teacher, student, blueprint, index) => {
       title: scheduledTitle,
       subject: blueprint.subject,
       grade: blueprint.grade,
-      topic: blueprint.reinforcementTopic,
+      topic: titles.scheduledTopic,
       scheduledAt: createRelativeDate((index % 5) + 1, 9 + (index % 6), 30),
       duration: 60,
       status: 'scheduled',
@@ -574,6 +598,65 @@ const ensureClassesForStudent = async (teacher, student, blueprint, index) => {
       notes: DEMO_TAG
     });
   }
+};
+
+const ensureLessonPreparationForStudent = async (teacher, student, blueprint) => {
+  const titles = getLessonTitles(student, blueprint);
+  const targetClass = await Class.findOne({
+    teacher: teacher._id,
+    student: student._id,
+    title: titles.completedTitle
+  }).sort({ scheduledAt: -1 });
+
+  if (!targetClass) {
+    return;
+  }
+
+  const existingPreparation = await LessonPreparation.findOne({
+    teacher: teacher._id,
+    class: targetClass._id
+  });
+
+  if (existingPreparation) {
+    return;
+  }
+
+  const generatedPreparation = await LessonPreparation.generatePreparation(
+    targetClass.toObject(),
+    student.toObject(),
+    []
+  );
+
+  const status = student.email === DEMO_STUDENT.email.toLowerCase() ? 'ready' : 'draft';
+
+  const preparation = await LessonPreparation.create({
+    class: targetClass._id,
+    student: student._id,
+    teacher: teacher._id,
+    ...generatedPreparation,
+    topic: titles.completedTopic,
+    generatedByAI: true,
+    status,
+    aiMetadata: {
+      ...(generatedPreparation.aiMetadata || {}),
+      generatedAt: now(),
+      providerMode: 'fallback',
+      confidence: generatedPreparation.aiMetadata?.confidence || 78
+    },
+    teacherReview: {
+      reviewed: status === 'ready',
+      reviewedAt: status === 'ready' ? now() : null,
+      modifications: [],
+      approved: status === 'ready',
+      notes: status === 'ready' ? 'Plano demo curado para validacao local.' : 'Plano demo pendente para revisao no AI Hub.'
+    }
+  });
+
+  await Class.findByIdAndUpdate(targetClass._id, {
+    $set: {
+      lessonPlan: preparation._id
+    }
+  });
 };
 
 const ensurePaymentForStudent = async (teacher, student) => {
@@ -769,14 +852,6 @@ const ensurePronunciationHistory = async (teacher, student, blueprint) => {
 };
 
 const ensureTeacherGroups = async (teacher, demoStudents) => {
-  const existingGroups = Array.isArray(teacher.teacherWorkspace?.studentGroups)
-    ? teacher.teacherWorkspace.studentGroups
-    : [];
-
-  if (existingGroups.length > 0) {
-    return;
-  }
-
   const mathIds = demoStudents
     .filter((student) => /matematica/i.test(student.subject || ''))
     .slice(0, 5)
@@ -815,6 +890,25 @@ const ensureTeacherGroups = async (teacher, demoStudents) => {
   await teacher.save();
 };
 
+const resetDemoDomain = async (teacher) => {
+  await Promise.all([
+    LearningSignal.deleteMany({ teacher: teacher._id }),
+    PronunciationTest.deleteMany({ teacher: teacher._id }),
+    LessonPreparation.deleteMany({ teacher: teacher._id }),
+    Activity.deleteMany({ teacher: teacher._id }),
+    Payment.deleteMany({ teacher: teacher._id }),
+    Class.deleteMany({ teacher: teacher._id })
+  ]);
+
+  await Student.deleteMany({ teacher: teacher._id });
+
+  teacher.teacherWorkspace = {
+    ...(teacher.teacherWorkspace || {}),
+    studentGroups: []
+  };
+  await teacher.save();
+};
+
 const toCompactId = (value) => String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 18);
 
 /**
@@ -827,7 +921,11 @@ export const ensureDevelopmentDemoData = async () => {
     return null;
   }
 
+  const resetApplied = shouldResetDemoOnBoot();
   const teacher = await createTeacher();
+  if (resetApplied) {
+    await resetDemoDomain(teacher);
+  }
   const demoStudentPasswordHash = await bcrypt.hash(DEMO_STUDENT.password, 12);
   const sharedStudentPasswordHash = await bcrypt.hash(EXTRA_DEMO_STUDENT_PASSWORD, 12);
 
@@ -854,12 +952,14 @@ export const ensureDevelopmentDemoData = async () => {
     await ensurePaymentForStudent(teacher, student);
     await ensureDiagnosticActivity(teacher, student, blueprint);
     await ensurePronunciationHistory(teacher, student, blueprint);
+    await ensureLessonPreparationForStudent(teacher, student, blueprint);
   }
 
   await ensurePendingActivityForStudent(teacher, primaryStudent, DEMO_STUDENT);
   await ensureTeacherGroups(teacher, demoStudents);
 
   return {
+    resetApplied,
     teacherEmail: DEMO_TEACHER.email,
     teacherPassword: DEMO_TEACHER.password,
     studentEmail: DEMO_STUDENT.email,

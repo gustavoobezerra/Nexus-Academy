@@ -15,17 +15,32 @@ const ClassSummary = ({ classId, className, transcript, onClose }: ClassSummaryP
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [providerInfo, setProviderInfo] = useState<{
+    mode: 'live' | 'fallback';
+    model?: string;
+    fallbackReason?: string | null;
+  } | null>(null);
 
   const generateSummary = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setProviderInfo(null);
 
       const response = await classesAPI.generateSummary(classId, transcript);
 
       if (response.success) {
         setSummary(response.aiSummary);
-        toast.success('Resumo gerado com sucesso!');
+        setProviderInfo({
+          mode: response.providerMode || 'fallback',
+          model: response.providerModel,
+          fallbackReason: response.fallbackReason || null
+        });
+        toast.success(
+          response.providerMode === 'live'
+            ? 'Resumo gerado com IA ao vivo!'
+            : 'Resumo gerado com fallback local.'
+        );
       }
     } catch (err) {
       setError('Erro ao gerar resumo. A transcrição pode estar muito curta ou houve um problema na conexão.');
@@ -70,11 +85,27 @@ const ClassSummary = ({ classId, className, transcript, onClose }: ClassSummaryP
                   <Sparkles size={20} className="text-white" />
                 </div>
                 <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Relatório de IA</span>
+                {providerInfo ? (
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                    providerInfo.mode === 'live'
+                      ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                  }`}>
+                    {providerInfo.mode === 'live' ? 'Gemini ao vivo' : 'Fallback local'}
+                  </span>
+                ) : null}
               </div>
               <h2 className="text-3xl font-extrabold text-white tracking-tight pt-2">Resumo da Aula</h2>
-              <p className="text-slate-400 font-medium flex items-center gap-2">
-                <FileText size={16} /> {className}
-              </p>
+              <div className="flex flex-wrap items-center gap-3 text-slate-400 font-medium pt-1">
+                <p className="flex items-center gap-2">
+                  <FileText size={16} /> {className}
+                </p>
+                {providerInfo?.model ? (
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                    Modelo: {providerInfo.model}
+                  </p>
+                ) : null}
+              </div>
             </div>
             <button
               onClick={onClose}
@@ -116,6 +147,12 @@ const ClassSummary = ({ classId, className, transcript, onClose }: ClassSummaryP
             </div>
           ) : (
             <div className="prose prose-invert max-w-none">
+              {providerInfo?.mode === 'fallback' ? (
+                <div className="mb-4 rounded-[1.4rem] border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-100">
+                  O resumo foi gerado por fallback local porque o provider externo não estava disponível no momento.
+                  {providerInfo.fallbackReason ? ` Motivo técnico: ${providerInfo.fallbackReason}.` : ''}
+                </div>
+              ) : null}
               <div className="bg-slate-950/50 border border-white/5 rounded-[2rem] p-8 md:p-10 shadow-inner">
                 <p className="whitespace-pre-wrap text-slate-300 text-lg leading-relaxed first-letter:text-4xl first-letter:font-bold first-letter:text-indigo-400 first-letter:mr-2 first-letter:float-left">
                   {summary}

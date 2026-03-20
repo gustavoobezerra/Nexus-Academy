@@ -8,7 +8,13 @@ const emptyWorkspaceData: TeacherWorkspaceData = {
     configured: false,
     available: false,
     mode: 'fallback',
-    models: []
+    health: 'fallback-only',
+    primaryModel: 'gemini-2.5-flash',
+    fallbackModels: ['gemini-2.5-flash-lite', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    models: [],
+    providerModel: null,
+    lastCheckedAt: null,
+    lastError: null
   },
   students: [],
   classes: [],
@@ -24,6 +30,16 @@ const emptyWorkspaceData: TeacherWorkspaceData = {
     activities: 0,
     lessonPreparations: 0,
     studentGroups: 0
+  },
+  windows: {
+    classesLoaded: 0,
+    paymentsLoaded: 0,
+    activitiesLoaded: 0,
+    lessonPreparationsLoaded: 0,
+    classesTruncated: false,
+    paymentsTruncated: false,
+    activitiesTruncated: false,
+    lessonPreparationsTruncated: false
   }
 };
 
@@ -59,7 +75,8 @@ export const useTeacherWorkspaceData = (enabled: boolean = true) => {
           lessonPreparations: response.lessonPreparations,
           learningSnapshots: response.learningSnapshots || [],
           studentGroups: response.studentGroups,
-          counts: response.counts
+          counts: response.counts,
+          windows: response.windows || emptyWorkspaceData.windows
         });
         setError(null);
       });

@@ -5,11 +5,14 @@ import { Resend } from 'resend';
 
 // Inicializar Resend apenas se API key estiver configurada
 let resend = null;
+const EMAILS_ENABLED = Boolean(process.env.RESEND_API_KEY);
+const IS_TEST_ENV = process.env.NODE_ENV === 'test';
+let warnedDisabledEmail = false;
 
-if (process.env.RESEND_API_KEY) {
+if (EMAILS_ENABLED) {
   resend = new Resend(process.env.RESEND_API_KEY);
   // DEBUG: console.log('✅ Resend configurado para envio de emails');
-} else {
+} else if (!IS_TEST_ENV) {
   console.warn('⚠️ RESEND_API_KEY não configurada. Emails desabilitados.');
 }
 
@@ -31,11 +34,14 @@ export async function sendEmail({ to, subject, html, from, replyTo }) {
     }
 
     if (!resend) {
-      console.warn('⚠️ Email não enviado - Resend não configurado:', to);
+      if (!warnedDisabledEmail && !IS_TEST_ENV) {
+        console.warn('⚠️ Emails em modo local/desabilitado. Configure RESEND_API_KEY para envio real.');
+        warnedDisabledEmail = true;
+      }
       return {
         success: false,
         error: 'RESEND_API_KEY não configurada',
-        message: 'Email não enviado - serviço desabilitado'
+        message: 'Email não enviado - serviço desabilitado no ambiente atual'
       };
     }
 

@@ -30,6 +30,14 @@ export const TeacherLessonPrepWorkspace = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
+  const refreshInBackground = async () => {
+    try {
+      await onRefresh();
+    } catch (error) {
+      console.error('Erro ao sincronizar preparacoes:', error);
+    }
+  };
+
   const eligibleClasses = useMemo(() => (
     classes.filter((classData) => classData.status !== 'cancelled')
   ), [classes]);
@@ -43,7 +51,7 @@ export const TeacherLessonPrepWorkspace = ({
       ? latestPreparation
       : null;
 
-  const activePreparation = isGenerating ? null : (currentPreparation || optimisticPreparation || lessonPreparations[0] || null);
+  const activePreparation = currentPreparation || optimisticPreparation || lessonPreparations[0] || null;
 
   const generatePreparation = async () => {
     if (!selectedClassId) {
@@ -59,7 +67,7 @@ export const TeacherLessonPrepWorkspace = ({
       setLatestPreparation(response.preparation);
       setSelectedPreparationId(response.preparation._id || response.preparation.id || '');
       toast.success(`Plano criado em modo ${response.providerMode === 'live' ? 'ao vivo' : 'fallback'}.`);
-      await onRefresh();
+      void refreshInBackground();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Falha ao gerar a preparação.');
     } finally {
@@ -75,14 +83,16 @@ export const TeacherLessonPrepWorkspace = ({
     setIsApproving(true);
 
     try {
-      await aiAPI.reviewLessonPreparation(activePreparation._id || activePreparation.id || '', {
+      const response = await aiAPI.reviewLessonPreparation(activePreparation._id || activePreparation.id || '', {
         approved: true,
         notes: 'Plano aprovado a partir do AI Hub.',
         modifications: []
       });
 
+      setLatestPreparation(response.preparation);
+      setSelectedPreparationId(response.preparation._id || response.preparation.id || '');
       toast.success('Plano aprovado e vinculado à aula.');
-      await onRefresh();
+      void refreshInBackground();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Falha ao aprovar o plano.');
     } finally {

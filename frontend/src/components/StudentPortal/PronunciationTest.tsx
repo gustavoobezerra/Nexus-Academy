@@ -4,11 +4,7 @@ import { Mic, StopCircle, Volume2, RefreshCw, Loader2, Sparkles, CheckCircle2 } 
 import toast from 'react-hot-toast';
 import { DifficultySelector } from './DifficultySelector';
 import { WordFeedback } from './WordFeedback';
-import apiService, { API_URL } from '../../services/api.service';
-
-// Importar a API do portal
-// Assumindo que existe um arquivo api.ts ou similar
-// Se não existir, você precisará criar as funções de API
+import { API_URL } from '../../services/api.service';
 
 type WordScore = {
   word: string;
@@ -24,8 +20,170 @@ type AnalysisResult = {
   feedback?: string;
   wordScores: WordScore[];
   mock?: boolean;
+  source?: string;
+  providerMode?: 'live' | 'beta' | 'fallback';
+  providerModel?: string;
+  configurationPending?: boolean;
+  fallbackReason?: string | null;
+  metadata?: {
+    service?: string;
+    locale?: string;
+    recognizedText?: string;
+    confidence?: number | null;
+    completenessScore?: number | null;
+    paceScore?: number | null;
+    scoringMethod?: string;
+  };
   audioUrl?: string | null;
 };
+
+type PreparedAudio = {
+  wavBlob: Blob;
+  duration: number;
+  rms: number;
+};
+
+const TARGET_SAMPLE_RATE = 16000;
+const SILENCE_RMS_THRESHOLD = 0.008;
+const PCM_WAV_HEADER_SIZE = 44;
+
+const AudioContextCtor = window.AudioContext || (window as typeof window & {
+  webkitAudioContext?: typeof AudioContext;
+}).webkitAudioContext;
+
+const OfflineAudioContextCtor = window.OfflineAudioContext || (window as typeof window & {
+  webkitOfflineAudioContext?: typeof OfflineAudioContext;
+}).webkitOfflineAudioContext;
+
+function encodeWavFromAudioBuffer(audioBuffer: AudioBuffer) {
+  const channelData = audioBuffer.getChannelData(0);
+  const buffer = new ArrayBuffer(44 + channelData.length * 2);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + channelData.length * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, audioBuffer.sampleRate, true);
+  view.setUint32(28, audioBuffer.sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, channelData.length * 2, true);
+
+  let offset = 44;
+  for (let index = 0; index < channelData.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, channelData[index]));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    offset += 2;
+  }
+
+  return buffer;
+}
+
+function looksLikeWav(arrayBuffer: ArrayBuffer) {
+  if (arrayBuffer.byteLength < PCM_WAV_HEADER_SIZE) {
+    return false;
+  }
+
+  const view = new DataView(arrayBuffer);
+  const readString = (offset: number, length: number) =>
+    Array.from({ length }, (_, index) => String.fromCharCode(view.getUint8(offset + index))).join('');
+
+  return readString(0, 4) === 'RIFF' && readString(8, 4) === 'WAVE';
+}
+
+function extractPreparedAudioFromPcmWav(arrayBuffer: ArrayBuffer): PreparedAudio | null {
+  if (!looksLikeWav(arrayBuffer) || arrayBuffer.byteLength < PCM_WAV_HEADER_SIZE) {
+    return null;
+  }
+
+  const view = new DataView(arrayBuffer);
+  const channelCount = view.getUint16(22, true);
+  const sampleRate = view.getUint32(24, true);
+  const bitsPerSample = view.getUint16(34, true);
+  const dataSize = view.getUint32(40, true);
+
+  if (channelCount !== 1 || sampleRate !== TARGET_SAMPLE_RATE || bitsPerSample !== 16) {
+    return null;
+  }
+
+  const sampleCount = Math.floor(dataSize / 2);
+  const samples = new Float32Array(sampleCount);
+
+  for (let index = 0; index < sampleCount; index += 1) {
+    samples[index] = view.getInt16(PCM_WAV_HEADER_SIZE + (index * 2), true) / 0x7fff;
+  }
+
+  const rms = Math.sqrt(
+    samples.reduce((sum, sample) => sum + (sample * sample), 0) / Math.max(samples.length, 1)
+  );
+
+  return {
+    wavBlob: new Blob([arrayBuffer], { type: 'audio/wav' }),
+    duration: sampleCount / TARGET_SAMPLE_RATE,
+    rms
+  };
+}
+
+async function prepareAudioForAnalysis(blob: Blob): Promise<PreparedAudio> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const directWavAudio = extractPreparedAudioFromPcmWav(arrayBuffer);
+
+  if (directWavAudio) {
+    return directWavAudio;
+  }
+
+  if (!AudioContextCtor || !OfflineAudioContextCtor) {
+    throw new Error('Seu navegador não suporta a conversão de áudio necessária para a análise da pronúncia.');
+  }
+
+  const audioContext = new AudioContextCtor();
+
+  try {
+    const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const frameCount = Math.max(1, Math.ceil(decodedBuffer.duration * TARGET_SAMPLE_RATE));
+    const offlineContext = new OfflineAudioContextCtor(1, frameCount, TARGET_SAMPLE_RATE);
+    const monoBuffer = offlineContext.createBuffer(1, decodedBuffer.length, decodedBuffer.sampleRate);
+    const monoData = monoBuffer.getChannelData(0);
+
+    for (let channelIndex = 0; channelIndex < decodedBuffer.numberOfChannels; channelIndex += 1) {
+      const channelData = decodedBuffer.getChannelData(channelIndex);
+      for (let sampleIndex = 0; sampleIndex < channelData.length; sampleIndex += 1) {
+        monoData[sampleIndex] += channelData[sampleIndex] / decodedBuffer.numberOfChannels;
+      }
+    }
+
+    const source = offlineContext.createBufferSource();
+    source.buffer = monoBuffer;
+    source.connect(offlineContext.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineContext.startRendering();
+    const renderedData = renderedBuffer.getChannelData(0);
+    const rms = Math.sqrt(
+      renderedData.reduce((sum, sample) => sum + (sample * sample), 0) / Math.max(renderedData.length, 1)
+    );
+    const wavBlob = new Blob([encodeWavFromAudioBuffer(renderedBuffer)], { type: 'audio/wav' });
+
+    return {
+      wavBlob,
+      duration: renderedBuffer.duration,
+      rms
+    };
+  } finally {
+    await audioContext.close();
+  }
+}
 
 // Funções de API (você pode mover para um arquivo separado)
 const getAuthHeaders = () => {
@@ -44,7 +202,8 @@ const generatePronunciationPhrase = async (difficulty: string) => {
   });
   
   if (!response.ok) {
-    throw new Error('Erro ao gerar frase');
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Erro ao gerar frase');
   }
   
   return await response.json();
@@ -61,7 +220,8 @@ const analyzePronunciation = async (formData: FormData) => {
   });
   
   if (!response.ok) {
-    throw new Error('Erro ao analisar pronúncia');
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Erro ao analisar pronúncia');
   }
   
   return await response.json();
@@ -75,7 +235,8 @@ const savePronunciationHistory = async (data: unknown) => {
   });
   
   if (!response.ok) {
-    throw new Error('Erro ao salvar histórico');
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || 'Erro ao salvar histórico');
   }
   
   return await response.json();
@@ -87,6 +248,8 @@ export function PronunciationTest() {
   const [difficulty, setDifficulty] = useState('intermediate');
   const [phrase, setPhrase] = useState('');
   const [phraseSource, setPhraseSource] = useState('');
+  const [phraseProviderMode, setPhraseProviderMode] = useState<'live' | 'fallback'>('fallback');
+  const [phraseProviderModel, setPhraseProviderModel] = useState<string | null>(null);
   const [phraseAudioUrl, setPhraseAudioUrl] = useState<string | null>(null);
   const [loadingPhrase, setLoadingPhrase] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -130,9 +293,13 @@ export function PronunciationTest() {
       const res = await generatePronunciationPhrase(level);
       const phraseValue = res?.data?.phrase || res?.phrase;
       const sourceValue = res?.data?.source || res?.source || 'fallback';
+      const providerModeValue = res?.data?.providerMode || res?.providerMode || 'fallback';
+      const providerModelValue = res?.data?.providerModel || res?.providerModel || null;
       const audioValue = res?.data?.audioUrl || res?.audioUrl || null;
       setPhrase(phraseValue || 'Practice makes perfect.');
       setPhraseSource(sourceValue);
+      setPhraseProviderMode(providerModeValue);
+      setPhraseProviderModel(providerModelValue);
       setPhraseAudioUrl(audioValue);
     } catch (error) {
       console.error(error);
@@ -158,7 +325,8 @@ export function PronunciationTest() {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const recordedBlobType = audioChunksRef.current.find((chunk): chunk is Blob => chunk instanceof Blob)?.type || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: recordedBlobType });
         setAudioBlob(blob);
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -190,8 +358,15 @@ export function PronunciationTest() {
     }
     try {
       setAnalyzing(true);
+      const preparedAudio = await prepareAudioForAnalysis(audioBlob);
+
+      if (preparedAudio.duration < 0.6 || preparedAudio.rms < SILENCE_RMS_THRESHOLD) {
+        toast.error('A gravação ficou muito baixa ou silenciosa. Grave novamente falando a frase inteira.');
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'pronunciation.webm');
+      formData.append('audio', preparedAudio.wavBlob, 'pronunciation.wav');
       formData.append('originalPhrase', phrase);
 
       const res = await analyzePronunciation(formData);
@@ -202,10 +377,18 @@ export function PronunciationTest() {
       }
       setAnalysis(result);
       setAnalysisAudioUrl(result.audioUrl || null);
-      toast.success('Análise concluída!');
+      toast.success(
+        result.providerMode === 'beta'
+          ? 'Análise beta do AssemblyAI concluída.'
+          : result.providerMode === 'live'
+            ? 'Análise canônica concluída.'
+            : result.configurationPending
+              ? 'AssemblyAI não configurada. Resultado local exibido sem impactar os insights.'
+              : 'AssemblyAI indisponível. Resultado local exibido como fallback.'
+      );
     } catch (error) {
       console.error(error);
-      toast.error('Erro ao analisar pronúncia.');
+      toast.error(error instanceof Error ? error.message : 'Erro ao analisar pronúncia.');
     } finally {
       setAnalyzing(false);
     }
@@ -224,11 +407,20 @@ export function PronunciationTest() {
         accuracyScore: analysis.accuracyScore,
         fluencyScore: analysis.fluencyScore,
         pronunciationScore: analysis.pronunciationScore,
+        mock: Boolean(analysis.mock),
+        source: analysis.source,
+        providerMode: analysis.providerMode,
+        providerModel: analysis.providerModel,
         feedback: analysis.feedback,
         wordScores: analysis.wordScores,
-        audioUrl: analysisAudioUrl
+        audioUrl: analysisAudioUrl,
+        metadata: analysis.metadata
       });
-      toast.success('Resultado salvo e enviado ao professor.');
+      toast.success(
+        analysis.providerMode === 'live'
+          ? 'Resultado salvo e enviado ao professor.'
+          : 'Resultado salvo no histórico sem impactar os insights do professor.'
+      );
     } catch (error) {
       console.error(error);
       toast.error('Erro ao salvar resultado.');
@@ -248,10 +440,10 @@ export function PronunciationTest() {
     switch (phraseSource) {
       case 'teacher':
         return '(Professor)';
-      case 'openai':
-        return '(IA)';
+      case 'gemini':
+        return '(Gemini)';
       case 'fallback':
-        return '(offline)';
+        return '(Fallback local)';
       default:
         return '';
     }
@@ -342,6 +534,11 @@ export function PronunciationTest() {
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Frase gerada {phraseSourceLabel}:</p>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{phrase || '—'}</h2>
+              {phraseProviderModel ? (
+                <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                  {phraseProviderMode === 'live' ? 'Modelo ativo' : 'Modo fallback'}: {phraseProviderModel}
+                </p>
+              ) : null}
             </div>
             <div className="flex gap-2">
               <button
@@ -427,13 +624,54 @@ export function PronunciationTest() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-lg border border-slate-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Feedback da IA {analysis.mock ? '(simulado)' : ''}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {analysis.providerMode === 'beta'
+                    ? 'Feedback beta do AssemblyAI'
+                    : analysis.providerMode === 'live'
+                      ? 'Feedback canônico de pronúncia'
+                      : 'Fallback explícito de pronúncia'}
+                </p>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Resultados</h3>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-black text-indigo-600">{(analysis.pronunciationScore * 100).toFixed(0)}%</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Score geral</p>
               </div>
+            </div>
+
+            <div className={`rounded-xl border px-4 py-3 text-sm ${
+              analysis.providerMode === 'live'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200'
+                : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'
+            }`}>
+              <p className="font-semibold">
+                {analysis.providerMode === 'beta'
+                  ? 'AssemblyAI beta'
+                  : analysis.providerMode === 'live'
+                    ? 'Análise canônica concluída'
+                    : analysis.configurationPending
+                      ? 'Configuração pendente do AssemblyAI'
+                      : 'Fallback local ativado'}
+              </p>
+              <p className="mt-1">
+                {analysis.providerMode === 'beta'
+                  ? `Origem: ${analysis.providerModel || 'universal-3-pro'}. O score abaixo é aproximado, útil para treino e histórico, mas não entra nos insights do professor.`
+                  : analysis.providerMode === 'live'
+                    ? `Origem: ${analysis.providerModel || 'live-pronunciation-provider'}`
+                    : analysis.configurationPending
+                      ? 'O resultado abaixo é apenas uma referência visual até a AssemblyAI ser configurada neste ambiente.'
+                      : 'A AssemblyAI não respondeu nesta tentativa. O resultado abaixo é local e não impacta os insights do professor.'}
+              </p>
+              {analysis.metadata?.recognizedText ? (
+                <p className="mt-2 text-xs uppercase tracking-[0.16em] opacity-80">
+                  Reconhecido: {analysis.metadata.recognizedText}
+                </p>
+              ) : null}
+              {typeof analysis.metadata?.confidence === 'number' ? (
+                <p className="mt-1 text-xs uppercase tracking-[0.16em] opacity-70">
+                  Confiança do reconhecimento: {(analysis.metadata.confidence * 100).toFixed(0)}%
+                </p>
+              ) : null}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

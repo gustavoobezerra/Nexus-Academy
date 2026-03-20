@@ -42,6 +42,25 @@ const pronunciationTestSchema = new mongoose.Schema({
     max: 1,
     required: true
   },
+  mock: {
+    type: Boolean,
+    default: false
+  },
+  source: {
+    type: String,
+    trim: true,
+    default: 'local-fallback'
+  },
+  providerMode: {
+    type: String,
+    enum: ['live', 'beta', 'fallback'],
+    default: 'fallback'
+  },
+  providerModel: {
+    type: String,
+    trim: true,
+    default: 'local-fallback'
+  },
   feedback: {
     type: String,
     trim: true
@@ -75,6 +94,10 @@ const pronunciationTestSchema = new mongoose.Schema({
   duration: {
     type: Number,
     min: 0
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   createdAt: {
     type: Date,

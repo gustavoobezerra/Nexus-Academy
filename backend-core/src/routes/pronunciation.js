@@ -4,7 +4,7 @@ import PronunciationTest from '../models/PronunciationTest.js';
 import PronunciationPhrase from '../models/PronunciationPhrase.js';
 import rateLimit from 'express-rate-limit';
 import { authenticateStudent } from '../middleware/studentAuth.js';
-import { generatePhrase, analyzePronunciation } from '../services/pronunciationService.js';
+import { generatePhrase, analyzePronunciation, PronunciationAnalysisError } from '../services/pronunciationService.js';
 import cloudinaryService from '../services/cloudinaryService.js';
 import Student from '../models/Student.js';
 import { recordPronunciationSignals } from '../services/learningSignalsService.js';
@@ -74,6 +74,8 @@ router.post('/generate', authenticateStudent, pronunciationLimiter, async (req, 
             phrase: teacherPhrase.phrase,
             source: teacherPhrase.source,
             audioUrl: teacherPhrase.audioUrl || null,
+            providerMode: 'live',
+            providerModel: 'teacher-library',
             mock: false
           }
         });
@@ -168,6 +170,13 @@ router.post('/analyze', authenticateStudent, pronunciationLimiter, upload.single
     });
   } catch (error) {
     console.error('Erro ao analisar pronúncia:', error);
+    if (error instanceof PronunciationAnalysisError) {
+      return res.status(error.status || 500).json({
+        success: false,
+        code: error.code,
+        message: error.userMessage || error.message
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Erro ao analisar pronúncia'
@@ -222,10 +231,15 @@ router.post('/history', authenticateStudent, pronunciationLimiter, async (req, r
       accuracyScore,
       fluencyScore,
       pronunciationScore,
+      mock,
+      source,
+      providerMode,
+      providerModel,
       feedback,
       wordScores,
       audioUrl,
-      duration
+      duration,
+      metadata
     } = req.body;
 
     // Validação básica
@@ -254,26 +268,55 @@ router.post('/history', authenticateStudent, pronunciationLimiter, async (req, r
       accuracyScore,
       fluencyScore,
       pronunciationScore,
+      mock: Boolean(mock),
+      source: source || (mock ? 'local-fallback' : 'assemblyai-beta'),
+      providerMode: providerMode || (mock ? 'fallback' : 'beta'),
+      providerModel: providerModel || (mock ? 'local-fallback' : 'universal-3-pro'),
       feedback,
       wordScores: wordScores || [],
       audioUrl: audioUrl || null,
-      duration: duration || null
+      duration: duration || null,
+      metadata: metadata || {}
     });
 
     await pronunciationTest.save();
 
-    const student = await Student.findById(studentId).select('subject');
-    await recordPronunciationSignals({
-      pronunciationTest,
-      studentSubject: student?.subject || ''
-    });
+    if (!pronunciationTest.mock && pronunciationTest.providerMode === 'live') {
+      try {
+        const student = await Student.findById(studentId).select('subject');
+        await recordPronunciationSignals({
+          pronunciationTest,
+          studentSubject: student?.subject || ''
+        });
+      } catch (signalError) {
+        try {
+          await PronunciationTest.deleteOne({
+            _id: pronunciationTest._id,
+            student: studentId,
+            teacher: teacherId
+          });
+        } catch (rollbackError) {
+          console.error('Erro ao reverter histórico de pronúncia após falha de sinais:', rollbackError);
+        }
+
+        throw signalError;
+      }
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Resultado salvo com sucesso',
+      message: pronunciationTest.providerMode === 'live'
+        ? 'Resultado salvo com sucesso.'
+        : pronunciationTest.providerMode === 'beta'
+          ? 'Resultado beta do AssemblyAI salvo no histórico sem impactar insights do professor.'
+          : 'Resultado de fallback salvo no histórico sem impactar insights do professor.',
       data: {
         id: pronunciationTest._id,
-        scorePercentage: pronunciationTest.scorePercentage
+        scorePercentage: pronunciationTest.scorePercentage,
+        mock: pronunciationTest.mock,
+        source: pronunciationTest.source,
+        providerMode: pronunciationTest.providerMode,
+        providerModel: pronunciationTest.providerModel
       }
     });
   } catch (error) {

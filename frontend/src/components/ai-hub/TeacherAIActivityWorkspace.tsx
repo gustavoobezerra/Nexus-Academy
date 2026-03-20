@@ -55,6 +55,14 @@ export const TeacherAIActivityWorkspace = ({
     providerMode: 'live' | 'fallback';
   } | null>(null);
 
+  const refreshInBackground = async () => {
+    try {
+      await onRefresh();
+    } catch (error) {
+      console.error('Erro ao sincronizar workspace apos atividade:', error);
+    }
+  };
+
   const completedOrScheduledClasses = useMemo(() => (
     classes.filter((classData) => ['completed', 'scheduled', 'in_progress'].includes(classData.status))
   ), [classes]);
@@ -203,7 +211,7 @@ export const TeacherAIActivityWorkspace = ({
 
       toast.success(`Atividade publicada para ${response.recipients.length} aluno(s).`);
       setGeneratedTemplate(null);
-      await onRefresh();
+      void refreshInBackground();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Falha ao publicar a atividade.');
     } finally {

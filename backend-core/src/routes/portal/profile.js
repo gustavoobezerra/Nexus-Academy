@@ -75,6 +75,19 @@ const serializeActivityForPortal = (activity, options = { includeQuestions: fals
   };
 };
 
+/**
+ * Reverte a submissão mais recente quando a etapa de analytics/sinais falha.
+ *
+ * O sistema ainda não usa transações Mongo por padrão no ambiente local, então
+ * aplicamos compensação explícita para impedir que atividade e insights fiquem
+ * divergentes após um erro intermediário.
+ */
+const rollbackLatestSubmission = async ({ activity, previousStatus, previousSubmissionCount }) => {
+  activity.submissions = activity.submissions.slice(0, previousSubmissionCount);
+  activity.status = previousStatus;
+  await activity.save();
+};
+
 // GET /api/portal/profile
 router.get('/profile', authenticateStudent, async (req, res) => {
   try {
@@ -341,31 +354,54 @@ router.post('/activities/:activityId/submissions', authenticateStudent, async (r
       });
     }
 
+    const previousStatus = activity.status;
+    const previousSubmissionCount = activity.submissions.length;
+    let shouldRollback = false;
+
     activity.submissions.push({
       submittedAt: new Date(),
       answers: normalizedAnswers
     });
 
-    await activity.save();
-    const submissionIndex = activity.submissions.length - 1;
-    await activity.autoGradeSubmission(submissionIndex);
+    try {
+      shouldRollback = true;
+      await activity.save();
+      const submissionIndex = activity.submissions.length - 1;
+      await activity.autoGradeSubmission(submissionIndex);
 
-    const latestSubmission = activity.submissions[submissionIndex];
-    const requiresManualReview = activity.questions.some((question) => !OBJECTIVE_QUESTION_TYPES.has(question.type));
+      const latestSubmission = activity.submissions[submissionIndex];
+      const requiresManualReview = activity.questions.some((question) => !OBJECTIVE_QUESTION_TYPES.has(question.type));
 
-    activity.status = requiresManualReview ? 'completed' : 'graded';
-    await activity.save();
+      activity.status = requiresManualReview ? 'completed' : 'graded';
+      await activity.save();
 
-    await recordActivitySubmissionSignals({
-      activity,
-      submission: latestSubmission
-    });
+      await recordActivitySubmissionSignals({
+        activity,
+        submission: latestSubmission
+      });
 
-    res.status(201).json({
-      success: true,
-      message: 'Atividade enviada com sucesso',
-      activity: serializeActivityForPortal(activity, { includeQuestions: true })
-    });
+      shouldRollback = false;
+
+      return res.status(201).json({
+        success: true,
+        message: 'Atividade enviada com sucesso',
+        activity: serializeActivityForPortal(activity, { includeQuestions: true })
+      });
+    } catch (submissionError) {
+      if (shouldRollback) {
+        try {
+          await rollbackLatestSubmission({
+            activity,
+            previousStatus,
+            previousSubmissionCount
+          });
+        } catch (rollbackError) {
+          console.error('[StudentPortal] Error rolling back activity submission:', rollbackError);
+        }
+      }
+
+      throw submissionError;
+    }
   } catch (error) {
     console.error('[StudentPortal] Error submitting activity:', error);
     res.status(500).json({ success: false, message: 'Erro ao enviar atividade' });

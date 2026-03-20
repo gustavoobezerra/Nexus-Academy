@@ -63,6 +63,7 @@ Também existem recursos auxiliares no repositório:
 
 - [src/main.tsx](C:/Users/User/Desktop/Nexus-Academy/frontend/src/main.tsx): bootstrap da aplicação.
 - [src/AppWithRouter.tsx](C:/Users/User/Desktop/Nexus-Academy/frontend/src/AppWithRouter.tsx): orquestra login, shell autenticado, portal do aluno e páginas públicas.
+- [src/App.tsx](C:/Users/User/Desktop/Nexus-Academy/frontend/src/App.tsx): wrapper de compatibilidade que aponta para `AppWithRouter`.
 - [src/index.css](C:/Users/User/Desktop/Nexus-Academy/frontend/src/index.css): tokens globais, tipografia, superfícies e utilitários visuais.
 - [src/context](C:/Users/User/Desktop/Nexus-Academy/frontend/src/context): contextos como tema.
 - [src/store](C:/Users/User/Desktop/Nexus-Academy/frontend/src/store): estado compartilhado do frontend.
@@ -141,7 +142,8 @@ O AI Hub ativo do sistema deixou de ser uma coleção de cards desconectados e p
 Fluxo canônico:
 
 - `AppWithRouter` carrega `useTeacherWorkspaceData` quando o professor está autenticado.
-- `GET /api/ai/workspace-data` retorna `students`, `classes`, `payments`, `activities`, `lessonPreparations`, `studentGroups`, `counts` e `provider`.
+- `GET /api/ai/workspace-data` retorna `students`, `classes`, `payments`, `activities`, `lessonPreparations`, `studentGroups`, `counts`, `windows` e `provider`.
+- O roster de alunos permanece completo para seleção e busca, enquanto coleções históricas pesadas são devolvidas em janelas operacionais com contadores totais separados.
 - Cada workspace usa essa mesma base compartilhada, evitando telas vazias ou selects sem contexto.
 
 Workspaces ativos:
@@ -171,9 +173,6 @@ Rotas e componentes principais no diretório [src/components/StudentPortal](C:/U
 - `StudentRegister.tsx`
 - `PronunciationTest.tsx`
 - `StudentChat.tsx`
-- `StudentPortalDashboard.tsx`
-- `StudentDashboardComplete.tsx`
-- `StudentDashboardNew.tsx`
 
 ## 5. Backend em Detalhe
 
@@ -220,6 +219,7 @@ Modelos com papel central na rodada de IA:
 - `Activity.js`: artefato canônico para atividades geradas e publicadas pelo AI Hub. Agora aceita origem manual ou por aula e metadata de `providerMode`, `batchId`, `targetMode`, `gradeLevel` e `learningObjective`.
 - `LessonPreparation.js`: plano persistido de aula gerado pelo AI Hub e anexado à `Class` quando aprovado.
 - `LearningSignal.js`: event store canônico de aprendizagem, usado para armazenar respostas por questão, eventos de pronúncia por palavra/frase e consolidar insights do AI Hub.
+- `PronunciationTest.js`: mantém o histórico de pronúncia do aluno com `source`, `providerMode`, `providerModel` e `metadata`; resultados de fallback continuam marcados com `mock` para impedir contaminação dos sinais pedagógicos.
 - `User.js`: agora também armazena `teacherWorkspace.studentGroups`, usados no AI Hub para segmentação persistida.
 
 ### Services
@@ -266,8 +266,9 @@ O arquivo [backend-core/src/routes/aiAssistant.js](C:/Users/User/Desktop/Nexus-A
 
 Principais endpoints:
 
-- `GET /api/ai/provider-status`: expõe o estado real do provider e se o sistema está em `live` ou `fallback`.
+- `GET /api/ai/provider-status`: expõe `configured`, `health`, `primaryModel`, `fallbackModels`, `providerModel` ativo e o último erro do provider.
 - `GET /api/ai/workspace-data`: devolve a camada compartilhada de dados reais do professor.
+- `GET /api/ai/workspace-data` também informa `windows` para indicar truncamento de listas históricas do AI Hub.
 - `GET /api/ai/students/:studentId/subject-suggestion`: sugere a próxima matéria/tópico com base em sinais reais, histórico de aulas e desempenho.
 - `POST /api/ai/chat`: conversa com o assistente e nunca devolve erro bruto de provider; cai para fallback quando necessário.
 - `GET /api/ai/suggestions`: recomenda ações rápidas com base no contexto do professor.
@@ -277,16 +278,20 @@ Principais endpoints:
 - `PUT /api/ai/lesson-preparations/:id/review`: aprova ou revisa o plano e consolida o vínculo com a aula.
 - `GET|POST|PUT|DELETE /api/ai/student-groups`: CRUD persistido dos grupos usados no AI Hub.
 - `GET|DELETE /api/ai/history`: histórico do assistente do professor.
+- `POST /api/classes/:id/generate-summary`: gera o resumo de aula pela mesma camada híbrida do AI Hub, sem depender do serviço legado em `localhost:5001`.
 
 ### Estratégia de fallback da IA
 
 O serviço [backend-core/src/services/aiAssistantService.js](C:/Users/User/Desktop/Nexus-Academy/backend-core/src/services/aiAssistantService.js) agora opera em modo híbrido robusto:
 
-- tenta usar o provider configurado;
+- tenta `gemini-2.5-flash` como modelo primário efetivo;
+- usa a cadeia externa `gemini-2.5-flash-lite` -> `gemini-2.5-pro` -> `gemini-2.0-flash` antes do fallback local;
 - normaliza respostas para o frontend;
 - valida a qualidade mínima das atividades geradas;
-- usa fallback determinístico quando o provider externo falha ou entrega conteúdo inconsistente;
-- sempre informa `providerMode: 'live' | 'fallback'`.
+- mantém `providerMode: 'live' | 'fallback'`, `providerModel` e `fallbackReason` nos fluxos críticos de IA;
+- expõe `healthy`, `degraded` ou `fallback-only` em `GET /api/ai/provider-status`;
+- unifica chat, geração de atividade, preparação de aula e resumo de aula na mesma camada de provider/fallback;
+- em ambientes sem chave válida ou com quota esgotada, degrada corretamente para fallback local explícito.
 - `chat.js`: comunicação.
 - `notifications.js`: notificações.
 - `reports.js`: relatórios.
@@ -312,7 +317,10 @@ Rotas do portal reforçadas na rodada atual:
 
 - `GET /api/portal/activities`: lista resumida das atividades do aluno, incluindo status, total de questões e último envio.
 - `GET /api/portal/activities/:activityId`: abre a atividade completa sem expor gabarito antes da submissão.
-- `POST /api/portal/activities/:activityId/submissions`: recebe respostas, dispara autocorreção quando cabível e grava sinais granulares de aprendizagem.
+- `POST /api/portal/activities/:activityId/submissions`: recebe respostas, dispara autocorreção quando cabível, grava sinais granulares de aprendizagem e devolve o payload que o frontend usa como fonte imediata de verdade.
+- `POST /api/portal/pronunciation/generate`: gera frase com Gemini Flash quando disponível e informa o modelo/origem usados.
+- `POST /api/portal/pronunciation/analyze`: usa AssemblyAI como caminho principal de transcrição e devolve um score beta explícito; sem configuração válida ou com erro do provider, responde com fallback explícito sem contaminar analytics.
+- `POST /api/portal/pronunciation/history`: persiste histórico de pronúncia com `source`, `providerMode`, `providerModel`, texto reconhecido e rollback se a gravação de sinais falhar.
 
 ### Busca unificada e contexto vivo
 
@@ -354,6 +362,12 @@ Comportamento atual:
 4. Acessa dashboard, perfil, pagamentos, aulas e atividades.
 5. Abre a atividade recebida, responde no portal e envia a submissão real para o backend.
 6. Os resultados alimentam o histórico do professor, os insights e as próximas sugestões pedagógicas.
+
+Detalhe operacional importante:
+
+- o detalhe da atividade no portal usa o retorno do `POST` como fonte imediata de verdade;
+- o refresh global roda em segundo plano;
+- respostas antigas do detalhe são invalidadas no frontend para não sobrescrever a submissão recém-enviada.
 
 ## 7. Sistema Visual Atual
 
@@ -453,19 +467,31 @@ Variáveis citadas pelo projeto e documentação:
 - `JWT_SECRET`
 - `FRONTEND_URL`
 - `API_URL`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
+- `GEMINI_MODEL_FALLBACKS`
+- `ASSEMBLYAI_API_KEY`
 - chaves de Stripe
 - chaves de Cloudinary
 - chaves de Resend
 - chaves de Daily
-- chaves de AssemblyAI
 - credenciais opcionais de Redis e integrações de mensagens
+
+Configuração operacional recomendada para o backend:
+
+- `GEMINI_MODEL=gemini-2.5-flash`
+- `GEMINI_MODEL_FALLBACKS=gemini-2.5-flash-lite,gemini-2.5-pro,gemini-2.0-flash`
+- `ASSEMBLYAI_API_KEY` habilita a transcrição real do áudio e o score beta de pronúncia
+- sem `ASSEMBLYAI_API_KEY`, o portal continua funcional, mas a UI mostra explicitamente que a análise exibida é fallback local
 
 ## 11. Situação Atual e Riscos Técnicos
 
 - O frontend gera um bundle principal grande, próximo de 1 MB minificado.
 - A suíte atual fecha com `build`, `typecheck`, `lint`, backend tests e E2E verdes.
 - Em ambientes sem provedor Gemini válido, os fluxos do AI Hub degradam corretamente para `fallback`, mas o backend ainda loga o erro original do provider para observabilidade.
+- Sem `ASSEMBLYAI_API_KEY`, o teste de pronúncia opera em fallback explícito e não alimenta `LearningSignal`.
 - O sistema depende de várias integrações externas; em ambientes de teste sem chaves, alguns serviços degradam para modo parcial.
+- O envio de e-mail permanece funcionalmente opcional em ambiente local: sem `RESEND_API_KEY`, o sistema continua operando e sinaliza que o serviço está desabilitado para aquele ambiente.
 - Há arquivos temporários de execução (`tmp-*`) no workspace que não fazem parte da lógica do produto.
 
 ## 12. Dados Demo e Seed Local
@@ -483,7 +509,21 @@ Ele garante:
 - grupos persistidos do professor;
 - sinais de aprendizagem suficientes para busca, insights e sugestão de matéria.
 
-## 13. Arquivos Mais Importantes para Manutenção
+Regras atuais do seed:
+
+- por padrão, a rotina apenas garante a base demo e preserva o estado manual criado no tenant demo entre reinícios do backend;
+- para forçar uma limpeza completa do tenant demo no boot, use `RESET_NEXUS_DEMO_DATA_ON_BOOT=true`;
+- artefatos ruidosos de E2E/IAHub/portal só são limpos quando esse reset explícito é habilitado;
+- o processo é idempotente para desenvolvimento e preserva dados fora do escopo demo.
+
+## 13. Integridade dos Sinais de Aprendizagem
+
+- submissões de atividade do portal usam compensação explícita: se a gravação dos `LearningSignal` falhar, a submissão é revertida para evitar divergência entre histórico e analytics;
+- o histórico de pronúncia também reverte a gravação se a persistência dos sinais falhar;
+- testes de pronúncia simulados (`mock: true`) podem ser salvos no histórico do aluno, mas não alimentam `LearningSignal`, insights do AI Hub nem sugestão pedagógica;
+- resultados de pronúncia vindos da AssemblyAI carregam `providerMode: 'beta'`, `providerModel` do speech model usado e metadados de reconhecimento/confiança para auditoria, mas continuam fora dos sinais pedagógicos canônicos.
+
+## 14. Arquivos Mais Importantes para Manutenção
 
 Se alguém entrar no projeto hoje e precisar entender rápido a aplicação, a ordem mais útil é:
 
@@ -513,3 +553,6 @@ Nesta rodada foram feitos os seguintes ajustes de base:
 - criação do event store de aprendizagem e dos snapshots pedagógicos;
 - submissão real de atividades no portal do aluno;
 - sugestão pedagógica de matéria/tópico para criação de aulas.
+- endurecimento do provider Gemini com fallback rápido e status real de saúde;
+- estabilização do detalhe de atividade do portal contra respostas stale;
+- limpeza determinística da base demo do professor principal.

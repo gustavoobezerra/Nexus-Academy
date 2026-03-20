@@ -150,7 +150,7 @@ const buildInsightSnapshot = (studentId, signals) => {
 /**
  * Grava sinais granulares a partir da submissão de uma atividade do portal.
  */
-export const recordActivitySubmissionSignals = async ({ activity, submission }) => {
+export const recordActivitySubmissionSignals = async ({ activity, submission, session = null }) => {
   if (!activity?._id || !submission) {
     return [];
   }
@@ -238,7 +238,7 @@ export const recordActivitySubmissionSignals = async ({ activity, submission }) 
   });
 
   if (signals.length > 0) {
-    await LearningSignal.insertMany(signals);
+    await LearningSignal.insertMany(signals, session ? { session } : undefined);
   }
 
   return signals;
@@ -247,8 +247,15 @@ export const recordActivitySubmissionSignals = async ({ activity, submission }) 
 /**
  * Persiste sinais detalhados de pronúncia para alimentar insights e recomendações.
  */
-export const recordPronunciationSignals = async ({ pronunciationTest, studentSubject }) => {
+export const recordPronunciationSignals = async ({ pronunciationTest, studentSubject, session = null }) => {
   if (!pronunciationTest?._id) {
+    return [];
+  }
+
+  // Resultados simulados, beta ou fallback podem ser úteis no histórico do
+  // aluno, mas não devem influenciar insights, recomendações ou qualquer sinal
+  // pedagógico canônico.
+  if (pronunciationTest.mock || pronunciationTest.providerMode !== 'live') {
     return [];
   }
 
@@ -313,7 +320,7 @@ export const recordPronunciationSignals = async ({ pronunciationTest, studentSub
     });
   }
 
-  await LearningSignal.insertMany(signals);
+  await LearningSignal.insertMany(signals, session ? { session } : undefined);
   return signals;
 };
 

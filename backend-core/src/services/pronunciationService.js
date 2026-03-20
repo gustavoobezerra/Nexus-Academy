@@ -1,6 +1,13 @@
-import axios from 'axios';
+import aiAssistantService from './aiAssistantService.js';
+import {
+  getAssemblyAIProviderInfo,
+  isAssemblyAIConfigured,
+  transcribeAudio
+} from './transcriptionService.js';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const PRONUNCIATION_LOCALE = 'en_us';
+const MIN_AUDIO_BUFFER_BYTES = 2_048;
+const PRONUNCIATION_SCORING_METHOD = 'assemblyai-transcription-beta-v1';
 
 const phraseBank = {
   beginner: [
@@ -65,6 +72,16 @@ const phraseBank = {
   ]
 };
 
+class PronunciationAnalysisError extends Error {
+  constructor(message, options = {}) {
+    super(message);
+    this.name = 'PronunciationAnalysisError';
+    this.status = options.status || 500;
+    this.code = options.code || 'PRONUNCIATION_ANALYSIS_ERROR';
+    this.userMessage = options.userMessage || message;
+  }
+}
+
 function normaliseDifficulty(difficulty = 'intermediate') {
   const key = difficulty.toLowerCase();
   if (phraseBank[key]) return key;
@@ -82,99 +99,96 @@ function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-export async function generatePhrase(difficulty) {
-  const level = normaliseDifficulty(difficulty);
-  const fallback = pickRandom(phraseBank[level] || phraseBank.intermediate);
-
-  if (!OPENAI_API_KEY) {
-    return { phrase: fallback, source: 'fallback', mock: true };
-  }
-
-  try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você gera frases curtas em inglês para treino de pronúncia. Retorne apenas a frase, sem aspas.'
-          },
-          {
-            role: 'user',
-            content: `Gere uma frase no nível ${level}. Limite a 12 palavras.`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 60
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`
-        }
-      }
-    );
-
-    const phrase = response.data?.choices?.[0]?.message?.content?.trim();
-    if (!phrase) {
-      return { phrase: fallback, source: 'fallback', mock: true };
-    }
-
-    return { phrase, source: 'openai', mock: false };
-  } catch (error) {
-    console.warn('OpenAI indisponível, usando fallback:', error.message);
-    return { phrase: fallback, source: 'fallback', mock: true };
-  }
+function normalizeWhitespace(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Deterministic word scoring based on complexity factors
- * No randomness - same word always gets same score
- */
-function scoreWord(word, context = {}) {
-  const clean = word.toLowerCase().replace(/[^a-z']/g, '');
+function normalizeToken(value) {
+  return normalizeWhitespace(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9']/gi, '');
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function roundScore(value) {
+  return Math.round(clamp(Number(value) || 0, 0, 1) * 100) / 100;
+}
+
+function toNormalizedScore(value, fallback = 0) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return roundScore(fallback);
+  }
+
+  const numericValue = Number(value);
+  if (numericValue > 1) {
+    return roundScore(numericValue / 100);
+  }
+
+  return roundScore(numericValue);
+}
+
+function estimateAudioDuration(phrase) {
+  const wordCount = String(phrase || '').split(/\s+/).filter(Boolean).length;
+  const estimatedSeconds = Math.round((wordCount / 2.6) * 10) / 10;
+  return Math.max(1, estimatedSeconds);
+}
+
+function sanitizeGeneratedPhrase(rawPhrase, fallback) {
+  const cleanedPhrase = String(rawPhrase || '')
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/^[-*\d.)\s]+/, '')
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  const normalizedPhrase = normalizeWhitespace(cleanedPhrase || '');
+  if (!normalizedPhrase) {
+    return fallback;
+  }
+
+  return /[.!?]$/.test(normalizedPhrase) ? normalizedPhrase : `${normalizedPhrase}.`;
+}
+
+function scoreWord(word) {
+  const clean = normalizeToken(word);
   if (!clean) return 0.85;
 
-  // Calculate complexity factors
   const length = clean.length;
   const hasApostrophe = word.includes("'");
   const consonantClusters = (clean.match(/[bcdfghjklmnpqrstvwxyz]{3,}/gi) || []).length;
   const vowelClusters = (clean.match(/[aeiouy]{3,}/gi) || []).length;
 
-  // Base score starts high
   let score = 0.92;
 
-  // Penalize based on length (longer words harder)
   if (length > 8) score -= 0.08;
   else if (length > 6) score -= 0.04;
   else if (length > 4) score -= 0.02;
 
-  // Penalize consonant clusters
   score -= consonantClusters * 0.05;
-
-  // Penalize vowel clusters
   score -= vowelClusters * 0.03;
 
-  // Slight penalty for apostrophes
   if (hasApostrophe) score -= 0.02;
 
-  // Ensure score stays in reasonable range
-  return Math.min(0.98, Math.max(0.60, score));
+  return clamp(score, 0.6, 0.98);
 }
 
 function splitSyllables(word) {
-  const clean = word.toLowerCase().replace(/[^a-z']/g, '');
+  const clean = normalizeToken(word);
   if (!clean) return [];
+
   const vowels = 'aeiouy';
   const syllables = [];
   let current = '';
 
-  for (let i = 0; i < clean.length; i += 1) {
-    const char = clean[i];
+  for (let index = 0; index < clean.length; index += 1) {
+    const char = clean[index];
     const isVowel = vowels.includes(char);
     current += char;
 
-    const nextChar = clean[i + 1];
+    const nextChar = clean[index + 1];
     const nextIsVowel = nextChar ? vowels.includes(nextChar) : false;
 
     if (isVowel && !nextIsVowel && current.length > 0) {
@@ -190,176 +204,426 @@ function splitSyllables(word) {
   return syllables.length ? syllables : [clean];
 }
 
-/**
- * Deterministic syllable scoring based on phonetic complexity
- * No randomness - same syllable always gets same score
- */
-function scoreSyllable(syllable) {
-  const clean = syllable.toLowerCase();
-  if (!clean) return 0.85;
-
-  // Base score
-  let score = 0.88;
-
-  // Check for difficult consonant combinations at start
-  const startConsonants = clean.match(/^[bcdfghjklmnpqrstvwxyz]+/);
-  if (startConsonants && startConsonants[0].length >= 3) {
-    score -= 0.10; // "str", "thr", "spr"
-  } else if (startConsonants && startConsonants[0].length === 2) {
-    score -= 0.05; // "sh", "ch", "th", "st"
-  }
-
-  // Check for difficult consonant combinations at end
-  const endConsonants = clean.match(/[bcdfghjklmnpqrstvwxyz]+$/);
-  if (endConsonants && endConsonants[0].length >= 3) {
-    score -= 0.08; // "ngth", "nts", "cts"
-  } else if (endConsonants && endConsonants[0].length === 2) {
-    score -= 0.03; // "nt", "st", "nd"
-  }
-
-  // Penalize complex vowel patterns
-  if (/[aeiouy]{3,}/.test(clean)) {
-    score -= 0.06; // "eau", "ieu"
-  }
-
-  // Penalize syllables with no clear vowel
-  if (!/[aeiouy]/.test(clean)) {
-    score -= 0.10;
-  }
-
-  return Math.min(0.98, Math.max(0.55, score));
+function buildSyllableScores(word, score) {
+  const syllables = splitSyllables(word);
+  return syllables.map((text, index) => ({
+    text,
+    score: roundScore(clamp(score - (index * 0.02), 0.2, 0.99))
+  }));
 }
 
-function buildWordScores(originalPhrase) {
-  const words = originalPhrase
+function buildFallbackWordScores(originalPhrase) {
+  return String(originalPhrase || '')
     .split(/\s+/)
-    .map(w => w.replace(/[^\w']/g, ''))
-    .filter(Boolean);
+    .map((word) => word.replace(/[^\w']/g, ''))
+    .filter(Boolean)
+    .map((word) => {
+      const score = roundScore(scoreWord(word));
 
-  const wordScores = words.map((word) => {
-    const syllables = splitSyllables(word);
-    const syllableScores = syllables.map((syllable) => ({
-      text: syllable,
-      score: scoreSyllable(syllable)
-    }));
-    const score = syllableScores.reduce((sum, s) => sum + s.score, 0) / Math.max(syllableScores.length, 1);
-    return {
-      word,
-      score,
-      phonetic: `/${word.toLowerCase()}/`, // placeholder simplificado
-      phonemes: [],
-      syllables: syllableScores
-    };
-  });
-
-  return wordScores;
+      return {
+        word,
+        score,
+        phonetic: undefined,
+        phonemes: [],
+        syllables: buildSyllableScores(word, score)
+      };
+    });
 }
 
-/**
- * Analyze pronunciation - DETERMINISTIC IMPLEMENTATION
- * Same audio + phrase = same results
- * Ready for real API integration (Azure Speech, Google Cloud Speech, etc.)
- *
- * @param {Buffer} audioBuffer - Audio file buffer
- * @param {string} originalPhrase - Expected phrase
- * @returns {Object} Analysis results with scores and feedback
- */
-export async function analyzePronunciation({ audioBuffer, originalPhrase }) {
-  // For production: integrate with real speech recognition API
-  // Azure Speech API example:
-  // const speechConfig = sdk.SpeechConfig.fromSubscription(key, region);
-  // const audioConfig = sdk.AudioConfig.fromWavFileInput(audioBuffer);
-  // const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-  // const result = await recognizer.recognizeOnceAsync();
-
-  // CURRENT: Deterministic mock based on phrase complexity
-  const wordScores = buildWordScores(originalPhrase);
-
-  // Calculate metrics deterministically
-  const accuracyScore = wordScores.reduce((sum, w) => sum + w.score, 0) / Math.max(wordScores.length, 1);
-
-  // Fluency based on phrase characteristics (deterministic)
-  const wordCount = wordScores.length;
-  const avgWordLength = originalPhrase.replace(/[^a-zA-Z]/g, '').length / Math.max(wordCount, 1);
-
-  let fluencyScore = 0.85;
-
-  // Longer phrases = slightly harder fluency
-  if (wordCount > 10) fluencyScore -= 0.05;
-  else if (wordCount > 7) fluencyScore -= 0.03;
-
-  // Longer average word length = slightly harder
-  if (avgWordLength > 7) fluencyScore -= 0.04;
-  else if (avgWordLength > 5) fluencyScore -= 0.02;
-
-  fluencyScore = Math.min(0.98, Math.max(0.60, fluencyScore));
-
-  // Overall pronunciation score (weighted average)
-  const pronunciationScore = (accuracyScore * 0.6) + (fluencyScore * 0.4);
-
-  // Generate contextual feedback
-  const feedback = generateFeedback(pronunciationScore, wordScores, originalPhrase);
-
-  // Calculate additional metrics
-  const duration = estimateAudioDuration(originalPhrase);
+function buildFallbackPronunciationAnalysis({ originalPhrase, reason, configurationPending = false }) {
+  const wordScores = buildFallbackWordScores(originalPhrase);
+  const accuracyScore = roundScore(
+    wordScores.reduce((sum, wordScore) => sum + wordScore.score, 0) / Math.max(wordScores.length, 1)
+  );
+  const fluencyScore = roundScore(Math.max(0.58, accuracyScore - 0.04));
+  const pronunciationScore = roundScore((accuracyScore * 0.6) + (fluencyScore * 0.4));
 
   return {
-    mock: true, // Set to false when real API is integrated
-    accuracyScore: Math.round(accuracyScore * 100) / 100,
-    fluencyScore: Math.round(fluencyScore * 100) / 100,
-    pronunciationScore: Math.round(pronunciationScore * 100) / 100,
-    feedback,
+    mock: true,
+    source: 'local-fallback',
+    providerMode: 'fallback',
+    providerModel: 'local-fallback',
+    configurationPending,
+    fallbackReason: reason,
+    accuracyScore,
+    fluencyScore,
+    pronunciationScore,
+    feedback: configurationPending
+      ? 'AssemblyAI ainda não está configurada. Este resultado local é apenas uma referência visual e não entra nos insights pedagógicos.'
+      : 'A AssemblyAI não respondeu nesta tentativa. Este resultado local é apenas uma referência visual e não entra nos insights pedagógicos.',
     wordScores,
-    duration,
+    duration: estimateAudioDuration(originalPhrase),
     metadata: {
-      wordCount,
-      avgWordLength: Math.round(avgWordLength * 10) / 10,
-      syllableCount: wordScores.reduce((sum, w) => sum + (w.syllables?.length || 0), 0)
+      service: 'local-fallback',
+      locale: PRONUNCIATION_LOCALE,
+      recognizedText: originalPhrase,
+      completenessScore: 1,
+      confidence: null,
+      scoringMethod: 'local-heuristic-fallback-v1',
+      wordCount: wordScores.length,
+      matchedWords: wordScores.length
     }
   };
 }
 
-/**
- * Generate contextual feedback based on scores
- */
-function generateFeedback(pronunciationScore, wordScores, phrase) {
-  const weakWords = wordScores.filter(w => w.score < 0.70);
-  const strongWords = wordScores.filter(w => w.score >= 0.85);
+function levenshteinDistance(left, right) {
+  const leftText = String(left || '');
+  const rightText = String(right || '');
+  const rows = leftText.length + 1;
+  const cols = rightText.length + 1;
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
 
-  if (pronunciationScore >= 0.90) {
-    return 'Excellent pronunciation! Your clarity and articulation are outstanding. Keep up the great work!';
+  for (let row = 0; row < rows; row += 1) matrix[row][0] = row;
+  for (let col = 0; col < cols; col += 1) matrix[0][col] = col;
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
+      const cost = leftText[row - 1] === rightText[col - 1] ? 0 : 1;
+      matrix[row][col] = Math.min(
+        matrix[row - 1][col] + 1,
+        matrix[row][col - 1] + 1,
+        matrix[row - 1][col - 1] + cost
+      );
+    }
   }
 
-  if (pronunciationScore >= 0.80) {
-    const tips = weakWords.length > 0
-      ? ` Pay extra attention to words like "${weakWords[0].word}".`
-      : ' Focus on maintaining consistency across all words.';
-    return `Great job! Your pronunciation is very good.${tips}`;
+  return matrix[rows - 1][cols - 1];
+}
+
+function getTokenSimilarity(left, right) {
+  const normalizedLeft = normalizeToken(left);
+  const normalizedRight = normalizeToken(right);
+  if (!normalizedLeft && !normalizedRight) return 1;
+  if (!normalizedLeft || !normalizedRight) return 0;
+  if (normalizedLeft === normalizedRight) return 1;
+
+  const maxLength = Math.max(normalizedLeft.length, normalizedRight.length);
+  return clamp(1 - (levenshteinDistance(normalizedLeft, normalizedRight) / maxLength), 0, 1);
+}
+
+function buildRecognizedWords(transcription) {
+  const words = Array.isArray(transcription?.words) ? transcription.words : [];
+  if (words.length > 0) {
+    return words
+      .map((word, index) => ({
+        index,
+        raw: normalizeWhitespace(word?.text || word?.word || ''),
+        normalized: normalizeToken(word?.text || word?.word || ''),
+        confidence: toNormalizedScore(word?.confidence, transcription?.confidence ?? 0.75)
+      }))
+      .filter((word) => word.normalized);
   }
 
-  if (pronunciationScore >= 0.70) {
-    const tips = weakWords.length > 0
-      ? ` Try breaking down challenging words like "${weakWords[0].word}" into syllables and practice each part separately.`
-      : ' Focus on rhythm and pace to improve fluency.';
-    return `Good effort! You're making solid progress.${tips}`;
+  return normalizeWhitespace(transcription?.text)
+    .split(/\s+/)
+    .map((raw, index) => ({
+      index,
+      raw,
+      normalized: normalizeToken(raw),
+      confidence: toNormalizedScore(transcription?.confidence, 0.72)
+    }))
+    .filter((word) => word.normalized);
+}
+
+function buildExpectedWords(originalPhrase) {
+  return normalizeWhitespace(originalPhrase)
+    .split(/\s+/)
+    .map((raw, index) => ({
+      index,
+      raw: raw.replace(/\s+/g, ''),
+      normalized: normalizeToken(raw)
+    }))
+    .filter((word) => word.normalized);
+}
+
+function alignRecognizedWords(expectedWords, recognizedWords) {
+  const usedIndexes = new Set();
+  let cursor = 0;
+
+  return expectedWords.map((expectedWord, expectedIndex) => {
+    let bestMatch = null;
+    let bestScore = -1;
+
+    for (let recognizedIndex = cursor; recognizedIndex < recognizedWords.length; recognizedIndex += 1) {
+      if (usedIndexes.has(recognizedIndex)) {
+        continue;
+      }
+
+      const recognizedWord = recognizedWords[recognizedIndex];
+      const similarity = getTokenSimilarity(expectedWord.normalized, recognizedWord.normalized);
+      const orderPenalty = Math.min(Math.abs(recognizedIndex - expectedIndex) * 0.05, 0.2);
+      const combinedScore = similarity - orderPenalty;
+
+      if (combinedScore > bestScore) {
+        bestScore = combinedScore;
+        bestMatch = { recognizedIndex, recognizedWord, similarity };
+      }
+
+      if (similarity === 1) {
+        break;
+      }
+    }
+
+    if (!bestMatch || bestMatch.similarity < 0.35) {
+      return {
+        expectedWord,
+        recognizedWord: null,
+        similarity: 0
+      };
+    }
+
+    usedIndexes.add(bestMatch.recognizedIndex);
+    cursor = bestMatch.recognizedIndex + 1;
+
+    return {
+      expectedWord,
+      recognizedWord: bestMatch.recognizedWord,
+      similarity: bestMatch.similarity
+    };
+  });
+}
+
+function buildWordScores(expectedWords, alignments) {
+  return alignments.map(({ expectedWord, recognizedWord, similarity }) => {
+    const wordConfidence = recognizedWord ? toNormalizedScore(recognizedWord.confidence, 0.7) : 0.45;
+    const score = recognizedWord
+      ? roundScore(clamp((similarity * 0.72) + (wordConfidence * 0.28), 0.25, 0.99))
+      : roundScore(clamp(0.18 + (scoreWord(expectedWord.raw) * 0.22), 0.18, 0.45));
+
+    return {
+      word: expectedWord.raw,
+      score,
+      phonetic: undefined,
+      phonemes: [],
+      syllables: buildSyllableScores(expectedWord.raw, score),
+      recognizedWord: recognizedWord?.raw || null
+    };
+  });
+}
+
+function generateFeedback(pronunciationScore, wordScores, metadata) {
+  const weakWords = wordScores.filter((wordScore) => wordScore.score < 0.68);
+  const completenessScore = Number(metadata?.completenessScore) || 0;
+
+  if (pronunciationScore >= 0.9 && completenessScore >= 0.9) {
+    return 'Ótimo treino. A transcrição ficou muito próxima da frase original e o ritmo manteve boa consistência.';
   }
 
-  if (pronunciationScore >= 0.60) {
-    return 'Keep practicing! Focus on pronouncing each word clearly. Listen to native speakers and repeat after them to improve your accent and intonation.';
+  if (pronunciationScore >= 0.82) {
+    return weakWords.length > 0
+      ? `Bom resultado beta. Vale repetir com foco especial em "${weakWords[0].word}" para ganhar mais precisão.`
+      : 'Bom resultado beta. Sua fala ficou próxima do enunciado proposto.';
   }
 
-  return 'Don\'t give up! Pronunciation takes time and practice. Start with shorter, simpler phrases and gradually work your way up to more complex sentences.';
+  if (completenessScore < 0.7) {
+    return 'A transcrição capturou apenas parte da frase. Tente gravar novamente em um ambiente mais silencioso e fale o enunciado inteiro.';
+  }
+
+  if (weakWords.length > 0) {
+    return `Continue praticando. As maiores perdas apareceram em "${weakWords[0].word}" e no ritmo geral da frase.`;
+  }
+
+  return 'Continue praticando. Este score beta é aproximado e ajuda a localizar trechos que ainda precisam de repetição.';
+}
+
+function buildBetaMetadata({
+  transcription,
+  recognizedText,
+  completenessScore,
+  paceScore,
+  expectedDuration,
+  actualDuration,
+  matchedWords,
+  wordScores
+}) {
+  return {
+    service: 'assemblyai',
+    locale: PRONUNCIATION_LOCALE,
+    recognizedText,
+    confidence: transcription.confidence ?? null,
+    completenessScore: roundScore(completenessScore),
+    paceScore: roundScore(paceScore),
+    expectedDuration: roundScore(expectedDuration),
+    actualDuration: actualDuration ? roundScore(actualDuration) : null,
+    speechModelUsed: transcription.providerModel,
+    languageCode: transcription.languageCode || PRONUNCIATION_LOCALE,
+    scoringMethod: PRONUNCIATION_SCORING_METHOD,
+    wordCount: wordScores.length,
+    matchedWords
+  };
+}
+
+async function analyzePronunciationWithAssemblyAI({ audioBuffer, originalPhrase }) {
+  const providerInfo = getAssemblyAIProviderInfo();
+  const transcription = await transcribeAudio(audioBuffer, {
+    language_code: PRONUNCIATION_LOCALE,
+    language_detection: false,
+    speech_models: [providerInfo.primaryModel, ...providerInfo.fallbackModels].filter(Boolean)
+  });
+
+  if (!transcription.success) {
+    throw new Error(transcription.error || 'Falha ao transcrever áudio na AssemblyAI.');
+  }
+
+  const recognizedText = normalizeWhitespace(transcription.text);
+  if (!recognizedText) {
+    throw new PronunciationAnalysisError('Nenhuma fala reconhecida', {
+      status: 422,
+      code: 'NO_SPEECH_RECOGNIZED',
+      userMessage: 'Nenhuma fala clara foi detectada. Grave novamente em um ambiente mais silencioso.'
+    });
+  }
+
+  const expectedWords = buildExpectedWords(originalPhrase);
+  const recognizedWords = buildRecognizedWords(transcription);
+  const alignments = alignRecognizedWords(expectedWords, recognizedWords);
+  const wordScores = buildWordScores(expectedWords, alignments);
+  const matchedWords = alignments.filter((alignment) => alignment.recognizedWord).length;
+  const completenessScore = matchedWords / Math.max(expectedWords.length, 1);
+  const confidenceScore = toNormalizedScore(transcription.confidence, 0.72);
+  const averageWordScore = roundScore(
+    wordScores.reduce((sum, wordScore) => sum + wordScore.score, 0) / Math.max(wordScores.length, 1)
+  );
+  const expectedDuration = estimateAudioDuration(originalPhrase);
+  const actualDuration = Number(transcription.audioDuration) || expectedDuration;
+  const durationDelta = Math.abs(actualDuration - expectedDuration) / Math.max(expectedDuration, 1);
+  const paceScore = roundScore(clamp(1 - (durationDelta * 0.55), 0.4, 1));
+
+  const accuracyScore = roundScore(
+    clamp((averageWordScore * 0.55) + (completenessScore * 0.25) + (confidenceScore * 0.2), 0.2, 0.99)
+  );
+  const fluencyScore = roundScore(
+    clamp((paceScore * 0.42) + (confidenceScore * 0.33) + (completenessScore * 0.25), 0.2, 0.99)
+  );
+  const pronunciationScore = roundScore(
+    clamp((accuracyScore * 0.5) + (fluencyScore * 0.35) + (averageWordScore * 0.15), 0.2, 0.99)
+  );
+  const metadata = buildBetaMetadata({
+    transcription,
+    recognizedText,
+    completenessScore,
+    paceScore,
+    expectedDuration,
+    actualDuration,
+    matchedWords,
+    wordScores
+  });
+
+  return {
+    mock: false,
+    source: 'assemblyai-beta',
+    providerMode: 'beta',
+    providerModel: transcription.providerModel || providerInfo.primaryModel,
+    configurationPending: false,
+    fallbackReason: null,
+    accuracyScore,
+    fluencyScore,
+    pronunciationScore,
+    feedback: generateFeedback(pronunciationScore, wordScores, metadata),
+    wordScores,
+    duration: actualDuration,
+    metadata
+  };
+}
+
+export async function generatePhrase(difficulty) {
+  const level = normaliseDifficulty(difficulty);
+  const fallback = pickRandom(phraseBank[level] || phraseBank.intermediate);
+
+  if (!aiAssistantService.isConfigured()) {
+    return {
+      phrase: fallback,
+      source: 'fallback',
+      providerMode: 'fallback',
+      providerModel: 'local-fallback',
+      mock: true
+    };
+  }
+
+  try {
+    const response = await aiAssistantService.requestTextCompletion(
+      `Você gera frases curtas em inglês para treino de pronúncia.
+
+Nível: ${level}
+Regras:
+1. Retorne apenas uma frase em inglês.
+2. Use entre 6 e 12 palavras.
+3. Evite nomes próprios raros e vocabulário excessivamente técnico.
+4. Não use aspas, bullets nem explicações.`,
+      {
+        temperature: 0.7,
+        maxOutputTokens: 80
+      }
+    );
+
+    return {
+      phrase: sanitizeGeneratedPhrase(response.text, fallback),
+      source: 'gemini',
+      providerMode: 'live',
+      providerModel: response.model,
+      mock: false
+    };
+  } catch (error) {
+    console.warn('Gemini indisponível para geração de frase, usando fallback:', error?.message || error);
+    return {
+      phrase: fallback,
+      source: 'fallback',
+      providerMode: 'fallback',
+      providerModel: 'local-fallback',
+      mock: true
+    };
+  }
 }
 
 /**
- * Estimate audio duration based on phrase (rough approximation)
- * Average speaking rate: ~150 words per minute = 2.5 words/second
+ * Analisa a pronúncia usando a transcrição da AssemblyAI como um beta explícito.
+ * Esse score é útil para treino e histórico, mas não entra nos insights canônicos.
  */
-function estimateAudioDuration(phrase) {
-  const wordCount = phrase.split(/\s+/).filter(Boolean).length;
-  const estimatedSeconds = Math.round((wordCount / 2.5) * 10) / 10;
-  return Math.max(1, estimatedSeconds);
+export async function analyzePronunciation({ audioBuffer, originalPhrase }) {
+  if (!originalPhrase || !normalizeWhitespace(originalPhrase)) {
+    throw new PronunciationAnalysisError('Frase original ausente', {
+      status: 400,
+      code: 'ORIGINAL_PHRASE_REQUIRED',
+      userMessage: 'A frase original é obrigatória para analisar a pronúncia.'
+    });
+  }
+
+  if (!audioBuffer || audioBuffer.length < MIN_AUDIO_BUFFER_BYTES) {
+    throw new PronunciationAnalysisError('Áudio insuficiente para análise', {
+      status: 422,
+      code: 'AUDIO_TOO_SHORT',
+      userMessage: 'A gravação ficou curta demais ou sem fala clara. Grave novamente antes de analisar.'
+    });
+  }
+
+  if (!isAssemblyAIConfigured()) {
+    return buildFallbackPronunciationAnalysis({
+      originalPhrase,
+      reason: 'assemblyai_not_configured',
+      configurationPending: true
+    });
+  }
+
+  try {
+    return await analyzePronunciationWithAssemblyAI({
+      audioBuffer,
+      originalPhrase
+    });
+  } catch (error) {
+    if (error instanceof PronunciationAnalysisError) {
+      throw error;
+    }
+
+    console.warn('AssemblyAI indisponível, usando fallback explícito:', error?.message || error);
+    return buildFallbackPronunciationAnalysis({
+      originalPhrase,
+      reason: 'assemblyai_provider_unavailable',
+      configurationPending: false
+    });
+  }
 }
+
+export { PronunciationAnalysisError };
 
 export default {
   generatePhrase,

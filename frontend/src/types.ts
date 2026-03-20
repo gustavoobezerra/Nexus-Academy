@@ -742,7 +742,19 @@ export interface AIProviderInfo {
   configured: boolean;
   available: boolean;
   mode: 'live' | 'fallback';
+  health?: 'healthy' | 'degraded' | 'fallback-only';
+  primaryModel?: string | null;
+  fallbackModels?: string[];
   models: string[];
+  providerModel?: string | null;
+  lastCheckedAt?: string | null;
+  lastError?: {
+    model?: string | null;
+    status?: number | null;
+    code?: string | null;
+    message?: string | null;
+    capturedAt?: string | null;
+  } | null;
 }
 
 export interface TeacherWorkspaceData {
@@ -761,6 +773,16 @@ export interface TeacherWorkspaceData {
     activities: number;
     lessonPreparations: number;
     studentGroups: number;
+  };
+  windows?: {
+    classesLoaded: number;
+    paymentsLoaded: number;
+    activitiesLoaded: number;
+    lessonPreparationsLoaded: number;
+    classesTruncated: boolean;
+    paymentsTruncated: boolean;
+    activitiesTruncated: boolean;
+    lessonPreparationsTruncated: boolean;
   };
 }
 

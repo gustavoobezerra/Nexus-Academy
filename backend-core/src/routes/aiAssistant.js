@@ -16,6 +16,32 @@ import {
 const router = express.Router();
 
 const models = { User, Student, Class, Payment, Course, Activity, LessonPreparation };
+const WORKSPACE_LIMITS = {
+  classes: 80,
+  payments: 80,
+  activities: 120,
+  lessonPreparations: 80
+};
+const WORKSPACE_STUDENT_FIELDS = [
+  'name',
+  'email',
+  'age',
+  'grade',
+  'subject',
+  'monthlyFee',
+  'paymentStatus',
+  'preferredDays',
+  'preferredTimes',
+  'performance',
+  'profile',
+  'points',
+  'level',
+  'active',
+  'portalAccess.enabled',
+  'portalAccess.email',
+  'createdAt',
+  'updatedAt'
+].join(' ');
 
 const toId = (value) => value?._id?.toString?.() || value?.id || value?.toString?.() || '';
 
@@ -85,26 +111,56 @@ const resolveRecipients = async ({ teacherId, targetMode, studentIds = [], group
 };
 
 const buildWorkspaceData = async (teacherId) => {
-  const [students, classes, payments, activities, lessonPreparations, studentGroups] = await Promise.all([
-    Student.find({ teacher: teacherId, active: true }).sort({ createdAt: -1 }).lean(),
+  const studentQuery = { teacher: teacherId, active: true };
+  const classQuery = { teacher: teacherId };
+  const paymentQuery = { teacher: teacherId };
+  const activityQuery = { teacher: teacherId };
+  const preparationQuery = { teacher: teacherId };
+
+  const [
+    students,
+    studentCount,
+    classes,
+    classCount,
+    payments,
+    paymentCount,
+    activities,
+    activityCount,
+    lessonPreparations,
+    lessonPreparationCount,
+    studentGroups
+  ] = await Promise.all([
+    Student.find(studentQuery)
+      .select(WORKSPACE_STUDENT_FIELDS)
+      .sort({ createdAt: -1 })
+      .lean(),
+    Student.countDocuments(studentQuery),
     Class.find({ teacher: teacherId })
       .sort({ scheduledAt: -1 })
+      .limit(WORKSPACE_LIMITS.classes)
       .populate('student', 'name grade')
       .lean(),
+    Class.countDocuments(classQuery),
     Payment.find({ teacher: teacherId })
       .sort({ dueDate: -1 })
+      .limit(WORKSPACE_LIMITS.payments)
       .populate('student', 'name')
       .lean(),
+    Payment.countDocuments(paymentQuery),
     Activity.find({ teacher: teacherId })
       .sort({ createdAt: -1 })
+      .limit(WORKSPACE_LIMITS.activities)
       .populate('student', 'name')
       .populate('class', 'title')
       .lean(),
+    Activity.countDocuments(activityQuery),
     LessonPreparation.find({ teacher: teacherId })
       .sort({ createdAt: -1 })
+      .limit(WORKSPACE_LIMITS.lessonPreparations)
       .populate('student', 'name')
       .populate('class', 'title scheduledAt')
       .lean(),
+    LessonPreparation.countDocuments(preparationQuery),
     getStudentGroups(teacherId)
   ]);
 
@@ -159,12 +215,22 @@ const buildWorkspaceData = async (teacherId) => {
     learningSnapshots,
     studentGroups,
     counts: {
-      students: students.length,
-      classes: classes.length,
-      payments: payments.length,
-      activities: activities.length,
-      lessonPreparations: lessonPreparations.length,
+      students: studentCount,
+      classes: classCount,
+      payments: paymentCount,
+      activities: activityCount,
+      lessonPreparations: lessonPreparationCount,
       studentGroups: studentGroups.length
+    },
+    windows: {
+      classesLoaded: classes.length,
+      paymentsLoaded: payments.length,
+      activitiesLoaded: activities.length,
+      lessonPreparationsLoaded: lessonPreparations.length,
+      classesTruncated: classCount > classes.length,
+      paymentsTruncated: paymentCount > payments.length,
+      activitiesTruncated: activityCount > activities.length,
+      lessonPreparationsTruncated: lessonPreparationCount > lessonPreparations.length
     }
   };
 };

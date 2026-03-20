@@ -35,6 +35,8 @@ const optionalVars = [
   'ASSEMBLYAI_API_KEY',
   'DAILY_API_KEY',
   'GEMINI_API_KEY',
+  'GEMINI_MODEL',
+  'GEMINI_MODEL_FALLBACKS',
   'OPENAI_API_KEY',
   'ALLOWED_ORIGINS'
 ];
@@ -112,6 +114,16 @@ if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'producti
 // CORS URLs check
 if (process.env.FRONTEND_URL && process.env.FRONTEND_URL.startsWith('http://') && process.env.NODE_ENV === 'production') {
   console.log('  ⚠️  FRONTEND_URL usa HTTP em produção (recomendado: HTTPS)');
+  hasWarnings = true;
+}
+
+if (!process.env.ASSEMBLYAI_API_KEY) {
+  console.log('  ⚠️  ASSEMBLYAI_API_KEY não configurada; pronúncia e transcrição usarão fallback explícito.');
+  hasWarnings = true;
+}
+
+if (process.env.GEMINI_MODEL && process.env.GEMINI_MODEL !== 'gemini-2.5-flash') {
+  console.log(`  ⚠️  GEMINI_MODEL atual é "${process.env.GEMINI_MODEL}". O padrão recomendado para este projeto é "gemini-2.5-flash".`);
   hasWarnings = true;
 }
 

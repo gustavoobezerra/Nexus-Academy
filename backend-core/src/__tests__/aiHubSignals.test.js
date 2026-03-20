@@ -1,21 +1,31 @@
 import bcrypt from 'bcryptjs';
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { jest } from '@jest/globals';
 import request from 'supertest';
+import axios from 'axios';
 import User from '../models/User.js';
 import Student from '../models/Student.js';
 import Class from '../models/Class.js';
 import Payment from '../models/Payment.js';
 import Activity from '../models/Activity.js';
 import LearningSignal from '../models/LearningSignal.js';
+import PronunciationTest from '../models/PronunciationTest.js';
 import aiAssistantRoutes from '../routes/aiAssistant.js';
 import portalProfileRoutes from '../routes/portal/profile.js';
+import pronunciationRoutes from '../routes/pronunciation.js';
+import classesRoutes from '../routes/classes.js';
 import { recordActivitySubmissionSignals } from '../services/learningSignalsService.js';
+import aiAssistantService from '../services/aiAssistantService.js';
+import { analyzePronunciation } from '../services/pronunciationService.js';
+import { ensureDevelopmentDemoData } from '../dev/ensureDemoData.js';
 
 const app = express();
 app.use(express.json());
 app.use('/api/ai', aiAssistantRoutes);
 app.use('/api/portal', portalProfileRoutes);
+app.use('/api/portal/pronunciation', pronunciationRoutes);
+app.use('/api/classes', classesRoutes);
 
 const createTeacherToken = (teacherId) => global.generateAuthToken(jwt, teacherId);
 
@@ -67,7 +77,46 @@ const createStudent = async (teacherId, overrides = {}) => {
   });
 };
 
+const createTinyWavBuffer = (durationSeconds = 1) => {
+  const sampleRate = 16000;
+  const totalSamples = sampleRate * durationSeconds;
+  const dataSize = totalSamples * 2;
+  const buffer = Buffer.alloc(44 + dataSize);
+
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  for (let index = 0; index < totalSamples; index += 1) {
+    const sample = Math.sin((2 * Math.PI * 440 * index) / sampleRate);
+    buffer.writeInt16LE(Math.round(sample * 0x3fff), 44 + (index * 2));
+  }
+
+  return buffer;
+};
+
+const originalIsConfigured = aiAssistantService.isConfigured;
+
 describe('AI Hub and learning signals integration', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+    aiAssistantService.isConfigured = originalIsConfigured;
+    aiAssistantService.providerHealth = aiAssistantService.isConfigured() ? 'degraded' : 'fallback-only';
+    aiAssistantService.lastProviderCheckAt = null;
+    aiAssistantService.lastSuccessfulModel = null;
+    aiAssistantService.lastProviderFailure = null;
+  });
+
   it('should hydrate workspace-data with live collections and learning snapshots', async () => {
     const teacher = await createTeacher({
       teacherWorkspace: {
@@ -347,5 +396,454 @@ describe('AI Hub and learning signals integration', () => {
     expect(detailAfterSubmission.status).toBe(200);
     expect(detailAfterSubmission.body.activity.questions[0].options[1].isCorrect).toBe(true);
     expect(detailAfterSubmission.body.activity.questions[1].correctAnswer).toBe('4');
+  });
+
+  it('should rollback an activity submission if learning-signal persistence fails', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id);
+
+    const activity = await Activity.create({
+      teacher: teacher._id,
+      student: student._id,
+      title: 'Prática com rollback',
+      description: 'Atividade para validar consistência transacional.',
+      type: 'exercise',
+      status: 'published',
+      questions: [
+        {
+          questionNumber: 1,
+          type: 'multiple_choice',
+          question: 'Qual é o resultado correto?',
+          points: 10,
+          difficulty: 'easy',
+          options: [
+            { letter: 'A', text: 'Alternativa incorreta', isCorrect: false },
+            { letter: 'B', text: 'Alternativa correta', isCorrect: true }
+          ],
+          explanation: 'A alternativa B é a correta.',
+          topics: ['Rollback']
+        }
+      ]
+    });
+
+    jest.spyOn(LearningSignal, 'insertMany').mockRejectedValue(new Error('signal write failed'));
+
+    const studentToken = createPortalToken(student._id, teacher._id);
+    const submitResponse = await request(app)
+      .post(`/api/portal/activities/${activity._id}/submissions`)
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({
+        answers: [{ questionNumber: 1, answer: 'B' }]
+      });
+
+    expect(submitResponse.status).toBe(500);
+
+    const reloadedActivity = await Activity.findById(activity._id).lean();
+    expect(reloadedActivity.submissions).toHaveLength(0);
+    expect(reloadedActivity.status).toBe('published');
+  });
+
+  it('should keep AssemblyAI beta pronunciation in history without creating canonical learning signals', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id, {
+      subject: 'English',
+      grade: '1o EM'
+    });
+    const studentToken = createPortalToken(student._id, teacher._id);
+
+    const response = await request(app)
+      .post('/api/portal/pronunciation/history')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({
+        phrase: 'Practice every day.',
+        difficulty: 'intermediate',
+        accuracyScore: 0.81,
+        fluencyScore: 0.79,
+        pronunciationScore: 0.8,
+        mock: false,
+        source: 'assemblyai-beta',
+        providerMode: 'beta',
+        providerModel: 'universal-3-pro',
+        feedback: 'Resultado beta.',
+        wordScores: [
+          {
+            word: 'practice',
+            score: 0.8,
+            syllables: [{ text: 'prac', score: 0.8 }]
+          }
+        ],
+        metadata: {
+          service: 'assemblyai',
+          recognizedText: 'Practice every day.',
+          confidence: 0.84,
+          scoringMethod: 'assemblyai-transcription-beta-v1'
+        }
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.mock).toBe(false);
+    expect(response.body.data.providerMode).toBe('beta');
+
+    const savedTests = await PronunciationTest.find({
+      teacher: teacher._id,
+      student: student._id
+    }).lean();
+    const savedSignals = await LearningSignal.find({
+      teacher: teacher._id,
+      student: student._id,
+      sourceType: 'pronunciation'
+    }).lean();
+
+    expect(savedTests).toHaveLength(1);
+    expect(savedTests[0].providerMode).toBe('beta');
+    expect(savedSignals).toHaveLength(0);
+  });
+
+  it('should rollback pronunciation history when signal persistence fails', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id, {
+      subject: 'English',
+      grade: '1o EM'
+    });
+    const studentToken = createPortalToken(student._id, teacher._id);
+
+    jest.spyOn(LearningSignal, 'insertMany').mockRejectedValue(new Error('signal write failed'));
+
+    const response = await request(app)
+      .post('/api/portal/pronunciation/history')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({
+        phrase: 'Speak with confidence.',
+        difficulty: 'intermediate',
+        accuracyScore: 0.74,
+        fluencyScore: 0.71,
+        pronunciationScore: 0.72,
+        mock: false,
+        source: 'canonical-pronunciation-provider',
+        providerMode: 'live',
+        providerModel: 'canonical-pronunciation-provider-v1',
+        feedback: 'Precisa repetir o padrão.',
+        wordScores: [
+          {
+            word: 'speak',
+            score: 0.7,
+            syllables: [{ text: 'speak', score: 0.7 }]
+          }
+        ]
+      });
+
+    expect(response.status).toBe(500);
+
+    const savedTests = await PronunciationTest.find({
+      teacher: teacher._id,
+      student: student._id
+    }).lean();
+
+    expect(savedTests).toHaveLength(0);
+  });
+
+  it('should expose provider health states through the status endpoint', async () => {
+    const teacher = await createTeacher();
+
+    aiAssistantService.isConfigured = () => true;
+    aiAssistantService.providerHealth = 'healthy';
+    aiAssistantService.lastProviderCheckAt = new Date().toISOString();
+    aiAssistantService.lastSuccessfulModel = 'gemini-2.5-flash';
+    aiAssistantService.lastProviderFailure = null;
+
+    const healthyResponse = await request(app)
+      .get('/api/ai/provider-status')
+      .set('Authorization', `Bearer ${createTeacherToken(teacher._id)}`);
+
+    expect(healthyResponse.status).toBe(200);
+    expect(healthyResponse.body.provider.health).toBe('healthy');
+    expect(healthyResponse.body.provider.available).toBe(true);
+    expect(healthyResponse.body.provider.mode).toBe('live');
+    expect(healthyResponse.body.provider.primaryModel).toBe('gemini-2.5-flash');
+    expect(healthyResponse.body.provider.fallbackModels).toEqual(
+      expect.arrayContaining(['gemini-2.5-flash-lite', 'gemini-2.5-pro'])
+    );
+
+    aiAssistantService.providerHealth = 'degraded';
+    aiAssistantService.lastProviderFailure = {
+      model: 'gemini-2.5-flash',
+      status: 503,
+      code: 'ECONNABORTED',
+      message: 'Provider timeout',
+      capturedAt: new Date().toISOString()
+    };
+
+    const degradedResponse = await request(app)
+      .get('/api/ai/provider-status')
+      .set('Authorization', `Bearer ${createTeacherToken(teacher._id)}`);
+
+    expect(degradedResponse.status).toBe(200);
+    expect(degradedResponse.body.provider.health).toBe('degraded');
+    expect(degradedResponse.body.provider.available).toBe(true);
+    expect(degradedResponse.body.provider.mode).toBe('live');
+
+    aiAssistantService.providerHealth = 'fallback-only';
+
+    const fallbackResponse = await request(app)
+      .get('/api/ai/provider-status')
+      .set('Authorization', `Bearer ${createTeacherToken(teacher._id)}`);
+
+    expect(fallbackResponse.status).toBe(200);
+    expect(fallbackResponse.body.provider.health).toBe('fallback-only');
+    expect(fallbackResponse.body.provider.available).toBe(false);
+    expect(fallbackResponse.body.provider.mode).toBe('fallback');
+  });
+
+  it('should walk the external Gemini fallback chain before using local fallback on quota exhaustion', async () => {
+    const quotaFailure = {
+      response: {
+        status: 429,
+        data: {
+          error: {
+            message: 'Quota exceeded',
+            status: 'RESOURCE_EXHAUSTED'
+          }
+        }
+      },
+      message: 'Quota exceeded'
+    };
+    const providerSpy = jest.spyOn(axios, 'post').mockRejectedValue(quotaFailure);
+
+    aiAssistantService.isConfigured = () => true;
+    aiAssistantService.providerHealth = 'degraded';
+    aiAssistantService.lastProviderFailure = null;
+    aiAssistantService.lastSuccessfulModel = null;
+
+    const result = await aiAssistantService.generateActivity({
+      lessonTopic: 'Frações equivalentes',
+      lessonSubject: 'Matematica',
+      lessonDescription: 'Revisão com exemplos guiados.'
+    });
+
+    expect(providerSpy).toHaveBeenCalledTimes(aiAssistantService.getProviderStatus().models.length);
+    expect(result.providerMode).toBe('fallback');
+    expect(result.providerModel).toBe('local-fallback');
+    expect(aiAssistantService.getProviderStatus().health).toBe('fallback-only');
+  });
+
+  it('should move from flash to the next external model after timeouts and recover live mode', async () => {
+    const providerSpy = jest.spyOn(axios, 'post')
+      .mockRejectedValueOnce({ code: 'ECONNABORTED', message: 'timeout attempt 1' })
+      .mockRejectedValueOnce({ code: 'ECONNABORTED', message: 'timeout attempt 2' })
+      .mockResolvedValueOnce({
+        data: {
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      title: 'Atividade: Equações lineares',
+                      description: 'Sequência validada pelo provider externo.',
+                      questions: [
+                        {
+                          type: 'multiple_choice',
+                          question: 'Em equações lineares, qual alternativa isola corretamente a variável na equação x + 2 = 5?',
+                          difficulty: 'easy',
+                          points: 10,
+                          options: [
+                            { letter: 'A', text: 'Subtrair 2 dos dois lados e obter x igual a 3.', isCorrect: true },
+                            { letter: 'B', text: 'Somar 2 aos dois lados e concluir que x vale 7.', isCorrect: false },
+                            { letter: 'C', text: 'Multiplicar ambos os lados por 2 antes de isolar x.', isCorrect: false },
+                            { letter: 'D', text: 'Trocar os termos de lado sem manter a equivalência.', isCorrect: false }
+                          ],
+                          explanation: 'Basta subtrair 2 dos dois lados.',
+                          topics: ['Equações lineares']
+                        },
+                        {
+                          type: 'multiple_choice',
+                          question: 'Em equações lineares, qual passo confirma se a solução encontrada realmente resolve a equação proposta?',
+                          difficulty: 'medium',
+                          points: 15,
+                          options: [
+                            { letter: 'A', text: 'Substituir o valor de x na equação original e verificar a igualdade.', isCorrect: true },
+                            { letter: 'B', text: 'Ignorar a equação inicial e apenas repetir o procedimento anterior.', isCorrect: false },
+                            { letter: 'C', text: 'Trocar o sinal do termo independente ao final da resolução.', isCorrect: false },
+                            { letter: 'D', text: 'Aplicar a mesma resposta em qualquer equação sem conferir o enunciado.', isCorrect: false }
+                          ],
+                          explanation: 'A verificação exige substituir a solução na equação original.',
+                          topics: ['Equações lineares']
+                        },
+                        {
+                          type: 'multiple_choice',
+                          question: 'Nas equações lineares, qual afirmação descreve corretamente uma transformação válida durante a resolução?',
+                          difficulty: 'easy',
+                          points: 10,
+                          options: [
+                            { letter: 'A', text: 'A mesma operação deve ser aplicada aos dois lados da equação.', isCorrect: true },
+                            { letter: 'B', text: 'Cada lado pode receber operações diferentes se o cálculo parecer mais rápido.', isCorrect: false },
+                            { letter: 'C', text: 'O resultado pode ser estimado sem considerar o enunciado original.', isCorrect: false },
+                            { letter: 'D', text: 'O termo incógnita pode ser removido sem justificar a etapa.', isCorrect: false }
+                          ],
+                          explanation: 'Toda transformação válida preserva a equivalência entre os dois lados.',
+                          topics: ['Equações lineares']
+                        },
+                        {
+                          type: 'essay',
+                          question: 'Explique, no contexto de equações lineares, por que dividir ambos os lados por 2 resolve a equação 2x = 8.',
+                          difficulty: 'medium',
+                          points: 10,
+                          correctAnswer: 'A resposta deve explicar que dividir os dois lados pelo mesmo número preserva a equivalência e isola a incógnita, mostrando que x vale 4.',
+                          explanation: 'A justificativa precisa ligar equivalência e isolamento da incógnita.',
+                          topics: ['Equações lineares']
+                        }
+                      ]
+                    })
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      });
+
+    aiAssistantService.isConfigured = () => true;
+    aiAssistantService.providerHealth = 'degraded';
+    aiAssistantService.lastProviderFailure = null;
+    aiAssistantService.lastSuccessfulModel = null;
+
+    const result = await aiAssistantService.generateActivity({
+      lessonTopic: 'Equações lineares',
+      lessonSubject: 'Matematica',
+      lessonDescription: 'Exercícios com isolamento de variável.'
+    });
+
+    expect(providerSpy).toHaveBeenCalledTimes(3);
+    expect(result.providerMode).toBe('live');
+    expect(result.providerModel).toBe('gemini-2.5-pro');
+    expect(aiAssistantService.getProviderStatus().health).toBe('degraded');
+  });
+
+  it('should generate class summaries through the unified AI service instead of the legacy localhost:5001 flow', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id, {
+      name: 'Aluno Resumo',
+      grade: '8o Ano',
+      subject: 'Historia'
+    });
+
+    const classData = await Class.create({
+      teacher: teacher._id,
+      student: student._id,
+      studentName: student.name,
+      title: 'História - Revolução Francesa',
+      subject: 'Historia',
+      grade: student.grade,
+      topic: 'Revolução Francesa',
+      scheduledAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      duration: 60,
+      status: 'completed',
+      transcript: 'A aula revisou causas, principais eventos e consequências da Revolução Francesa.'
+    });
+
+    const providerSpy = jest.spyOn(axios, 'post').mockResolvedValue({
+      data: {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: 'A aula revisou as causas da Revolução Francesa, conectou os eventos centrais ao contexto social e terminou com um próximo passo de consolidação.'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+
+    aiAssistantService.isConfigured = () => true;
+
+    const response = await request(app)
+      .post(`/api/classes/${classData._id}/generate-summary`)
+      .set('Authorization', `Bearer ${createTeacherToken(teacher._id)}`)
+      .send({
+        transcript: classData.transcript
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.providerMode).toBe('live');
+    expect(response.body.providerModel).toBe('gemini-2.5-flash');
+    expect(response.body.aiSummary).toMatch(/Revolução Francesa/i);
+    expect(providerSpy.mock.calls[0][0]).toMatch(/generativelanguage\.googleapis\.com/);
+  });
+
+  it('should return an explicit local fallback when AssemblyAI is not configured', async () => {
+    const previousAssemblyKey = process.env.ASSEMBLYAI_API_KEY;
+
+    try {
+      delete process.env.ASSEMBLYAI_API_KEY;
+
+      const analysis = await analyzePronunciation({
+        audioBuffer: createTinyWavBuffer(),
+        originalPhrase: 'Practice makes perfect.'
+      });
+
+      expect(analysis.mock).toBe(true);
+      expect(analysis.providerMode).toBe('fallback');
+      expect(analysis.configurationPending).toBe(true);
+      expect(analysis.source).toBe('local-fallback');
+      expect(analysis.metadata.service).toBe('local-fallback');
+    } finally {
+      if (previousAssemblyKey === undefined) {
+        delete process.env.ASSEMBLYAI_API_KEY;
+      } else {
+        process.env.ASSEMBLYAI_API_KEY = previousAssemblyKey;
+      }
+    }
+  });
+
+  it('should preserve manual demo data across boots unless explicit demo reset is enabled', async () => {
+    const previousResetFlag = process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT;
+
+    try {
+      delete process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT;
+
+      const firstSeed = await ensureDevelopmentDemoData();
+      expect(firstSeed.resetApplied).toBe(false);
+
+      const teacher = await User.findOne({ email: 'demo@nexus.com' });
+      const student = await Student.findOne({
+        teacher: teacher._id,
+        email: 'aluno.demo@nexus.com'
+      });
+
+      await Activity.create({
+        teacher: teacher._id,
+        student: student._id,
+        title: 'Atividade manual de QA',
+        description: 'Persistência manual para validar reinicialização local.',
+        type: 'exercise',
+        status: 'draft',
+        questions: []
+      });
+
+      const secondSeed = await ensureDevelopmentDemoData();
+      expect(secondSeed.resetApplied).toBe(false);
+      expect(await Activity.countDocuments({
+        teacher: teacher._id,
+        title: 'Atividade manual de QA'
+      })).toBe(1);
+
+      process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT = 'true';
+      const thirdSeed = await ensureDevelopmentDemoData();
+      expect(thirdSeed.resetApplied).toBe(true);
+      expect(await Activity.countDocuments({
+        teacher: teacher._id,
+        title: 'Atividade manual de QA'
+      })).toBe(0);
+    } finally {
+      if (previousResetFlag === undefined) {
+        delete process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT;
+      } else {
+        process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT = previousResetFlag;
+      }
+    }
   });
 });

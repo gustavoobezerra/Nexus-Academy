@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BookOpenCheck, CheckCircle2, Loader2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { portalAPI } from '../../lib/api';
-import type { PortalActivityDetail, PortalActivitySummary } from '../../types';
+import type { PortalActivityDetail, PortalActivitySummary, Submission } from '../../types';
 
 interface StudentActivitiesWorkspaceProps {
   activities: PortalActivitySummary[];
@@ -72,6 +72,17 @@ export const StudentActivitiesWorkspace = ({
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [optimisticSubmission, setOptimisticSubmission] = useState<Submission | null>(null);
+  // Evita que uma resposta antiga do detalhe sobrescreva a submissão recém-enviada.
+  const detailRequestRef = useRef(0);
+
+  const refreshInBackground = async () => {
+    try {
+      await onRefresh();
+    } catch (error) {
+      console.error('Erro ao sincronizar atividades do portal:', error);
+    }
+  };
 
   useEffect(() => {
     if (!selectedActivityId && activities.length > 0) {
@@ -84,27 +95,41 @@ export const StudentActivitiesWorkspace = ({
       if (!selectedActivityId) {
         setSelectedActivity(null);
         setAnswers({});
+        setOptimisticSubmission(null);
         return;
       }
 
+      const requestId = ++detailRequestRef.current;
       setLoadingDetail(true);
 
       try {
         const response = await portalAPI.getActivityDetail(selectedActivityId);
+        if (requestId !== detailRequestRef.current) {
+          return;
+        }
+
         setSelectedActivity(response.activity);
+        setOptimisticSubmission(response.activity.latestSubmission || null);
         setAnswers(buildAnswerMap(response.activity));
       } catch (error) {
+        if (requestId !== detailRequestRef.current) {
+          return;
+        }
+
         console.error('Erro ao carregar atividade:', error);
         toast.error(error instanceof Error ? error.message : 'Erro ao carregar atividade');
       } finally {
-        setLoadingDetail(false);
+        if (requestId === detailRequestRef.current) {
+          setLoadingDetail(false);
+        }
       }
     };
 
     void loadActivity();
   }, [selectedActivityId]);
 
-  const alreadySubmitted = Boolean(selectedActivity?.latestSubmission);
+  const visibleSubmission = selectedActivity?.latestSubmission || optimisticSubmission;
+  const alreadySubmitted = Boolean(visibleSubmission);
 
   const handleSubmit = async () => {
     if (!selectedActivity) {
@@ -122,13 +147,32 @@ export const StudentActivitiesWorkspace = ({
     }
 
     setSubmitting(true);
+    detailRequestRef.current += 1;
 
     try {
+      const submittedAt = new Date().toISOString();
       const response = await portalAPI.submitActivity(selectedActivity._id, { answers: payload });
-      setSelectedActivity(response.activity);
-      setAnswers(buildAnswerMap(response.activity));
+      const nextSubmission = response.activity.latestSubmission || {
+        submittedAt,
+        answers: payload.map((answer) => ({
+          questionNumber: answer.questionNumber,
+          answer: answer.answer
+        })),
+        score: 0,
+        percentage: 0,
+        autoGraded: false
+      };
+
+      const nextActivity = {
+        ...response.activity,
+        latestSubmission: nextSubmission
+      };
+
+      setOptimisticSubmission(nextSubmission);
+      setSelectedActivity(nextActivity);
+      setAnswers(buildAnswerMap(nextActivity));
       toast.success('Atividade enviada com sucesso.');
-      await onRefresh();
+      void refreshInBackground();
     } catch (error) {
       console.error('Erro ao enviar atividade:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao enviar atividade');
@@ -289,16 +333,16 @@ export const StudentActivitiesWorkspace = ({
               ))}
             </div>
 
-            {selectedActivity.latestSubmission ? (
+            {visibleSubmission ? (
               <div className={`rounded-xl border p-4 ${isDark ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'}`}>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={18} className="text-emerald-500" />
                   <p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                    Último resultado: {Math.round(selectedActivity.latestSubmission.percentage || 0)}%
+                    Último resultado: {Math.round(visibleSubmission.percentage || 0)}%
                   </p>
                 </div>
                 <p className={`mt-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Enviado em {new Date(selectedActivity.latestSubmission.submittedAt).toLocaleString('pt-BR')}.
+                  Enviado em {new Date(visibleSubmission.submittedAt).toLocaleString('pt-BR')}.
                 </p>
               </div>
             ) : null}
