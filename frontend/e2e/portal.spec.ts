@@ -166,6 +166,22 @@ test.describe('Student Portal', () => {
     await expect(detailPanel.getByText(/Último resultado:/i)).toBeVisible();
   });
 
+  test('should expose notification access and profile navigation for the student portal', async ({ page }) => {
+    await page.goto(`${FRONTEND_URL}/portal/login`);
+    await page.fill('input[type="email"]', 'aluno.demo@nexus.com');
+    await page.fill('input[type="password"]', 'Aluno@123');
+    await page.click('button:has-text("Entrar")');
+
+    await expect(page).toHaveURL(/\/portal\/dashboard/);
+
+    await page.getByRole('button', { name: 'Abrir notificações' }).click();
+    await expect(page.getByText('Notificações')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Abrir perfil' }).click();
+    await expect(page).toHaveURL(/\/portal\/profile/);
+    await expect(page.getByText('Sobre mim')).toBeVisible();
+  });
+
   test('should analyze pronunciation and show the real provider state explicitly', async ({ page }) => {
     await page.addInitScript(() => {
       const createFakeAudioBuffer = (length = 16000, sampleRate = 16000) => {

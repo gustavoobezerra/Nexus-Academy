@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { tenantAwarePlugin } from '../middleware/tenantAware.js';
 
+const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
+
 const activitySchema = new mongoose.Schema({
   class: {
     type: mongoose.Schema.Types.ObjectId,
@@ -158,29 +160,33 @@ activitySchema.methods.autoGradeSubmission = function(submissionIndex = 0) {
     const question = this.questions.find(q => q.questionNumber === answer.questionNumber);
     if (!question) return answer;
 
-    let isCorrect = false;
-    let pointsEarned = 0;
+    let isCorrect = null;
+    let pointsEarned = null;
+    let feedback = 'Resposta aguardando revisão do professor.';
 
     if (question.type === 'multiple_choice') {
       const correctOption = question.options.find(opt => opt.isCorrect);
-      isCorrect = correctOption && answer.answer === correctOption.letter;
+      isCorrect = Boolean(correctOption && answer.answer === correctOption.letter);
       pointsEarned = isCorrect ? question.points : 0;
+      feedback = isCorrect ? 'Resposta correta!' : `Resposta incorreta. ${question.explanation || ''}`;
     } else if (question.type === 'true_false') {
-      isCorrect = answer.answer.toLowerCase() === question.correctAnswer.toLowerCase();
+      isCorrect = normalizeAnswer(answer.answer) === normalizeAnswer(question.correctAnswer);
       pointsEarned = isCorrect ? question.points : 0;
+      feedback = isCorrect ? 'Resposta correta!' : `Resposta incorreta. ${question.explanation || ''}`;
     } else if (question.type === 'fill_blank') {
-      isCorrect = answer.answer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
+      isCorrect = normalizeAnswer(answer.answer) === normalizeAnswer(question.correctAnswer);
       pointsEarned = isCorrect ? question.points : 0;
+      feedback = isCorrect ? 'Resposta correta!' : `Resposta incorreta. ${question.explanation || ''}`;
     }
     // Questões dissertativas precisam de correção manual
 
-    totalScore += pointsEarned;
+    totalScore += Number(pointsEarned) || 0;
 
     return {
       ...answer.toObject(),
       isCorrect,
       pointsEarned,
-      feedback: isCorrect ? 'Resposta correta!' : `Resposta incorreta. ${question.explanation || ''}`
+      feedback
     };
   });
 

@@ -1,383 +1,406 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Send, Clock, CheckCircle, AlertCircle, Plus, Trash2 } from 'lucide-react';
-import apiService from '../services/api.service';
-import type { Notification, NotificationTemplate } from '../types';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Bell,
+  Clock3,
+  Loader2,
+  MessageSquare,
+  RefreshCw,
+  SendHorizonal,
+  Sparkles
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { notificationsAPI, studentsAPI } from '../lib/api';
+import { SearchableSelect, type SearchableOption } from './ui/SearchableSelect';
+import type { Aluno, Notification, NotificationTemplate } from '../types';
 
-const AutomationCenter: React.FC = () => {
+type NotificationComposer = {
+  recipientId: string;
+  templateId: string;
+  channel: Notification['channel'];
+  type: NotificationTemplate['type'];
+  title: string;
+  subject: string;
+  message: string;
+  scheduledFor: string;
+};
+
+const initialComposer: NotificationComposer = {
+  recipientId: '',
+  templateId: '',
+  channel: 'in_app',
+  type: 'custom',
+  title: '',
+  subject: '',
+  message: '',
+  scheduledFor: ''
+};
+
+const getStatusTone = (status: Notification['status']) => {
+  switch (status) {
+    case 'read':
+      return 'bg-slate-500/15 text-slate-300';
+    case 'delivered':
+    case 'sent':
+      return 'bg-emerald-500/15 text-emerald-300';
+    case 'scheduled':
+      return 'bg-cyan-500/15 text-cyan-300';
+    case 'failed':
+      return 'bg-rose-500/15 text-rose-300';
+    default:
+      return 'bg-amber-500/15 text-amber-300';
+  }
+};
+
+const getStatusLabel = (status: Notification['status']) => {
+  switch (status) {
+    case 'delivered':
+      return 'Entregue';
+    case 'scheduled':
+      return 'Agendada';
+    case 'sent':
+      return 'Enviada';
+    case 'read':
+      return 'Lida';
+    case 'failed':
+      return 'Falhou';
+    default:
+      return 'Pendente';
+  }
+};
+
+const formatDateTimeLocal = (value?: string) => {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const AutomationCenter = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
-  const [activeTab, setActiveTab] = useState<'notifications' | 'templates' | 'schedule'>('notifications');
+  const [students, setStudents] = useState<Aluno[]>([]);
+  const [composer, setComposer] = useState<NotificationComposer>(initialComposer);
   const [loading, setLoading] = useState(true);
-  const [showTemplateForm, setShowTemplateForm] = useState(false);
-  const [showNotificationForm, setShowNotificationForm] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const [newTemplate, setNewTemplate] = useState({ name: '', type: 'reminder' as const, subject: '', body: '' });
-  const [newNotification, setNewNotification] = useState({
-    type: 'reminder' as const,
-    channel: 'email' as const,
-    recipientId: '',
-    title: '',
-    message: '',
-    scheduledFor: ''
-  });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [notifRes, templateRes] = await Promise.all([
-        apiService.get<{ notifications: Notification[] }>('/notifications'),
-        apiService.get<{ templates: NotificationTemplate[] }>('/notifications/templates')
+      const [notificationsResponse, templatesResponse, studentsResponse] = await Promise.all([
+        notificationsAPI.getAll({ status: 'all', limit: 20 }),
+        notificationsAPI.getTemplates(),
+        studentsAPI.getAll()
       ]);
-      setNotifications(notifRes.notifications || []);
-      setTemplates(templateRes.templates || []);
+
+      setNotifications(Array.isArray(notificationsResponse.notifications) ? notificationsResponse.notifications : []);
+      setTemplates(Array.isArray(templatesResponse.templates) ? templatesResponse.templates : []);
+      setStudents(Array.isArray(studentsResponse.students) ? studentsResponse.students : []);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('Erro ao carregar centro de mensagens:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao carregar centro de mensagens');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateTemplate = async () => {
-    if (!newTemplate.name || !newTemplate.subject || !newTemplate.body) {
-      toast.error('Preencha todos os campos');
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const studentOptions = useMemo<SearchableOption[]>(
+    () => students.map((student) => ({
+      id: student._id || student.id || '',
+      label: student.name,
+      description: student.email || student.phone || 'Aluno sem contato principal',
+      meta: [student.grade, student.subject].filter(Boolean).join(' • '),
+      group: 'Alunos',
+      recent: Boolean(student.createdAt),
+      keywords: [student.name, student.email, student.subject, student.grade].filter(Boolean) as string[]
+    })),
+    [students]
+  );
+
+  const templateOptions = useMemo<SearchableOption[]>(
+    () => templates.map((template) => ({
+      id: template.id || template._id || '',
+      label: template.name,
+      description: template.subject || template.body,
+      meta: [template.type, template.channel].filter(Boolean).join(' • '),
+      group: 'Templates',
+      keywords: [template.name, template.type, template.body, template.subject].filter(Boolean) as string[]
+    })),
+    [templates]
+  );
+
+  const handleTemplateSelect = (templateId: string) => {
+    const template = templates.find((item) => (item.id || item._id) === templateId);
+    if (!template) {
+      setComposer((currentComposer) => ({
+        ...currentComposer,
+        templateId
+      }));
       return;
     }
 
-    try {
-      const response = await apiService.post<{ template: NotificationTemplate }>('/notifications/templates', newTemplate);
-      setTemplates(prev => [...prev, response.template]);
-      setNewTemplate({ name: '', type: 'reminder', subject: '', body: '' });
-      setShowTemplateForm(false);
-      toast.success('Template criado com sucesso!');
-    } catch (_error) {
-      toast.error('Erro ao criar template');
-    }
+    setComposer((currentComposer) => ({
+      ...currentComposer,
+      templateId,
+      channel: template.channel,
+      type: template.type,
+      title: template.subject || currentComposer.title || template.name,
+      subject: template.subject || '',
+      message: template.body
+    }));
   };
 
-  const handleScheduleNotification = async () => {
-    if (!newNotification.recipientId || !newNotification.title || !newNotification.message) {
-      toast.error('Preencha todos os campos obrigatórios');
+  const handleSend = async () => {
+    if (!composer.recipientId || !composer.title.trim() || !composer.message.trim()) {
+      toast.error('Selecione o aluno e preencha título e mensagem.');
       return;
     }
 
+    setSending(true);
     try {
-      const response = await apiService.post<{ notification: Notification }>('/notifications/send', newNotification);
-      setNotifications(prev => [response.notification, ...prev]);
-      setNewNotification({
-        type: 'reminder',
-        channel: 'email',
-        recipientId: '',
-        title: '',
-        message: '',
-        scheduledFor: ''
+      const response = await notificationsAPI.send({
+        recipientId: composer.recipientId,
+        channel: composer.channel,
+        type: composer.type,
+        title: composer.title,
+        subject: composer.subject || composer.title,
+        message: composer.message,
+        scheduledFor: composer.scheduledFor || undefined
       });
-      setShowNotificationForm(false);
-      toast.success('Notificação agendada!');
-    } catch (_error) {
-      toast.error('Erro ao agendar notificação');
+
+      setNotifications((currentNotifications) => [response.notification, ...currentNotifications]);
+      setComposer(initialComposer);
+      toast.success(response.notification.status === 'scheduled' ? 'Mensagem agendada.' : 'Mensagem enviada.');
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao enviar mensagem');
+    } finally {
+      setSending(false);
     }
   };
-
-  const handleDeleteTemplate = async (templateId: string) => {
-    try {
-      await apiService.delete(`/notifications/templates/${templateId}`);
-      setTemplates(templates.filter(t => t.id !== templateId));
-      toast.success('Template removido');
-    } catch (_error) {
-      toast.error('Erro ao remover template');
-    }
-  };
-
-  if (loading) {
-    return <div className="text-white p-8">Carregando...</div>;
-  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-6">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <Bell className="text-cyan-400" size={28} />
-          <h1 className="text-4xl font-bold text-indigo-400">Centro de Automação</h1>
-        </div>
-        <p className="text-gray-400">Gerencie notificações, templates e lembretes automáticos</p>
-      </div>
-
-      <div className="flex gap-2 mb-8 flex-wrap">
-        {(['notifications', 'templates', 'schedule'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-              activeTab === tab
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
-            }`}
-          >
-            {tab === 'notifications' && '📬 Notificações'}
-            {tab === 'templates' && '📋 Templates'}
-            {tab === 'schedule' && '⏰ Agendar'}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'notifications' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Notificações Recentes</h2>
-              <span className="text-sm text-gray-400">
-                {notifications.filter(n => n.status === 'pending').length} pendentes
-              </span>
-            </div>
-
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <p className="text-gray-400">Nenhuma notificação ainda</p>
-              ) : (
-                notifications.slice(0, 10).map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`border rounded-lg p-4 ${
-                      notif.status === 'sent'
-                        ? 'bg-slate-700/30 border-emerald-700'
-                        : notif.status === 'pending'
-                          ? 'bg-slate-700/30 border-amber-700'
-                          : 'bg-slate-700/30 border-rose-700'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-white">{notif.title}</h4>
-                          {notif.status === 'sent' && (
-                            <CheckCircle className="text-emerald-400" size={16} />
-                          )}
-                          {notif.status === 'pending' && (
-                            <Clock className="text-amber-400" size={16} />
-                          )}
-                          {notif.status === 'failed' && (
-                            <AlertCircle className="text-rose-400" size={16} />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-300 mb-2">{notif.message}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span>📧 {notif.channel}</span>
-                          <span>{notif.recipientName}</span>
-                          {notif.scheduledFor && <span>🕐 {notif.scheduledFor}</span>}
-                        </div>
-                      </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          notif.status === 'sent'
-                            ? 'bg-emerald-900 text-emerald-300'
-                            : notif.status === 'pending'
-                              ? 'bg-amber-900 text-amber-300'
-                              : 'bg-rose-900 text-rose-300'
-                        }`}
-                      >
-                        {notif.status === 'sent' && 'Enviado'}
-                        {notif.status === 'pending' && 'Pendente'}
-                        {notif.status === 'failed' && 'Falhou'}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <Bell className="text-cyan-400" size={28} />
+            <p className="text-4xl font-bold text-indigo-300">Centro de Mensagens</p>
           </div>
+          <p className="mt-3 text-gray-400">
+            Notificações reais, templates reutilizáveis e envio direto para o aluno.
+          </p>
         </div>
-      )}
 
-      {activeTab === 'templates' && (
-        <div className="space-y-6">
-          <button
-            onClick={() => setShowTemplateForm(!showTemplateForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition"
-          >
-            <Plus size={20} />
-            Novo Template
-          </button>
+        <button
+          type="button"
+          onClick={() => void loadData()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-50"
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          Atualizar
+        </button>
+      </div>
 
-          {showTemplateForm && (
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-              <h3 className="text-xl font-bold mb-4">Criar Novo Template</h3>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Nome do template"
-                  value={newTemplate.name}
-                  onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-                <select
-                  value={newTemplate.type}
-                  onChange={(e) => setNewTemplate({ ...newTemplate, type: e.target.value as any })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+      <div className="grid gap-5 xl:grid-cols-[1.08fr,0.92fr]">
+        <section className="rounded-2xl border border-slate-800 bg-slate-800/80 p-6 shadow-xl">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold">Mensagens recentes</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Tudo o que foi enviado, agendado ou lido pelo ecossistema do professor.
+              </p>
+            </div>
+            <span className="rounded-full bg-slate-700 px-3 py-1 text-xs font-semibold text-slate-200">
+              {notifications.filter((notification) => notification.status === 'pending' || notification.status === 'scheduled').length} em aberto
+            </span>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {loading ? (
+              <div className="flex min-h-[14rem] items-center justify-center">
+                <Loader2 className="animate-spin text-indigo-400" size={24} />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-sm text-slate-400">
+                Nenhuma mensagem registrada ainda.
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <article
+                  key={notification.id || notification._id}
+                  className={`rounded-xl border p-4 ${
+                    !notification.readAt && notification.channel === 'in_app'
+                      ? 'border-rose-500/30 bg-rose-500/10'
+                      : 'border-slate-700 bg-slate-900/60'
+                  }`}
                 >
-                  <option value="reminder">Lembrete de Aula</option>
-                  <option value="payment">Alerta de Pagamento</option>
-                  <option value="confirmation">Confirmação de Presença</option>
-                  <option value="feedback">Solicitação de Feedback</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Assunto"
-                  value={newTemplate.subject}
-                  onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-                <textarea
-                  placeholder="Corpo da mensagem (use {{studentName}}, {{className}}, etc)"
-                  value={newTemplate.body}
-                  onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })}
-                  rows={5}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleCreateTemplate}
-                    className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition"
-                  >
-                    Criar Template
-                  </button>
-                  <button
-                    onClick={() => setShowTemplateForm(false)}
-                    className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-medium transition"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {templates.map((template) => (
-              <div key={template.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-semibold text-white">{template.name}</h4>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {template.type === 'reminder' && 'Lembrete'}
-                      {template.type === 'payment' && 'Pagamento'}
-                      {template.type === 'confirmation' && 'Confirmação'}
-                      {template.type === 'feedback' && 'Feedback'}
-                    </p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-white">{notification.title}</p>
+                        {!notification.readAt && notification.channel === 'in_app' ? (
+                          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_6px_rgba(239,68,68,0.12)]" />
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-sm text-slate-300">{notification.message}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                        <span>{notification.channel}</span>
+                        {notification.recipientName ? <span>• {notification.recipientName}</span> : null}
+                        {notification.scheduledFor ? (
+                          <span>• {new Date(notification.scheduledFor).toLocaleString('pt-BR')}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusTone(notification.status)}`}>
+                      {getStatusLabel(notification.status)}
+                    </span>
                   </div>
-                  <button
-                    onClick={() => template.id && handleDeleteTemplate(template.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                <p className="text-sm text-gray-300 mb-3">{template.subject}</p>
-                <p className="text-xs text-gray-400 line-clamp-2">{template.body}</p>
-              </div>
-            ))}
+                </article>
+              ))
+            )}
           </div>
-        </div>
-      )}
+        </section>
 
-      {activeTab === 'schedule' && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-2xl font-bold mb-6">Agendar Notificação</h2>
-          <button
-            onClick={() => setShowNotificationForm(!showNotificationForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition mb-6"
-          >
-            <Send size={20} />
-            {showNotificationForm ? 'Cancelar' : 'Nova Notificação'}
-          </button>
-
-          {showNotificationForm && (
-            <div className="bg-slate-700/50 rounded-lg p-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="text-sm text-gray-400 block mb-2">Tipo</label>
-                  <select
-                    value={newNotification.type}
-                    onChange={(e) => setNewNotification({ ...newNotification, type: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="reminder">Lembrete</option>
-                    <option value="payment">Pagamento</option>
-                    <option value="confirmation">Confirmação</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-400 block mb-2">Canal</label>
-                  <select
-                    value={newNotification.channel}
-                    onChange={(e) => setNewNotification({ ...newNotification, channel: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="email">Email</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="sms">SMS</option>
-                    <option value="in_app">In-App</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="text-sm text-gray-400 block mb-2">Aluno (ID)</label>
-                <input
-                  type="text"
-                  placeholder="student_1"
-                  value={newNotification.recipientId}
-                  onChange={(e) => setNewNotification({ ...newNotification, recipientId: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="text-sm text-gray-400 block mb-2">Assunto</label>
-                <input
-                  type="text"
-                  placeholder="Lembrete da aula de amanhã"
-                  value={newNotification.title}
-                  onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="text-sm text-gray-400 block mb-2">Mensagem</label>
-                <textarea
-                  placeholder="Escreva a mensagem aqui"
-                  value={newNotification.message}
-                  onChange={(e) => setNewNotification({ ...newNotification, message: e.target.value })}
-                  rows={4}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="text-sm text-gray-400 block mb-2">Agendar para (opcional)</label>
-                <input
-                  type="datetime-local"
-                  value={newNotification.scheduledFor}
-                  onChange={(e) => setNewNotification({ ...newNotification, scheduledFor: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <button
-                onClick={handleScheduleNotification}
-                className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition"
-              >
-                Agendar Notificação
-              </button>
+        <section className="rounded-2xl border border-slate-800 bg-slate-800/80 p-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <Sparkles className="text-indigo-300" size={18} />
+            <div>
+              <h2 className="text-2xl font-bold">Nova mensagem</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Use um template pronto ou escreva uma comunicação manual para o aluno.
+              </p>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <SearchableSelect
+              label="Aluno"
+              value={composer.recipientId}
+              onChange={(recipientId) => setComposer((currentComposer) => ({
+                ...currentComposer,
+                recipientId
+              }))}
+              options={studentOptions}
+              placeholder="Buscar aluno por nome, email ou série..."
+              emptyLabel="Nenhum aluno encontrado."
+              helperText="Selecione quem vai receber a mensagem."
+            />
+
+            <SearchableSelect
+              label="Template (opcional)"
+              value={composer.templateId}
+              onChange={handleTemplateSelect}
+              options={templateOptions}
+              placeholder="Buscar template por nome ou assunto..."
+              emptyLabel="Nenhum template disponível."
+              helperText="Ao selecionar um template, o texto é aplicado no formulário abaixo."
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-200">Canal</label>
+                <select
+                  value={composer.channel}
+                  onChange={(event) => setComposer((currentComposer) => ({
+                    ...currentComposer,
+                    channel: event.target.value as Notification['channel']
+                  }))}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
+                >
+                  <option value="in_app">In-app</option>
+                  <option value="email">E-mail</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="sms">SMS</option>
+                  <option value="push">Push</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-200">Agendar para</label>
+                <div className="relative">
+                  <Clock3 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                  <input
+                    type="datetime-local"
+                    value={formatDateTimeLocal(composer.scheduledFor)}
+                    onChange={(event) => setComposer((currentComposer) => ({
+                      ...currentComposer,
+                      scheduledFor: event.target.value
+                    }))}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 py-3 pl-11 pr-4 text-white outline-none transition focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-200">Título</label>
+              <input
+                value={composer.title}
+                onChange={(event) => setComposer((currentComposer) => ({
+                  ...currentComposer,
+                  title: event.target.value
+                }))}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
+                placeholder="Ex: Revisão da aula de amanhã"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-200">Assunto interno</label>
+              <input
+                value={composer.subject}
+                onChange={(event) => setComposer((currentComposer) => ({
+                  ...currentComposer,
+                  subject: event.target.value
+                }))}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
+                placeholder="Assunto complementar para o template."
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-200">Mensagem</label>
+              <textarea
+                value={composer.message}
+                onChange={(event) => setComposer((currentComposer) => ({
+                  ...currentComposer,
+                  message: event.target.value
+                }))}
+                rows={6}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
+                placeholder="Escreva a mensagem que o aluno vai receber."
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleSend()}
+              disabled={sending}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+            >
+              {sending ? <Loader2 size={16} className="animate-spin" /> : <SendHorizonal size={16} />}
+              {composer.scheduledFor ? 'Agendar mensagem' : 'Enviar mensagem'}
+            </button>
+
+            <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-xs leading-6 text-slate-400">
+              Os templates desta tela são os mesmos usados no Hub educacional. Mensagens in-app aparecem com destaque visual no portal do aluno.
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

@@ -170,15 +170,18 @@ export interface TeacherAnalytics {
 export interface Notification {
   id?: string;
   _id?: string;
-  type: 'reminder' | 'payment' | 'confirmation' | 'feedback' | 'general';
-  recipientId: string;
-  recipientName: string;
-  channel: 'email' | 'whatsapp' | 'sms' | 'in_app';
+  type: 'reminder' | 'payment' | 'confirmation' | 'feedback' | 'general' | 'system';
+  recipientId?: string;
+  recipientName?: string;
+  channel: 'email' | 'whatsapp' | 'sms' | 'push' | 'in_app';
   title: string;
   message: string;
   scheduledFor?: string;
   sentAt?: string;
-  status: 'pending' | 'sent' | 'failed';
+  readAt?: string;
+  entityType?: string;
+  entityId?: string;
+  status: 'pending' | 'scheduled' | 'sent' | 'delivered' | 'read' | 'failed' | 'cancelled';
   templateId?: string;
   createdAt?: string;
 }
@@ -204,12 +207,17 @@ export interface NotificationTemplate {
   id?: string;
   _id?: string;
   name: string;
-  type: 'reminder' | 'payment' | 'confirmation' | 'feedback';
-  subject: string;
+  description?: string;
+  type: 'class_reminder' | 'payment_reminder' | 'payment_overdue' | 'birthday' | 'welcome' | 'feedback' | 'report' | 'custom';
+  channel: 'email' | 'whatsapp' | 'sms' | 'push' | 'in_app';
+  subject?: string;
   body: string;
   variables: string[];
+  category?: string;
   active: boolean;
+  isDefault?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ClassFeedback {
@@ -551,6 +559,46 @@ export interface PortalActivitySummary {
 
 export interface PortalActivityDetail extends PortalActivitySummary {
   questions: Question[];
+}
+
+export interface TeacherActivitySubmissionDetail extends Submission {
+  submissionIndex: number;
+}
+
+export interface TeacherActivitySummary {
+  id: string;
+  _id: string;
+  title: string;
+  description?: string;
+  type: Activity['type'];
+  status: Activity['status'];
+  dueDate?: string;
+  totalPoints: number;
+  studentId: string;
+  studentName: string;
+  classId?: string;
+  classTitle?: string;
+  aiMetadata?: ActivityAIMetadata | null;
+  createdAt?: string;
+  updatedAt?: string;
+  submissionCount: number;
+  latestSubmission?: TeacherActivitySubmissionDetail | null;
+  needsReview: boolean;
+}
+
+export interface TeacherActivityDetail extends TeacherActivitySummary {
+  questions: Question[];
+  submissions: TeacherActivitySubmissionDetail[];
+}
+
+export interface ActivityReviewSuggestion {
+  answers: Array<{
+    questionNumber: number;
+    isCorrect: boolean;
+    pointsEarned: number;
+    feedback: string;
+  }>;
+  teacherFeedback: string;
 }
 
 // Preparação automática de aulas

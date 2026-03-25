@@ -8,6 +8,7 @@ import Payment from '../models/Payment.js';
 import Course from '../models/Course.js';
 import Activity from '../models/Activity.js';
 import LessonPreparation from '../models/LessonPreparation.js';
+import { Notification } from '../models/Notification.js';
 import {
   buildLearningSnapshots,
   buildStudentSubjectSuggestion
@@ -75,6 +76,49 @@ const serializePreparation = (preparation) => ({
   classTitle: preparation.class?.title || '',
   studentName: preparation.student?.name || ''
 });
+
+const notifyActivityRecipients = async ({ teacherId, activities, recipients }) => {
+  try {
+    const activitiesByStudent = new Map(
+      activities.map((activity) => [toId(activity.student), activity])
+    );
+
+    const notifications = recipients
+      .map((student) => {
+        const activity = activitiesByStudent.get(toId(student));
+        if (!activity) {
+          return null;
+        }
+
+        return {
+          teacher: teacherId,
+          recipientType: 'student',
+          recipientId: student._id,
+          recipientName: student.name,
+          channel: 'in_app',
+          subject: 'Nova atividade no portal',
+          body: `Você recebeu a atividade "${activity.title}". Abra o portal para responder.`,
+          sentAt: new Date(),
+          deliveredAt: new Date(),
+          status: 'delivered',
+          entityType: 'system',
+          providerResponse: {
+            type: 'activity_assigned',
+            route: '/portal/dashboard',
+            activityId: toId(activity),
+            batchId: activity.aiMetadata?.batchId || null
+          }
+        };
+      })
+      .filter(Boolean);
+
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+    }
+  } catch (error) {
+    console.error('[AI] Error notifying activity recipients:', error);
+  }
+};
 
 const getStudentGroups = async (teacherId) => {
   const teacher = await User.findById(teacherId).select('teacherWorkspace.studentGroups').lean();
@@ -453,6 +497,12 @@ router.post('/publish-activity', async (req, res) => {
     })
       .populate('student', 'name')
       .populate('class', 'title');
+
+    await notifyActivityRecipients({
+      teacherId: req.user._id,
+      activities: populatedActivities,
+      recipients
+    });
 
     res.status(201).json({
       success: true,

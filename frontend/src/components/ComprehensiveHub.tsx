@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   BarChart3, BookOpen, Share2, Clock, Zap, Shield, Award,
-  Plus, Link as LinkIcon, CheckCircle, TrendingUp
+  Plus, Link as LinkIcon, TrendingUp
 } from 'lucide-react';
-import api from '../lib/api';
+import api, { notificationsAPI } from '../lib/api';
 import type {
   StudentGrade, StudentMaterial, TeachingTemplate,
-  ReferralLink, CoursePlan
+  ReferralLink, CoursePlan, NotificationTemplate
 } from '../types';
 import toast from 'react-hot-toast';
 
@@ -18,9 +18,11 @@ const ComprehensiveHub: React.FC = () => {
   const [grades, setGrades] = useState<StudentGrade[]>([]);
   const [materials, setMaterials] = useState<StudentMaterial[]>([]);
   const [templates, setTemplates] = useState<TeachingTemplate[]>([]);
+  const [messageTemplates, setMessageTemplates] = useState<NotificationTemplate[]>([]);
   const [referral, setReferral] = useState<ReferralLink | null>(null);
   const [courses, setCourses] = useState<CoursePlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
 
   const [newMaterial, setNewMaterial] = useState({
     classId: '', className: '', topic: '', title: '', type: 'pdf' as const, url: '', description: ''
@@ -33,19 +35,51 @@ const ComprehensiveHub: React.FC = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [gradesRes, materialsRes, templatesRes, referralRes, coursesRes] = await Promise.all([
-        api.get('/grades').catch(() => ({ data: [] })),
-        api.get('/materials').catch(() => ({ data: [] })),
-        api.get('/teaching-templates').catch(() => ({ data: [] })),
-        api.get('/referral').catch(() => ({ data: null })),
-        api.get('/course-plans').catch(() => ({ data: [] }))
+      const warnings: string[] = [];
+      const safeRequest = async <T,>(label: string, loader: () => Promise<T>, fallback: T) => {
+        try {
+          return await loader();
+        } catch (error) {
+          console.error(`[ComprehensiveHub] Falha ao carregar ${label}:`, error);
+          warnings.push(label);
+          return fallback;
+        }
+      };
+
+      const [gradesData, materialsData, templatesData, referralData, coursesData, messageTemplatesData] = await Promise.all([
+        safeRequest('notas', async () => {
+          const response = await api.get<StudentGrade[]>('/grades');
+          return Array.isArray(response.data) ? response.data : [];
+        }, [] as StudentGrade[]),
+        safeRequest('materiais', async () => {
+          const response = await api.get<StudentMaterial[]>('/materials');
+          return Array.isArray(response.data) ? response.data : [];
+        }, [] as StudentMaterial[]),
+        safeRequest('templates pedagógicos', async () => {
+          const response = await api.get<TeachingTemplate[]>('/teaching-templates');
+          return Array.isArray(response.data) ? response.data : [];
+        }, [] as TeachingTemplate[]),
+        safeRequest('referência', async () => {
+          const response = await api.get<ReferralLink | null>('/referral');
+          return response.data || null;
+        }, null as ReferralLink | null),
+        safeRequest('planos de curso', async () => {
+          const response = await api.get<CoursePlan[]>('/course-plans');
+          return Array.isArray(response.data) ? response.data : [];
+        }, [] as CoursePlan[]),
+        safeRequest('templates de mensagem', async () => {
+          const response = await notificationsAPI.getTemplates();
+          return Array.isArray(response.templates) ? response.templates : [];
+        }, [] as NotificationTemplate[])
       ]);
 
-      setGrades(Array.isArray(gradesRes.data) ? gradesRes.data : []);
-      setMaterials(Array.isArray(materialsRes.data) ? materialsRes.data : []);
-      setTemplates(Array.isArray(templatesRes.data) ? templatesRes.data : []);
-      setReferral(referralRes.data || null);
-      setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : []);
+      setGrades(gradesData);
+      setMaterials(materialsData);
+      setTemplates(templatesData);
+      setMessageTemplates(messageTemplatesData);
+      setReferral(referralData);
+      setCourses(coursesData);
+      setSyncWarnings(warnings);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar alguns dados');
@@ -75,13 +109,67 @@ const ComprehensiveHub: React.FC = () => {
     toast.success('Copiado!');
   };
 
+  const renderRoadmapState = ({
+    icon: Icon,
+    title,
+    description,
+    status,
+    bullets,
+    currentSurface
+  }: {
+    icon: typeof TrendingUp;
+    title: string;
+    description: string;
+    status: string;
+    bullets: string[];
+    currentSurface: string;
+  }) => (
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-2xl">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
+              <Icon className="text-indigo-300" size={20} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{title}</h2>
+              <p className="text-sm text-slate-400 mt-1">{status}</p>
+            </div>
+          </div>
+          <p className="text-gray-300 mt-5">{description}</p>
+        </div>
+        <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+          Em preparação
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        {bullets.map((bullet) => (
+          <div key={bullet} className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+            <p className="text-sm text-slate-200">{bullet}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+        <p className="text-sm font-semibold text-white">Superfície funcional por enquanto</p>
+        <p className="text-sm text-slate-400 mt-2">{currentSurface}</p>
+      </div>
+    </div>
+  );
+
   if (loading) return <div className="text-white p-8">Carregando...</div>;
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-6">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-indigo-400 mb-2">Hub Educacional Completo</h1>
-        <p className="text-gray-400">Notas, Materiais, Templates, Referência, Preços, Cursos e mais</p>
+        <p className="text-gray-400">Notas, materiais, templates, referência, cursos e módulos em evolução.</p>
+        {syncWarnings.length > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            Alguns blocos não puderam ser sincronizados agora: {syncWarnings.join(', ')}.
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 mb-8 flex-wrap text-sm">
@@ -176,20 +264,71 @@ const ComprehensiveHub: React.FC = () => {
         {/* 🎨 TEMPLATES */}
         {activeTab === 'templates' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6">Templates de Aula</h2>
-            {templates.length === 0 ? (
-              <p className="text-gray-400">Nenhum template criado</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {templates.map((tpl) => (
-                  <div key={tpl.id} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
-                    <p className="font-semibold text-white">{tpl.name}</p>
-                    <p className="text-xs text-gray-400 mb-2">{tpl.subject} • {tpl.duration}min</p>
-                    <p className="text-sm text-gray-300 line-clamp-2">{tpl.description}</p>
+            <h2 className="text-2xl font-bold mb-6">Templates ativos do professor</h2>
+
+            <div className="space-y-8">
+              <div>
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.22em] text-slate-400">Pedagógicos</p>
+                    <p className="text-sm text-slate-500">Estruturas de aula e repertório didático do Hub.</p>
                   </div>
-                ))}
+                  <span className="px-3 py-1 rounded-full bg-slate-700 text-xs font-semibold text-slate-200">
+                    {templates.length} template(s)
+                  </span>
+                </div>
+
+                {templates.length === 0 ? (
+                  <p className="text-gray-400">Nenhum template pedagógico criado.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {templates.map((tpl) => (
+                      <div key={tpl.id} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+                        <p className="font-semibold text-white">{tpl.name}</p>
+                        <p className="text-xs text-gray-400 mb-2">{tpl.subject} • {tpl.duration}min</p>
+                        <p className="text-sm text-gray-300 line-clamp-2">{tpl.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+
+              <div>
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.22em] text-slate-400">Mensagens</p>
+                    <p className="text-sm text-slate-500">Mesma base usada na aba de mensagens do professor.</p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-indigo-600/20 text-xs font-semibold text-indigo-200">
+                    {messageTemplates.length} template(s)
+                  </span>
+                </div>
+
+                {messageTemplates.length === 0 ? (
+                  <p className="text-gray-400">Nenhum template de mensagem criado.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {messageTemplates.map((template) => (
+                      <div
+                        key={template.id || template._id}
+                        className="bg-slate-700/50 p-4 rounded-lg border border-slate-600"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-white">{template.name}</p>
+                          <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[11px] font-semibold text-slate-300">
+                            {template.channel}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {template.type} {template.subject ? `• ${template.subject}` : ''}
+                        </p>
+                        <p className="text-sm text-gray-300 line-clamp-3 mt-2">{template.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -228,40 +367,18 @@ const ComprehensiveHub: React.FC = () => {
 
         {/* 💰 PREÇOS */}
         {activeTab === 'pricing' && (
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6">Otimização de Preços</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-700/50 p-6 rounded-lg">
-                <h3 className="font-semibold text-white mb-4">Sugestão Inteligente</h3>
-                <p className="text-gray-300 mb-4">Com 10 alunos ativos de R$ 450/mês = R$ 4.500/mês</p>
-                <div className="space-y-3">
-                  <div className="bg-amber-900/20 border border-amber-700 p-3 rounded">
-                    <p className="text-sm text-amber-300">↗️ Aumente para R$ 500</p>
-                    <p className="text-xs text-gray-400">+R$ 500/mês com mesmos alunos</p>
-                  </div>
-                  <div className="bg-emerald-900/20 border border-emerald-700 p-3 rounded">
-                    <p className="text-sm text-emerald-300">✓ Cresça para 15 alunos</p>
-                    <p className="text-xs text-gray-400">= R$ 6.750/mês (50% crescimento)</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-700/50 p-6 rounded-lg">
-                <h3 className="font-semibold text-white mb-4">Simulador A/B</h3>
-                <p className="text-gray-300 text-sm mb-4">Teste novo preço com próximos alunos:</p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 bg-slate-800 rounded">
-                    <span className="text-sm">Preço Atual</span>
-                    <span className="font-bold">R$ 450</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-indigo-900/30 rounded">
-                    <span className="text-sm">Teste</span>
-                    <input type="number" defaultValue="500" className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-right" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          renderRoadmapState({
+            icon: TrendingUp,
+            title: 'Otimização de Preços',
+            status: 'Sem cálculos automáticos conectados ao financeiro real nesta rodada.',
+            description: 'Esta aba deixa de exibir sugestões fabricadas. Ela só será ativada quando o Hub puder calcular preços, retenção e crescimento a partir de pagamentos, alunos e contratos realmente persistidos.',
+            bullets: [
+              'Nenhuma recomendação de valor é mostrada sem base financeira real.',
+              'Nenhum cenário A/B é sugerido antes da integração com contratos e pagamentos.',
+              'Quando a integração existir, os números daqui precisarão bater com o Financeiro.'
+            ],
+            currentSurface: 'Use a aba Financeiro para consultar receita e pendências já disponíveis no shell do professor.'
+          })
         )}
 
         {/* 🎓 CURSOS */}
@@ -286,53 +403,34 @@ const ComprehensiveHub: React.FC = () => {
 
         {/* ⏰ LEMBRETES */}
         {activeTab === 'reminders' && (
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6">Lembretes Inteligentes</h2>
-            <div className="space-y-3">
-              <div className="bg-amber-900/20 border border-amber-700 p-4 rounded-lg flex items-start gap-3">
-                <Clock className="text-amber-400 mt-1" size={20} />
-                <div>
-                  <p className="font-semibold text-white">Você não cobra 3 alunos há 30 dias</p>
-                  <p className="text-xs text-gray-400">Action: Envie lembrete de pagamento</p>
-                </div>
-              </div>
-              <div className="bg-amber-900/20 border border-amber-700 p-4 rounded-lg flex items-start gap-3">
-                <Clock className="text-amber-400 mt-1" size={20} />
-                <div>
-                  <p className="font-semibold text-white">João faltou 2 aulas</p>
-                  <p className="text-xs text-gray-400">Action: Verifique se está interessado</p>
-                </div>
-              </div>
-              <div className="bg-emerald-900/20 border border-emerald-700 p-4 rounded-lg flex items-start gap-3">
-                <CheckCircle className="text-emerald-400 mt-1" size={20} />
-                <div>
-                  <p className="font-semibold text-white">Próxima avaliação de Maria em 5 dias</p>
-                  <p className="text-xs text-gray-400">Prepare material de revisão</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          renderRoadmapState({
+            icon: Clock,
+            title: 'Lembretes Inteligentes',
+            status: 'Nenhum alerta automático é emitido aqui sem critérios persistidos.',
+            description: 'A versão anterior exibida nesta tela parecia viva, mas usava textos inventados. Agora o módulo deixa claro que lembretes só serão publicados quando houver gatilhos auditados ligados a frequência, pagamento, notificações e atividades.',
+            bullets: [
+              'Não mostramos faltas, atrasos ou cobranças sem fonte confirmada.',
+              'Os futuros lembretes precisarão ser reconciliados com Mensagens e Notificações.',
+              'Toda automação pedagógica ou financeira deverá deixar rastro observável no sistema.'
+            ],
+            currentSurface: 'Use Mensagens, Notificações e Atividades para acompanhar os fluxos que já estão ativos hoje.'
+          })
         )}
 
         {/* 📅 AGENDAMENTO */}
         {activeTab === 'schedule' && (
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6">Análise de Horários</h2>
-            <div className="space-y-4">
-              <div className="bg-emerald-900/20 border border-emerald-700 p-4 rounded-lg">
-                <p className="font-semibold text-white">Seu melhor engagement</p>
-                <p className="text-sm text-emerald-300 mt-2">Sexta-feira: 95% de presença e engajamento alto</p>
-              </div>
-              <div className="bg-emerald-900/20 border border-emerald-700 p-4 rounded-lg">
-                <p className="font-semibold text-white">Comparação por período</p>
-                <p className="text-sm text-emerald-300 mt-2">Alunos da manhã: 20% melhor desempenho vs à noite</p>
-              </div>
-              <div className="bg-indigo-900/20 border border-indigo-700 p-4 rounded-lg">
-                <p className="font-semibold text-white">Sugestão</p>
-                <p className="text-sm text-indigo-300 mt-2">Abra mais vagas segunda à noite - 3 solicitações em fila</p>
-              </div>
-            </div>
-          </div>
+          renderRoadmapState({
+            icon: Shield,
+            title: 'Análise de Horários',
+            status: 'Sem recomendações de agenda enquanto o motor não estiver ligado aos dados reais de aulas e presença.',
+            description: 'Recomendações de melhor horário, engajamento por turno e expansão de vagas só podem existir quando a agenda real, presença e histórico de turmas estiverem sincronizados. Até lá, a tela permanece honesta sobre o que ainda falta integrar.',
+            bullets: [
+              'Não exibimos percentuais de presença ou engajamento sem base observável.',
+              'Nenhuma sugestão comercial de horário é emitida sem demanda registrada.',
+              'A futura versão desta análise deve conversar com Calendário e Agendamento Inteligente.'
+            ],
+            currentSurface: 'Use Calendário, Aulas e Agendamento Inteligente no AI Hub para os fluxos já operacionais.'
+          })
         )}
       </div>
     </div>

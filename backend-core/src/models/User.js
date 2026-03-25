@@ -243,7 +243,7 @@ userSchema.methods.canAccess = function() {
 };
 
 userSchema.virtual('referralUrl').get(function() {
-  return `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?ref=${this.referralCode}`;
+  return `${process.env.FRONTEND_URL || 'http://localhost:5173'}/professor/login?ref=${encodeURIComponent(this.referralCode)}`;
 });
 
 export default mongoose.model('User', userSchema);

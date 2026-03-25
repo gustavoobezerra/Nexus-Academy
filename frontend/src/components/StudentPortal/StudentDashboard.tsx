@@ -60,6 +60,7 @@ export const StudentDashboard = () => {
   const [joiningTeacher, setJoiningTeacher] = useState(false);
   const [notifications, setNotifications] = useState<PortalNotification[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -202,6 +203,7 @@ export const StudentDashboard = () => {
     setNotificationCount((currentCount) => Math.max(currentCount - (notification.readAt ? 0 : 1), 0));
 
     const route = notification.route || (notification.gameId ? `/portal/hangman?gameId=${notification.gameId}` : '/portal/hangman');
+    setShowNotificationsPanel(false);
     navigate(route);
   };
 
@@ -241,6 +243,12 @@ export const StudentDashboard = () => {
     { id: 'performance', label: 'Desempenho', icon: TrendingUp },
     { id: 'chat', label: 'Falar com Professor', icon: MessageCircle }
   ];
+  const pendingActivitiesCount = activities.filter((activity) => activity.status === 'published').length;
+  const sectionIndicators: Record<string, number> = {
+    dashboard: notificationCount,
+    activities: pendingActivitiesCount,
+    classes: classes.filter((cls: Class) => cls.status === 'in_progress').length
+  };
 
   return (
     <div className={`flex h-screen w-screen overflow-hidden ${isDark ? 'dark' : ''}`}>
@@ -275,11 +283,16 @@ export const StudentDashboard = () => {
               >
                 <Icon size={20} />
                 <span>{item.label}</span>
-                {item.id === 'chat' && unreadMessages > 0 && (
+                {(item.id === 'chat' && unreadMessages > 0) ? (
                   <span className="ml-auto w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                     {unreadMessages}
                   </span>
-                )}
+                ) : sectionIndicators[item.id] > 0 ? (
+                  <span className="ml-auto flex items-center gap-2">
+                    <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_6px_rgba(239,68,68,0.12)]" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400">novo</span>
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -339,16 +352,97 @@ export const StudentDashboard = () => {
                 Olá, {student.name}! 👋
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <button className="relative p-2 rounded-xl hover:bg-slate-700 transition-colors">
-                <Bell size={22} className="text-slate-400" />
-                {notificationCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowNotificationsPanel((currentValue) => !currentValue)}
+                  className={`relative rounded-xl p-2 transition-colors ${
+                    isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-100'
+                  }`}
+                  aria-label="Abrir notificações"
+                  aria-expanded={showNotificationsPanel}
+                >
+                  <Bell size={22} className={isDark ? 'text-slate-300' : 'text-slate-600'} />
+                  {notificationCount > 0 && (
+                    <>
+                      <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500"></span>
+                      <span className="absolute right-0.5 top-0.5 h-4 w-4 rounded-full border border-red-400/40 animate-ping"></span>
+                    </>
+                  )}
+                </button>
+
+                {showNotificationsPanel && (
+                  <div
+                    className={`absolute right-0 top-full z-20 mt-3 w-[22rem] rounded-2xl border p-4 shadow-2xl ${
+                      isDark ? 'border-slate-700 bg-slate-900' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Notificações</p>
+                        <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {notificationCount > 0 ? `${notificationCount} nova(s) agora` : 'Nenhuma nova notificação'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowNotificationsPanel(false)}
+                        className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
+                          isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        Fechar
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {notifications.length === 0 ? (
+                        <div className={`rounded-xl border border-dashed p-4 text-sm ${
+                          isDark ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'
+                        }`}>
+                          Sem alertas novos por aqui.
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <button
+                            key={notification.id}
+                            type="button"
+                            onClick={() => void handleOpenNotification(notification)}
+                            className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                              !notification.readAt
+                                ? 'border-rose-400/30 bg-rose-500/10'
+                                : isDark
+                                  ? 'border-slate-800 bg-slate-950'
+                                  : 'border-slate-200 bg-slate-50'
+                            }`}
+                          >
+                            <p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{notification.title}</p>
+                            <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{notification.message}</p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-                <User className="text-white" size={24} />
               </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/portal/profile')}
+                className={`flex items-center gap-3 rounded-2xl px-3 py-2 transition-colors ${
+                  isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-100'
+                }`}
+                aria-label="Abrir perfil"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                  <User className="text-white" size={22} />
+                </div>
+                <div className="hidden text-left sm:block">
+                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>Meu perfil</p>
+                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Metas e preferências</p>
+                </div>
+              </button>
             </div>
           </div>
         </header>
@@ -633,7 +727,7 @@ const DashboardContent = ({
     )}
 
     {/* Quick Actions */}
-    <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+    <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg ${notifications.length > 0 ? 'ring-1 ring-rose-500/20' : ''}`}>
       <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
         Ações Rápidas
       </h3>
@@ -694,7 +788,7 @@ const DashboardContent = ({
     )}
 
     {/* Recent Activities */}
-    <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg`}>
+    <div className={`${isDark ? 'bg-slate-900' : 'bg-white'} rounded-xl p-6 shadow-lg ${activities.some((activity) => activity.status === 'published') ? 'ring-1 ring-indigo-500/30' : ''}`}>
       <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>
         Atividades Recentes
       </h3>
