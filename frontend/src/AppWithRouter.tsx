@@ -50,6 +50,7 @@ import BrandLogo from './components/BrandLogo';
 import { HourBankManagement } from './components/HourBankManagement';
 import { ContractManager } from './components/ContractManager';
 import MessageTemplatesManager from './components/MessageTemplatesManager';
+import TeacherActivitiesWorkspace from './components/TeacherActivitiesWorkspace';
 import useTeacherWorkspaceData from './hooks/useTeacherWorkspaceData';
 import TeacherAIHub from './components/ai-hub/TeacherAIHub';
 import TeacherAssistantWorkspace from './components/ai-hub/TeacherAssistantWorkspace';
@@ -93,6 +94,7 @@ const navigationSections: NavigationSection[] = [
       { id: 'ai-hub', label: 'AI Hub', note: 'Assistência inteligente', icon: Brain },
       { id: 'aulas', label: 'Aulas', note: 'Agenda e execução', icon: Video },
       { id: 'students', label: 'Alunos', note: 'Base ativa', icon: Users },
+      { id: 'teacher-activities', label: 'Atividades', note: 'Envios e correções', icon: BookOpen },
       { id: 'calendar', label: 'Calendário', note: 'Planejamento', icon: CalendarDays }
     ]
   },
@@ -128,6 +130,11 @@ const shellSectionMeta: Record<string, ShellSectionMeta> = {
     eyebrow: 'Base ativa',
     title: 'Gestão de Alunos',
     subtitle: 'Cadastros, convite público e acompanhamento da carteira de alunos.'
+  },
+  'teacher-activities': {
+    eyebrow: 'Operação pedagógica',
+    title: 'Atividades Enviadas',
+    subtitle: 'Veja para quem cada atividade foi enviada, acompanhe respostas e corrija com apoio de IA ou manualmente.'
   },
   calendar: {
     eyebrow: 'Planejamento',
@@ -288,9 +295,19 @@ function AppWithRouter() {
 
   useEffect(() => {
     if (!isStudentPortal && !isPublicRoute) {
-      const count = alertService.getUnreadCount();
-      // ATENÇÃO: setState em useEffect pode causar re-renders. Considere usar useCallback ou mover lógica.
-      setUnreadAlerts(count);
+      const syncUnreadAlerts = async () => {
+        try {
+          const count = await alertService.fetchUnreadCount();
+          setUnreadAlerts(count);
+        } catch {
+          setUnreadAlerts(alertService.getUnreadCount());
+        }
+      };
+
+      void syncUnreadAlerts();
+      const interval = window.setInterval(() => {
+        void syncUnreadAlerts();
+      }, 15000);
 
       const onboardingConcluido = localStorage.getItem('onboarding_concluido') === 'true'
         || localStorage.getItem('onboarding_completed') === 'true'
@@ -303,6 +320,8 @@ function AppWithRouter() {
       } else {
         setMostrarOnboarding(false);
       }
+
+      return () => window.clearInterval(interval);
     }
   }, [isStudentPortal, isPublicRoute, isAuthenticated, teacherUser]);
 
@@ -489,8 +508,15 @@ function AppWithRouter() {
     );
   }
 
+  const pendingTeacherReviews = teacherWorkspace.data.activities.filter((activity) => activity.status === 'completed').length;
+  const sectionIndicators: Record<string, number> = {
+    automation: unreadAlerts,
+    'teacher-activities': pendingTeacherReviews
+  };
+
   const ItemNavegacao = ({ item }: { item: NavigationItem }) => {
     const Icon = item.icon;
+    const indicatorCount = sectionIndicators[item.id] || 0;
 
     return (
       <button
@@ -501,11 +527,21 @@ function AppWithRouter() {
         aria-label={item.label}
         title={item.label}
       >
-        <div className="rounded-[1rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-2.5 text-[var(--brand-indigo)]">
+        <div className="relative rounded-[1rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-2.5 text-[var(--brand-indigo)]">
           <Icon size={18} />
+          {indicatorCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-3 w-3 rounded-full bg-[var(--brand-red)] shadow-[0_0_0_6px_rgba(239,68,68,0.12)]" />
+          ) : null}
         </div>
         <div className="min-w-0">
-          <span className="block text-sm font-bold">{item.label}</span>
+          <div className="flex items-center gap-2">
+            <span className="block text-sm font-bold">{item.label}</span>
+            {indicatorCount > 0 ? (
+              <span className="rounded-full bg-[rgba(239,68,68,0.16)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--brand-red)]">
+                novo
+              </span>
+            ) : null}
+          </div>
           <span className="nexus-sidebar-note">{item.note}</span>
         </div>
       </button>
@@ -709,6 +745,12 @@ function AppWithRouter() {
                 )
               )}
               {abaAtiva === 'students' && <StudentsPage />}
+              {abaAtiva === 'teacher-activities' && (
+                <TeacherActivitiesWorkspace
+                  isDark={isDark}
+                  onRefreshWorkspace={teacherWorkspace.refresh}
+                />
+              )}
               {abaAtiva === 'calendar' && <CalendarView />}
               {abaAtiva === 'finance' && <FinancialPage />}
               {abaAtiva === 'analytics' && <TeacherAnalyticsDashboard />}

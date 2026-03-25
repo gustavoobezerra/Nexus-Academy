@@ -1,212 +1,116 @@
 # Catalogo de Skills
 
-Este documento cataloga as skills disponiveis nesta sessao e resume quando usar cada uma.
+Este documento resume as skills mais importantes para o Nexus Academy e explica como elas sao descobertas no workspace.
 
-## Escopo
+Nao tente usar este arquivo como indice completo da colecao de terceiros em `.agent/skills/skills/`. Para isso, use o catalogo proprio daquela colecao.
 
-- Fonte principal: lista de skills exposta pelo contexto do `AGENTS`.
-- Estado local do projeto: a pasta `.agent/skills` agora contem a skill local `nexus-deep-review`.
-- Total catalogado: 8 entradas considerando a lista da sessao mais a skill local do projeto, com 7 nomes efetivamente distintos porque `skill-creator` aparece em 2 variantes.
+## Como a descoberta funciona
 
-## Matriz de Decisao Curta
+- Skills expostas pela sessao atual do agente continuam sendo a fonte principal para auto-trigger no ambiente.
+- Skills customizadas do projeto vivem em `.agent/skills/<nome-da-skill>`.
+- A colecao de terceiros instalada em `.agent/skills/skills/` tem indice proprio.
+- O indice gerado de `.agent/skills/skills_index.json` e o `web-app/public/skills.json` indexam apenas a colecao de terceiros.
+- Portanto, skills customizadas do Nexus devem ser descobertas por:
+  - `AGENTS.md`
+  - este `CATALOGO_SKILLS.md`
+  - referencia direta por caminho/nome quando necessario
+
+## Skills locais do Nexus
+
+| Skill | Caminho | Quando usar |
+|---|---|---|
+| `nexus-academy-review-specialist` | `.agent/skills/nexus-academy-review-specialist/SKILL.md` | Review especializado do Nexus com foco em contratos, tenant safety, AI Hub, portal e fluxo fim a fim |
+| `nexus-system-audit` | `.agent/skills/nexus-system-audit/SKILL.md` | Auditoria ampla do sistema, procurando drift arquitetural, fluxos desconectados e riscos cross-surface |
+| `nexus-agent-ops` | `.agent/skills/nexus-agent-ops/SKILL.md` | Criar, delegar, administrar, reutilizar e encerrar agentes no contexto do Nexus Academy |
+
+## Correcao de inventario
+
+- O catalogo antigo citava `nexus-deep-review`, mas esse caminho nao representa o estado atual do workspace.
+- As skills locais realmente presentes nesta rodada sao:
+  - `nexus-academy-review-specialist`
+  - `nexus-system-audit`
+  - `nexus-agent-ops`
+
+## Matriz de decisao curta
 
 | Se o pedido for... | Use esta skill | Motivo |
 |---|---|---|
-| revisar PR, commit, diff ou mudancas de codigo | `code-review` | prioriza bugs, seguranca e regressao |
-| testar tela, login, formulario, responsividade ou browser flow | `playwright` | automatiza navegador e fluxo real |
+| revisar diff, commit, PR ou mudancas de codigo | `code-review` | prioriza bugs, seguranca, regressao e testes |
+| testar browser, login, formulario, responsividade ou tirar screenshot | `playwright` | automatiza navegador e fluxo real |
 | publicar no Render | `render-deploy` | cobre `render.yaml`, servicos e deploy |
-| consultar docs da OpenAI ou escolher modelo atual | `openai-docs` | usa fonte oficial e atual |
-| revisar o Nexus Academy inteiro com jornadas e contratos | `nexus-deep-review` | audita front, back, APIs e fluxos professor/aluno |
-| criar ou atualizar uma skill para Codex | `skill-creator` (`.codex/.system`) | segue o formato de skills do Codex |
-| criar ou atualizar uma skill para Claude | `skill-creator` (`.agents`) | segue o formato do ecossistema Claude |
-| instalar skill pronta | `skill-installer` | lista e instala skills disponiveis |
+| consultar docs oficiais da OpenAI ou escolher modelo atual | `openai-docs` | usa fonte oficial e atual |
+| criar ou atualizar skill do ecossistema Codex | `skill-creator` da `.codex/.system` | segue o formato e o fluxo do Codex |
+| criar ou atualizar skill do ecossistema Claude legado | `skill-creator` da `.agents` | segue o formato da colecao Claude |
+| instalar skill pronta | `skill-installer` | instala skills curadas ou de outros repos |
+| revisar o Nexus Academy com foco em contrato e regressao | `nexus-academy-review-specialist` | entende teacher shell, AI Hub, portal, seed e fallback |
+| auditar o Nexus Academy de ponta a ponta | `nexus-system-audit` | olha rotas, persistencia, journeys e drift arquitetural |
+| abrir, dividir, coordenar ou encerrar subagentes no Nexus | `nexus-agent-ops` | aplica orquestracao especifica do projeto |
 
-## Guia Rapido
+## Guia rapido por skill
 
-| Skill | Quando usar | Nao usar quando |
-|---|---|---|
-| `code-review` | Revisar diff, commit, range git ou mudancas de codigo | O objetivo for implementar mudancas, nao revisar |
-| `playwright` | Testar site, fluxo de login, formulario, responsividade, screenshot, automacao de browser | A tarefa nao envolver navegador |
-| `render-deploy` | Publicar app no Render, gerar `render.yaml`, criar servicos no Render | O deploy for em outra nuvem/plataforma |
-| `skill-creator` (`.agents`) | Criar ou atualizar uma skill voltada ao ecossistema Claude | O objetivo for apenas instalar uma skill existente |
-| `openai-docs` | Consultar docs oficiais da OpenAI, escolher modelo atual, upgrade GPT-5.4 | A pergunta nao for sobre produtos/docs da OpenAI |
-| `nexus-deep-review` | Revisar profundamente este SaaS, incluindo jornadas professor/aluno, rotas, APIs e contratos | O pedido for apenas um review rapido de diff isolado |
-| `skill-creator` (`.codex/.system`) | Criar ou atualizar skill voltada ao ecossistema Codex | O objetivo for apenas catalogar ou instalar skills |
-| `skill-installer` | Listar skills instalaveis e instalar skills curadas ou de outros repos | A skill ja estiver instalada e o usuario quiser edita-la |
-
-## Catalogo Completo
-
-### 1. `code-review`
+### `code-review`
 
 - Origem: `C:/Users/User/.agents/skills/code-review/SKILL.md`
-- Objetivo: revisar mudancas de codigo com foco em corretude, seguranca, performance e qualidade.
-- Entradas esperadas:
-  - diff em texto
-  - hash de commit
-  - range git
-  - requisitos da tarefa
-- Quando usar:
-  - review de PR
-  - review de commit
-  - auditoria tecnica de mudancas
-- Como opera:
-  - obtem diff
-  - le arquivos completos alterados
-  - classifica achados em `P0` a `P3`
-  - responde com veredito (`APPROVE`, `REQUEST CHANGES`, `NEEDS DISCUSSION`)
-- Valor principal:
-  - bom para achar bug funcional, regressao, falha de autorizacao, N+1, exposicao de segredo
+- Use quando o usuario pedir review de diff, commit, range git ou mudancas de codigo.
+- Melhor quando o foco principal e corretude, seguranca, regressao e cobertura.
 
-### 2. `playwright`
+### `playwright`
 
 - Origem: `C:/Users/User/.agents/skills/playwright/SKILL.md`
-- Objetivo: automacao de navegador com Playwright.
-- Quando usar:
-  - testar fluxo de cadastro/login
-  - validar layout responsivo
-  - preencher formulario
-  - verificar links quebrados
-  - tirar screenshot
-- Fluxo recomendado pela skill:
-  - detectar servidores locais
-  - escrever script temporario em `/tmp`
-  - executar via `run.js`
-  - reportar resultado
-- Regras importantes:
-  - por padrao usa browser visivel
-  - evitar criar teste dentro do projeto do usuario para tarefas pontuais
-  - preferir `waitForURL` e `waitForSelector` em vez de timeout fixo
+- Use quando a tarefa exigir browser real, login, formulario, screenshot ou fluxo visual.
+- Evite quando a tarefa nao envolver navegador.
 
-### 3. `render-deploy`
+### `render-deploy`
 
 - Origem: `C:/Users/User/.codex/skills/render-deploy/SKILL.md`
-- Objetivo: deploy no Render por Blueprint (`render.yaml`) ou criacao direta.
-- Quando usar:
-  - hospedar app no Render
-  - gerar `render.yaml`
-  - configurar web service, worker, cron ou database no Render
-- Decisao principal:
-  - app simples, um servico: criacao direta
-  - multi-servico, banco, worker, cron, IaC: Blueprint
-- Dependencias relevantes:
-  - git remote para fluxo baseado em repo
-  - MCP do Render ou CLI do Render
-  - possivel escalacao para chamadas de rede
-- Valor principal:
-  - evita deploy improvisado e obriga checagem de runtime, env vars, banco e deeplink de dashboard
+- Use quando o objetivo for publicar o app no Render ou revisar `render.yaml`.
 
-### 4. `skill-creator` da pasta `.agents`
-
-- Origem: `C:/Users/User/.agents/skills/skill-creator/SKILL.md`
-- Objetivo: guiar criacao de skills para Claude.
-- Quando usar:
-  - desenhar uma skill nova
-  - atualizar uma skill existente
-  - estruturar `SKILL.md`, `scripts/`, `references/`, `assets/`
-- Pontos fortes:
-  - enfatiza economia de contexto
-  - separa bem o que vai em `SKILL.md` e o que vai em `references`
-  - inclui fluxo de inicializacao e empacotamento com `package_skill.py`
-- Melhor para:
-  - skills mais genericas do ecossistema Claude
-
-### 5. `openai-docs`
+### `openai-docs`
 
 - Origem: `C:/Users/User/.codex/skills/.system/openai-docs/SKILL.md`
-- Objetivo: responder usando docs oficiais e atuais da OpenAI.
-- Quando usar:
-  - como usar API da OpenAI
-  - qual modelo atual escolher
-  - upgrade para GPT-5.4
-  - ajustes de prompting ligados a GPT-5.4
-- Regras centrais:
-  - priorizar MCP de docs da OpenAI
-  - usar refs locais apenas como apoio
-  - fallback web apenas em dominio oficial da OpenAI
-- Valor principal:
-  - reduz risco de responder com doc desatualizada ou modelo errado
+- Use quando a pergunta for sobre modelos, APIs e documentacao oficial da OpenAI.
 
-### 6. `skill-creator` da pasta `.codex/.system`
+### `skill-creator` da `.codex/.system`
 
 - Origem: `C:/Users/User/.codex/skills/.system/skill-creator/SKILL.md`
-- Objetivo: criar ou atualizar skills para Codex.
-- Quando usar:
-  - o alvo e o ecossistema Codex
-  - a skill precisa incluir metadados de UI em `agents/openai.yaml`
-  - a skill precisa de validacao rapida e forward-testing
-- Diferencas em relacao ao `skill-creator` da `.agents`:
-  - inclui `agents/openai.yaml`
-  - fala em `quick_validate.py`
-  - trata explicitamente `forward-testing` com subagentes
-  - tem convencoes de naming mais detalhadas
-- Melhor para:
-  - skills que vao viver no fluxo/UX do Codex
+- Use quando a skill-alvo precisa seguir o fluxo/UX do Codex.
+- E a variante preferida quando o pedido menciona criar ou evoluir skill para o ambiente atual.
 
-### 7. `nexus-deep-review`
+### `skill-creator` da `.agents`
 
-- Origem: `.agent/skills/nexus-deep-review/SKILL.md`
-- Objetivo: fazer auditoria full-stack profunda do Nexus Academy com rastreamento de jornadas, botoes, rotas e contratos de API.
-- Quando usar:
-  - review completo do projeto
-  - auditoria detalhada de front e back
-  - verificacao de fluxo professor/aluno
-  - checagem se um botao, link, redirect ou endpoint realmente fecha a cadeia
-- Diferenciais:
-  - forca inventario inicial do sistema
-  - exige cobertura de frontend, backend e API contracts
-  - exige rastrear jornadas de professor e aluno
-  - inclui script `collect_inventory.py` para acelerar mapeamento
-- Melhor para:
-  - pedidos amplos do tipo "revise absolutamente tudo"
+- Origem: `C:/Users/User/.agents/skills/skill-creator/SKILL.md`
+- Use quando a skill-alvo pertence ao ecossistema Claude/Antigravity legado.
 
-### 8. `skill-installer`
+### `skill-installer`
 
 - Origem: `C:/Users/User/.codex/skills/.system/skill-installer/SKILL.md`
-- Objetivo: listar e instalar skills no `$CODEX_HOME/skills`.
-- Quando usar:
-  - o usuario quer ver skills disponiveis para instalar
-  - quer instalar uma skill curada
-  - quer instalar skill de outro repo GitHub
-- Como opera:
-  - lista skills via script helper
-  - instala skill por repo/path
-  - usa rede, entao geralmente precisa de escalacao fora do sandbox
-- Regras importantes:
-  - se instalar, avisar para reiniciar o Codex
-  - skills `.system` normalmente ja vem preinstaladas
+- Use quando o usuario quer instalar skill pronta, nao desenhar uma nova.
 
-## Duplicidades e Diferencas
+### `nexus-academy-review-specialist`
 
-### `skill-creator` aparece duas vezes
+- Origem: `.agent/skills/nexus-academy-review-specialist/SKILL.md`
+- Skill local especializada em review do Nexus Academy.
+- Prioriza contratos frontend/backend, fluxo professor/aluno, AI fallback e tenant safety.
 
-- `C:/Users/User/.agents/skills/skill-creator/SKILL.md`
-  - focada em Claude
-  - empacotamento com `package_skill.py`
-- `C:/Users/User/.codex/skills/.system/skill-creator/SKILL.md`
-  - focada em Codex
-  - inclui `agents/openai.yaml`, `quick_validate.py` e forward-testing
+### `nexus-system-audit`
 
-### Recomendacao pratica
+- Origem: `.agent/skills/nexus-system-audit/SKILL.md`
+- Skill local para auditoria ampla do sistema.
+- Boa para pedidos do tipo "revise o sistema inteiro", "procure incoerencias" ou "cheque fluxos fim a fim".
 
-- Se a skill vai ser usada dentro do ambiente Codex, prefira a variante de `skill-creator` em `.codex/.system`.
-- Se a referencia de trabalho for o ecossistema Claude legado, use a variante da `.agents`.
+### `nexus-agent-ops`
 
-## Ordem de Escolha Recomendada
+- Origem: `.agent/skills/nexus-agent-ops/SKILL.md`
+- Skill local para orquestracao de agentes no Nexus Academy.
+- Use quando o pedido envolver:
+  - spawnar ou administrar agentes;
+  - dividir backend, frontend, portal e testes;
+  - decidir entre reutilizar ou abrir novo agente;
+  - consolidar memoria operacional antes/depois da delegacao.
 
-1. Se o pedido for revisar mudanca de codigo: `code-review`
-2. Se o pedido envolver browser: `playwright`
-3. Se o pedido for deploy no Render: `render-deploy`
-4. Se o pedido for docs OpenAI: `openai-docs`
-5. Se o pedido for auditoria profunda do Nexus Academy: `nexus-deep-review`
-6. Se o pedido for criar/editar skill:
-   - skill de Codex: `skill-creator` de `.codex/.system`
-   - skill de Claude: `skill-creator` de `.agents`
-7. Se o pedido for instalar skill pronta: `skill-installer`
+## Recomendacoes praticas
 
-## Observacao sobre o Projeto
-
-- Skill local criada neste projeto: `.agent/skills/nexus-deep-review`.
-- Se voce quiser, o proximo passo natural e eu gerar uma segunda versao deste catalogo em formato mais operacional, por exemplo:
-  - matriz de decisao
-  - fluxograma
-  - tabela com exemplos reais de prompts que disparam cada skill
+- Para memoria e contexto do projeto, leia primeiro `AGENTS.md`.
+- Para criar ou administrar agentes dentro do Nexus, prefira `nexus-agent-ops`.
+- Para review profundo do produto, prefira uma das skills locais do Nexus em vez de uma skill generica.
+- Para skills de terceiros, parta da colecao em `.agent/skills/skills/` e do catalogo proprio dela.

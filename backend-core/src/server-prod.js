@@ -31,6 +31,7 @@ import onboardingRoutes from './routes/onboarding.js';
 import studentsRoutes from './routes/students.js';
 import paymentsRoutes from './routes/payments.js';
 import classesRoutes from './routes/classes.js';
+import activitiesRoutes from './routes/activities.js';
 import reportsRoutes from './routes/reports.js';
 import liveClassRoutes from './routes/liveClass.js';
 import dailyVideoRoutes from './routes/dailyVideo.js';
@@ -103,6 +104,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(sanitizeInput);
 app.use(correlationId);
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+app.get('/api/health', (req, res) => {
+  const dbConnected = isDBConnected();
+  if (process.env.NODE_ENV === 'production' && !dbConnected) {
+    return res.status(503).json({
+      status: 'degraded',
+      database: 'disconnected'
+    });
+  }
+  return res.json({
+    status: 'ok',
+    database: dbConnected ? 'connected' : 'disconnected'
+  });
+});
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -359,6 +374,7 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/classes', classesRoutes);
+app.use('/api/activities', activitiesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/live-class', liveClassRoutes);
 app.use('/api/daily', dailyVideoRoutes);
@@ -383,20 +399,6 @@ app.use('/api/hangman', hangmanRoutes);
 app.use('/api/teaching-assistant', teachingAssistantRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
-
-app.get('/api/health', (req, res) => {
-  const dbConnected = isDBConnected();
-  if (process.env.NODE_ENV === 'production' && !dbConnected) {
-    return res.status(503).json({
-      status: 'degraded',
-      database: 'disconnected'
-    });
-  }
-  return res.json({
-    status: 'ok',
-    database: dbConnected ? 'connected' : 'disconnected'
-  });
-});
 
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', {

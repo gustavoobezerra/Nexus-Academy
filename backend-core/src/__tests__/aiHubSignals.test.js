@@ -15,10 +15,16 @@ import aiAssistantRoutes from '../routes/aiAssistant.js';
 import portalProfileRoutes from '../routes/portal/profile.js';
 import pronunciationRoutes from '../routes/pronunciation.js';
 import classesRoutes from '../routes/classes.js';
+import activitiesRoutes from '../routes/activities.js';
+import notificationsRoutes from '../routes/notifications.js';
+import hubRoutes from '../routes/hub.js';
 import { recordActivitySubmissionSignals } from '../services/learningSignalsService.js';
 import aiAssistantService from '../services/aiAssistantService.js';
 import { analyzePronunciation } from '../services/pronunciationService.js';
 import { ensureDevelopmentDemoData } from '../dev/ensureDemoData.js';
+import { Notification, NotificationTemplate } from '../models/Notification.js';
+import { authenticateOptional } from '../middleware/auth.js';
+import { tenantContextMiddleware } from '../middleware/tenantAware.js';
 
 const app = express();
 app.use(express.json());
@@ -26,6 +32,9 @@ app.use('/api/ai', aiAssistantRoutes);
 app.use('/api/portal', portalProfileRoutes);
 app.use('/api/portal/pronunciation', pronunciationRoutes);
 app.use('/api/classes', classesRoutes);
+app.use('/api/activities', activitiesRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api', hubRoutes);
 
 const createTeacherToken = (teacherId) => global.generateAuthToken(jwt, teacherId);
 
@@ -441,6 +450,168 @@ describe('AI Hub and learning signals integration', () => {
     const reloadedActivity = await Activity.findById(activity._id).lean();
     expect(reloadedActivity.submissions).toHaveLength(0);
     expect(reloadedActivity.status).toBe('published');
+  });
+
+  it('should keep essay activities pending review until the teacher grades them', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id, {
+      subject: 'Redação'
+    });
+    const studentToken = createPortalToken(student._id, teacher._id);
+    const teacherToken = createTeacherToken(teacher._id);
+
+    const activity = await Activity.create({
+      teacher: teacher._id,
+      student: student._id,
+      title: 'Resposta dissertativa',
+      description: 'Explique o argumento principal do texto.',
+      type: 'exercise',
+      status: 'published',
+      questions: [
+        {
+          questionNumber: 1,
+          type: 'essay',
+          question: 'Explique com suas palavras o argumento principal do texto-base.',
+          points: 10,
+          difficulty: 'medium',
+          correctAnswer: 'A resposta deve identificar a tese central e sustentá-la com um exemplo coerente.',
+          explanation: 'O aluno precisa retomar a tese e mostrar compreensão real do texto.',
+          topics: ['Argumentação']
+        }
+      ]
+    });
+
+    const submitResponse = await request(app)
+      .post(`/api/portal/activities/${activity._id}/submissions`)
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({
+        answers: [{ questionNumber: 1, answer: 'O texto defende uma tese e traz um exemplo para sustentá-la.' }]
+      });
+
+    expect(submitResponse.status).toBe(201);
+    expect(submitResponse.body.activity.status).toBe('completed');
+
+    const signalsBeforeReview = await LearningSignal.find({
+      teacher: teacher._id,
+      student: student._id,
+      activity: activity._id
+    }).lean();
+    expect(signalsBeforeReview).toHaveLength(0);
+
+    const reviewResponse = await request(app)
+      .put(`/api/activities/teacher/${activity._id}/submissions/0/review`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        reviewMode: 'manual',
+        teacherFeedback: 'Boa síntese. Continue fortalecendo a justificativa final.',
+        answers: [
+          {
+            questionNumber: 1,
+            isCorrect: true,
+            pointsEarned: 10,
+            feedback: 'Você identificou corretamente a tese e conectou o exemplo principal.'
+          }
+        ]
+      });
+
+    expect(reviewResponse.status).toBe(200);
+    expect(reviewResponse.body.activity.status).toBe('graded');
+    expect(reviewResponse.body.activity.latestSubmission.teacherFeedback).toContain('Boa síntese');
+
+    const signalsAfterReview = await LearningSignal.find({
+      teacher: teacher._id,
+      student: student._id,
+      activity: activity._id
+    }).lean();
+    expect(signalsAfterReview.length).toBeGreaterThan(0);
+
+    const studentNotifications = await Notification.find({
+      teacher: teacher._id,
+      recipientType: 'student',
+      recipientId: student._id,
+      channel: 'in_app'
+    }).lean();
+
+    expect(studentNotifications.some((notification) => notification.providerResponse?.type === 'activity_reviewed')).toBe(true);
+  });
+
+  it('should create message templates and schedule in-app messages for a teacher', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id);
+    const teacherToken = createTeacherToken(teacher._id);
+
+    const templateResponse = await request(app)
+      .post('/api/notifications/templates')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        name: 'Lembrete rápido',
+        type: 'class_reminder',
+        channel: 'in_app',
+        subject: 'Aula amanhã',
+        body: 'Não esqueça da aula de amanhã às 18h.'
+      });
+
+    expect(templateResponse.status).toBe(201);
+    expect(templateResponse.body.template.name).toBe('Lembrete rápido');
+
+    const sendResponse = await request(app)
+      .post('/api/notifications/send')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        recipientId: student._id.toString(),
+        type: 'class_reminder',
+        channel: 'in_app',
+        title: 'Aula confirmada',
+        subject: 'Aula confirmada',
+        message: 'Sua aula está confirmada para amanhã.'
+      });
+
+    expect(sendResponse.status).toBe(201);
+    expect(sendResponse.body.notification.status).toBe('delivered');
+
+    const storedTemplate = await NotificationTemplate.findOne({
+      teacher: teacher._id,
+      name: 'Lembrete rápido'
+    }).lean();
+    const storedNotification = await Notification.findOne({
+      teacher: teacher._id,
+      recipientId: student._id,
+      subject: 'Aula confirmada'
+    }).lean();
+
+    expect(storedTemplate).not.toBeNull();
+    expect(storedNotification).not.toBeNull();
+  });
+
+  it('should expose a referral URL that points to a mounted public teacher route', async () => {
+    const teacher = await createTeacher({
+      referralCode: 'NEXUS123',
+      slug: 'prof-demo'
+    });
+
+    const response = await request(app)
+      .get('/api/referral')
+      .set('Authorization', `Bearer ${createTeacherToken(teacher._id)}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.code).toBe('NEXUS123');
+    expect(response.body.fullUrl).toMatch(/\/professor\/login\?ref=NEXUS123$/);
+  });
+
+  it('should keep /api/health public when mounted before protected generic hub routes', async () => {
+    const healthApp = express();
+    healthApp.use(express.json());
+    healthApp.use('/api', authenticateOptional);
+    healthApp.use('/api', tenantContextMiddleware);
+    healthApp.get('/api/health', (_req, res) => {
+      res.json({ status: 'ok' });
+    });
+    healthApp.use('/api', hubRoutes);
+
+    const response = await request(healthApp).get('/api/health');
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ok');
   });
 
   it('should keep AssemblyAI beta pronunciation in history without creating canonical learning signals', async () => {

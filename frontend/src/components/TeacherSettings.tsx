@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   User, Mail, Phone, Link2, Copy, Check, Save, X,
   CreditCard, Bell, Shield, Key,
@@ -44,7 +43,6 @@ interface TeacherSettingsProps {
 }
 
 export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
-  const navigate = useNavigate();
   const { setAuth } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -338,10 +336,15 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
                       {formData.name.charAt(0).toUpperCase()}
                     </div>
-                    <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex items-center gap-2 transition-colors">
-                      <Camera className="w-4 h-4" />
-                      Alterar foto
-                    </button>
+                    <div className="space-y-2">
+                      <span className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700">
+                        <Camera className="w-4 h-4" />
+                        Upload de avatar em preparação
+                      </span>
+                      <p className="text-sm text-slate-400">
+                        Nome, email, telefone e bio já podem ser atualizados nesta aba. O envio de foto será liberado quando a rota de upload estiver disponível.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -755,6 +758,12 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-4">Segurança da Conta</h3>
+                  <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                    <p className="font-medium text-amber-200">Fluxos sensíveis ainda não foram publicados nesta rodada.</p>
+                    <p className="mt-2 text-sm text-slate-300">
+                      Para evitar promessas vazias, senha, 2FA e exclusão aparecem apenas como status operacional até que existam endpoints auditados para essas ações.
+                    </p>
+                  </div>
 
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-800/50 rounded-xl">
@@ -763,12 +772,12 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
                           <Key className="w-5 h-5 text-slate-400" />
                           <div>
                             <div className="font-medium text-white">Alterar Senha</div>
-                            <div className="text-sm text-slate-400">Atualize sua senha de acesso</div>
+                            <div className="text-sm text-slate-400">Atualize sua senha de acesso assim que a API segura de redefinição estiver disponível.</div>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-                          Alterar
-                        </button>
+                        <span className="px-3 py-1 rounded-full border border-slate-600 bg-slate-900/60 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                          Em preparação
+                        </span>
                       </div>
                     </div>
 
@@ -778,12 +787,12 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
                           <Shield className="w-5 h-5 text-slate-400" />
                           <div>
                             <div className="font-medium text-white">Autenticação em Duas Etapas</div>
-                            <div className="text-sm text-slate-400">Adicione uma camada extra de segurança</div>
+                            <div className="text-sm text-slate-400">Será ativada quando o fluxo completo de verificação estiver integrado ao login do professor.</div>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
-                          Configurar
-                        </button>
+                        <span className="px-3 py-1 rounded-full border border-slate-600 bg-slate-900/60 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                          Planejado
+                        </span>
                       </div>
                     </div>
 
@@ -791,11 +800,11 @@ export const TeacherSettings = ({ onClose }: TeacherSettingsProps) => {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-medium text-red-400">Excluir Conta</div>
-                          <div className="text-sm text-slate-400">Esta ação é irreversível</div>
+                          <div className="text-sm text-slate-400">A exclusão definitiva será exposta apenas com confirmação reforçada e trilha de auditoria.</div>
                         </div>
-                        <button className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg border border-red-500/50 transition-colors">
-                          Excluir
-                        </button>
+                        <span className="px-3 py-1 rounded-full border border-red-500/40 bg-red-950/50 text-xs font-semibold uppercase tracking-[0.16em] text-red-300">
+                          Bloqueado por segurança
+                        </span>
                       </div>
                     </div>
                   </div>

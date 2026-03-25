@@ -14,6 +14,7 @@ export const OnboardingSuccess: React.FC = () => {
   const { user, setAuth } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
+  const supportHref = 'mailto:?subject=Ajuda%20Nexus%20Academy&body=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20o%20onboarding%20do%20Nexus%20Academy.';
 
   useEffect(() => {
     const completeOnboarding = async () => {
@@ -231,7 +232,7 @@ export const OnboardingSuccess: React.FC = () => {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-indigo-200 text-sm">
-            Precisa de ajuda? <a href="#" className="text-white underline hover:no-underline">Entre em contato</a>
+            Precisa de ajuda? <a href={supportHref} className="text-white underline hover:no-underline">Entre em contato</a>
           </p>
         </div>
       </div>

@@ -3,6 +3,7 @@ import Student from '../../models/Student.js';
 import Class from '../../models/Class.js';
 import Activity from '../../models/Activity.js';
 import User from '../../models/User.js';
+import { Notification } from '../../models/Notification.js';
 import { authenticateStudent } from '../../middleware/studentAuth.js';
 import emailService from '../../services/emailService.js';
 import cacheService from '../../services/cacheService.js';
@@ -86,6 +87,33 @@ const rollbackLatestSubmission = async ({ activity, previousStatus, previousSubm
   activity.submissions = activity.submissions.slice(0, previousSubmissionCount);
   activity.status = previousStatus;
   await activity.save();
+};
+
+const notifyTeacherAboutSubmission = async ({ activity, student }) => {
+  try {
+    await Notification.create({
+      teacher: activity.teacher,
+      recipientType: 'teacher',
+      recipientId: activity.teacher,
+      recipientName: 'Professor',
+      channel: 'in_app',
+      subject: 'Nova atividade enviada',
+      body: `${student.name} enviou a atividade "${activity.title}".`,
+      sentAt: new Date(),
+      deliveredAt: new Date(),
+      status: 'delivered',
+      entityType: 'student',
+      entityId: student._id,
+      providerResponse: {
+        type: 'activity_submission',
+        route: 'teacher-activities',
+        activityId: toId(activity),
+        studentId: toId(student)
+      }
+    });
+  } catch (error) {
+    console.error('[StudentPortal] Error notifying teacher about activity submission:', error);
+  }
 };
 
 // GET /api/portal/profile
@@ -325,6 +353,7 @@ router.post('/activities/:activityId/submissions', authenticateStudent, async (r
       _id: req.params.activityId,
       student: req.studentId
     });
+    const student = await Student.findById(req.studentId).select('name').lean();
 
     if (!activity) {
       return res.status(404).json({ success: false, message: 'Atividade não encontrada' });
@@ -375,10 +404,19 @@ router.post('/activities/:activityId/submissions', authenticateStudent, async (r
       activity.status = requiresManualReview ? 'completed' : 'graded';
       await activity.save();
 
-      await recordActivitySubmissionSignals({
-        activity,
-        submission: latestSubmission
-      });
+      if (!requiresManualReview) {
+        await recordActivitySubmissionSignals({
+          activity,
+          submission: latestSubmission
+        });
+      }
+
+      if (student) {
+        await notifyTeacherAboutSubmission({
+          activity,
+          student
+        });
+      }
 
       shouldRollback = false;
 

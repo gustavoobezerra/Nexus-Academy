@@ -3,6 +3,7 @@ import type {
   Pagamento,
   Aula,
   Aluno,
+  Notification,
   TeacherAnalytics,
   StudentPaymentStatus,
   AIAnalysis,
@@ -18,7 +19,11 @@ import type {
   Question,
   PortalActivityDetail,
   PortalActivitySummary,
-  SubjectSuggestion
+  SubjectSuggestion,
+  NotificationTemplate,
+  TeacherActivityDetail,
+  TeacherActivitySummary,
+  ActivityReviewSuggestion
 } from '../types';
 
 // ============================================================================
@@ -92,6 +97,63 @@ export const portalAPI = {
     apiService.get<{ notifications: PortalNotification[]; unreadCount: number }>('/portal/notifications', { params }),
   markNotificationRead: (id: string) =>
     apiService.put<{ success: boolean; message: string }>(`/portal/notifications/${id}/read`)
+};
+
+export const notificationsAPI = {
+  getAll: (params?: { status?: 'pending' | 'read' | 'all'; limit?: number; page?: number }) =>
+    apiService.get<{ success: boolean; notifications: Notification[]; unreadCount: number }>('/notifications', { params }),
+  getUnreadCount: () =>
+    apiService.get<{ success: boolean; count: number }>('/notifications/unread-count'),
+  markRead: (id: string) =>
+    apiService.put<{ success: boolean; message: string }>(`/notifications/${id}/read`),
+  markAllRead: () =>
+    apiService.put<{ success: boolean; message: string }>('/notifications/read-all'),
+  getTemplates: () =>
+    apiService.get<{ success: boolean; templates: NotificationTemplate[] }>('/notifications/templates'),
+  createTemplate: (data: Partial<NotificationTemplate>) =>
+    apiService.post<{ success: boolean; template: NotificationTemplate }>('/notifications/templates', data),
+  updateTemplate: (id: string, data: Partial<NotificationTemplate>) =>
+    apiService.put<{ success: boolean; template: NotificationTemplate }>(`/notifications/templates/${id}`, data),
+  deleteTemplate: (id: string) =>
+    apiService.delete<{ success: boolean; message: string }>(`/notifications/templates/${id}`),
+  send: (data: {
+    recipientId: string;
+    title: string;
+    message: string;
+    channel?: Notification['channel'];
+    type?: NotificationTemplate['type'];
+    scheduledFor?: string;
+    subject?: string;
+    route?: string;
+  }) =>
+    apiService.post<{ success: boolean; notification: Notification }>('/notifications/send', data)
+};
+
+export const teacherActivitiesAPI = {
+  getAll: () =>
+    apiService.get<{ success: boolean; activities: TeacherActivitySummary[] }>('/activities/teacher'),
+  getDetail: (activityId: string) =>
+    apiService.get<{ success: boolean; activity: TeacherActivityDetail }>(`/activities/teacher/${activityId}`),
+  reviewWithAI: (activityId: string, submissionIndex: number) =>
+    apiService.post<{
+      success: boolean;
+      review: ActivityReviewSuggestion;
+      providerMode: 'live' | 'fallback';
+      providerModel?: string;
+    }>(`/activities/teacher/${activityId}/submissions/${submissionIndex}/review/ai`),
+  saveReview: (
+    activityId: string,
+    submissionIndex: number,
+    data: {
+      answers: ActivityReviewSuggestion['answers'];
+      teacherFeedback: string;
+      reviewMode: 'manual' | 'ai';
+    }
+  ) =>
+    apiService.put<{ success: boolean; activity: TeacherActivityDetail }>(
+      `/activities/teacher/${activityId}/submissions/${submissionIndex}/review`,
+      data
+    )
 };
 
 export const liveClassAPI = {

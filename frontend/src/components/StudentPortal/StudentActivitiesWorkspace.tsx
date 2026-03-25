@@ -329,6 +329,28 @@ export const StudentActivitiesWorkspace = ({
                       />
                     )}
                   </div>
+
+                  {visibleSubmission ? (() => {
+                    const reviewedAnswer = visibleSubmission.answers.find((answer) => answer.questionNumber === question.questionNumber);
+                    if (!reviewedAnswer?.feedback) {
+                      return null;
+                    }
+
+                    return (
+                      <div className={`mt-4 rounded-xl border px-4 py-3 ${
+                        isDark
+                          ? 'border-indigo-500/20 bg-indigo-500/10'
+                          : 'border-indigo-200 bg-indigo-50'
+                      }`}>
+                        <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-indigo-200/80' : 'text-indigo-500'}`}>
+                          Feedback da questão
+                        </p>
+                        <p className={`mt-2 text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                          {reviewedAnswer.feedback}
+                        </p>
+                      </div>
+                    );
+                  })() : null}
                 </article>
               ))}
             </div>
@@ -344,6 +366,20 @@ export const StudentActivitiesWorkspace = ({
                 <p className={`mt-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                   Enviado em {new Date(visibleSubmission.submittedAt).toLocaleString('pt-BR')}.
                 </p>
+                {visibleSubmission.teacherFeedback ? (
+                  <div className={`mt-4 rounded-xl border px-4 py-3 ${
+                    isDark
+                      ? 'border-emerald-500/20 bg-slate-950'
+                      : 'border-emerald-200 bg-white/80'
+                  }`}>
+                    <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-emerald-300/80' : 'text-emerald-600'}`}>
+                      Comentário do professor
+                    </p>
+                    <p className={`mt-2 text-sm ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                      {visibleSubmission.teacherFeedback}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

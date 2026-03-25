@@ -87,6 +87,7 @@ class AlertService {
           entityType: n.entityType || 'system',
           entityId: n.entityId || '',
           entityName: n.entityName || '',
+          actionRoute: (n as any).route || '',
           createdAt: n.createdAt,
           readAt: n.readAt,
           status: n.status

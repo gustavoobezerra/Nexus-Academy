@@ -156,12 +156,13 @@ router.get('/referral', async (req, res) => {
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const referralUrl = `${frontendUrl}/professor/login?ref=${encodeURIComponent(user.referralCode)}`;
 
     res.json({
       id: `ref_${req.user._id}`,
       teacherId: req.user._id.toString(),
       code: user.referralCode,
-      fullUrl: `${frontendUrl}/register?ref=${user.referralCode}`,
+      fullUrl: referralUrl,
       totalReferred: user.referralCount || 0,
       activeReferred: user.referralCount || 0,
       totalBonus: user.referralBonus || 0,
