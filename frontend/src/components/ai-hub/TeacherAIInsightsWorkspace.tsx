@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, Brain, CheckCircle2, CircleDollarSign, TrendingUp } from 'lucide-react';
 import { SearchableSelect } from '../ui/SearchableSelect';
-import type { Activity, Aluno, Aula, Pagamento, StudentLearningSnapshot } from '../../types';
+import type { Activity, Aluno, Aula, Pagamento, StudentLearningSnapshot, TeacherWorkspaceData } from '../../types';
 
 type TeacherAIInsightsWorkspaceProps = {
   students: Aluno[];
@@ -9,6 +9,8 @@ type TeacherAIInsightsWorkspaceProps = {
   payments: Pagamento[];
   activities: Array<Activity & { studentName?: string; classTitle?: string }>;
   learningSnapshots: StudentLearningSnapshot[];
+  counts: TeacherWorkspaceData['counts'];
+  windows?: TeacherWorkspaceData['windows'];
 };
 
 const daysSince = (dateValue?: string) => {
@@ -32,9 +34,16 @@ export const TeacherAIInsightsWorkspace = ({
   classes,
   payments,
   activities,
-  learningSnapshots
+  learningSnapshots,
+  counts,
+  windows
 }: TeacherAIInsightsWorkspaceProps) => {
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const usingOperationalWindow = Boolean(
+    windows?.classesTruncated ||
+    windows?.paymentsTruncated ||
+    windows?.activitiesTruncated
+  );
 
   const snapshotsByStudent = useMemo(() => (
     new Map(learningSnapshots.map((snapshot) => [snapshot.studentId, snapshot]))
@@ -103,6 +112,14 @@ export const TeacherAIInsightsWorkspace = ({
 
   return (
     <section className="space-y-5">
+      {usingOperationalWindow ? (
+        <div className="rounded-[1.4rem] border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-[var(--text-muted)]">
+          Estes insights usam a janela operacional carregada no AI Hub: {windows?.classesLoaded ?? classes.length} de {counts.classes} aula(s),
+          {windows?.paymentsLoaded ?? payments.length} de {counts.payments} pagamento(s) e {windows?.activitiesLoaded ?? activities.length} de {counts.activities} atividade(s).
+          Se a carteira do professor for maior, a priorização abaixo representa uma amostra recente, não o histórico completo.
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           { label: 'Risco alto', value: headlineMetrics.critical, icon: AlertTriangle, tone: 'text-rose-500' },

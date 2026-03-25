@@ -5,7 +5,7 @@ import { protect, authorize } from '../middleware/auth.js';
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('teacher', 'admin'));
+router.use(authorize('teacher'));
 
 /**
  * @swagger
@@ -103,13 +103,9 @@ router.get('/games/:id', async (req, res) => {
       });
     }
     
-    // Verificar se o usuário tem permissão (é o professor ou um dos jogadores)
     const isTeacher = game.teacher.toString() === req.user._id.toString();
-    const isPlayer = game.players.some(p => 
-      p.studentId._id.toString() === req.user._id.toString()
-    );
-    
-    if (!isTeacher && !isPlayer) {
+
+    if (!isTeacher) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado'
@@ -146,7 +142,7 @@ router.get('/games/:id', async (req, res) => {
       }
     };
     
-    // Se o jogo terminou ou o usuário é o professor, revelar a palavra
+    // O contrato REST desta rota é exclusivo do professor dono do jogo.
     if (game.status !== 'active' && game.status !== 'waiting' || isTeacher) {
       response.data.word = game.word;
     }

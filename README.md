@@ -150,15 +150,15 @@ npm run dev
 
 Acesse: **http://localhost:5173**
 
-### 5. Criar Primeiro Professor
+### 5. Popular Domínio Demo Canônico
 ```bash
 cd backend-core
 npm run seed
 ```
 
-**Credenciais padrão:**
-- Email: `professor@nexus.com`
-- Senha: `senha123`
+**Credenciais demo:**
+- Professor: `demo@nexus.com` / `Nexus@123`
+- Aluno: `aluno.demo@nexus.com` / `Aluno@123`
 
 ## 📦 Deploy
 

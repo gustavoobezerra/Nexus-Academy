@@ -65,11 +65,21 @@ const tools = [
  * tomada de decisão do professor.
  */
 export const TeacherAIHub = ({ data, onNavigate }: TeacherAIHubProps) => {
+  const classesLoaded = data.windows?.classesLoaded ?? data.classes.length;
+  const activitiesLoaded = data.windows?.activitiesLoaded ?? data.activities.length;
+  const lessonPreparationsLoaded = data.windows?.lessonPreparationsLoaded ?? data.lessonPreparations.length;
+  const hasOperationalWindow = Boolean(
+    data.windows?.classesTruncated ||
+    data.windows?.paymentsTruncated ||
+    data.windows?.activitiesTruncated ||
+    data.windows?.lessonPreparationsTruncated
+  );
+
   const metrics = [
     { label: 'Alunos ativos', value: data.counts.students },
-    { label: 'Aulas carregadas', value: data.counts.classes },
-    { label: 'Atividades publicadas', value: data.activities.filter((activity) => activity.status === 'published').length },
-    { label: 'Planos de aula', value: data.counts.lessonPreparations }
+    { label: 'Aulas na janela', value: classesLoaded },
+    { label: 'Atividades publicadas na janela', value: data.activities.filter((activity) => activity.status === 'published').length },
+    { label: 'Planos na janela', value: lessonPreparationsLoaded }
   ];
 
   return (
@@ -90,13 +100,21 @@ export const TeacherAIHub = ({ data, onNavigate }: TeacherAIHubProps) => {
             </span>
             <span className="nexus-chip">
               <ClipboardList size={14} />
-              {data.counts.activities} atividade(s) carregada(s)
+              {activitiesLoaded} atividade(s) visível(is) agora
             </span>
             <span className="nexus-chip">
               <Users size={14} />
               {data.counts.studentGroups} grupo(s) disponível(is)
             </span>
           </div>
+
+          {hasOperationalWindow ? (
+            <div className="mt-5 rounded-[1.4rem] border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-[var(--text-muted)]">
+              O AI Hub está operando em uma janela operacional para manter a tela responsiva.
+              Atualmente você vê {classesLoaded} de {data.counts.classes} aula(s), {activitiesLoaded} de {data.counts.activities} atividade(s)
+              e {lessonPreparationsLoaded} de {data.counts.lessonPreparations} plano(s). Use os workspaces com essa amostra em mente.
+            </div>
+          ) : null}
         </div>
 
         <aside className="nexus-panel rounded-[2rem] p-6">

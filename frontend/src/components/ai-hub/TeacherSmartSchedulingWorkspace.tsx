@@ -3,12 +3,14 @@ import { CalendarClock, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { aiAPI, classesAPI } from '../../lib/api';
 import { SearchableSelect } from '../ui/SearchableSelect';
-import type { Aluno, Aula, SmartScheduleSuggestion } from '../../types';
+import type { Aluno, Aula, SmartScheduleSuggestion, TeacherWorkspaceData } from '../../types';
 
 type TeacherSmartSchedulingWorkspaceProps = {
   students: Aluno[];
   classes: Aula[];
   onRefresh: () => Promise<void>;
+  counts: TeacherWorkspaceData['counts'];
+  windows?: TeacherWorkspaceData['windows'];
 };
 
 const weekdayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
@@ -22,7 +24,9 @@ const weekdayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 export const TeacherSmartSchedulingWorkspace = ({
   students,
   classes,
-  onRefresh
+  onRefresh,
+  counts,
+  windows
 }: TeacherSmartSchedulingWorkspaceProps) => {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [classTitle, setClassTitle] = useState('');
@@ -45,6 +49,7 @@ export const TeacherSmartSchedulingWorkspace = ({
   const selectedStudent = useMemo(() => (
     students.find((student) => (student._id || student.id) === selectedStudentId)
   ), [selectedStudentId, students]);
+  const usingOperationalWindow = Boolean(windows?.classesTruncated);
 
   useEffect(() => {
     if (!selectedStudent) {
@@ -207,7 +212,14 @@ export const TeacherSmartSchedulingWorkspace = ({
         <p className="nexus-kicker">Agendamento inteligente</p>
         <h2 className="mt-2 text-3xl leading-none">Sugerir janelas e criar a aula de verdade.</h2>
 
-        <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-5">
+          {usingOperationalWindow ? (
+            <div className="rounded-[1.4rem] border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-[var(--text-muted)]">
+              As sugestões abaixo usam {windows?.classesLoaded ?? classes.length} de {counts.classes} aula(s) carregadas no histórico operacional.
+              Para alunos com histórico longo, os horários sugeridos podem refletir apenas a janela recente.
+            </div>
+          ) : null}
+
           <SearchableSelect
             label="Aluno"
             placeholder="Buscar aluno..."

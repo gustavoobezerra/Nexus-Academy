@@ -7,6 +7,8 @@ import Activity from '../models/Activity.js';
 import PronunciationTest from '../models/PronunciationTest.js';
 import LessonPreparation from '../models/LessonPreparation.js';
 import LearningSignal from '../models/LearningSignal.js';
+import HangmanGame from '../models/HangmanGame.js';
+import { Notification, NotificationTemplate } from '../models/Notification.js';
 import {
   recordActivitySubmissionSignals,
   recordPronunciationSignals
@@ -897,7 +899,10 @@ const resetDemoDomain = async (teacher) => {
     LessonPreparation.deleteMany({ teacher: teacher._id }),
     Activity.deleteMany({ teacher: teacher._id }),
     Payment.deleteMany({ teacher: teacher._id }),
-    Class.deleteMany({ teacher: teacher._id })
+    Class.deleteMany({ teacher: teacher._id }),
+    HangmanGame.deleteMany({ teacher: teacher._id }),
+    Notification.deleteMany({ teacher: teacher._id }),
+    NotificationTemplate.deleteMany({ teacher: teacher._id })
   ]);
 
   await Student.deleteMany({ teacher: teacher._id });
@@ -916,12 +921,14 @@ const toCompactId = (value) => String(value || '').replace(/[^a-z0-9]/gi, '').to
  * insights e portal do aluno funcionarem imediatamente em desenvolvimento.
  * Nunca roda em producao.
  */
-export const ensureDevelopmentDemoData = async () => {
+export const ensureDevelopmentDemoData = async (options = {}) => {
+  const { forceReset = false } = options;
+
   if (process.env.NODE_ENV === 'production') {
     return null;
   }
 
-  const resetApplied = shouldResetDemoOnBoot();
+  const resetApplied = forceReset || shouldResetDemoOnBoot();
   const teacher = await createTeacher();
   if (resetApplied) {
     await resetDemoDomain(teacher);

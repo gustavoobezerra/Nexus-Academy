@@ -11,12 +11,14 @@ import Payment from '../models/Payment.js';
 import Activity from '../models/Activity.js';
 import LearningSignal from '../models/LearningSignal.js';
 import PronunciationTest from '../models/PronunciationTest.js';
+import HangmanGame from '../models/HangmanGame.js';
 import aiAssistantRoutes from '../routes/aiAssistant.js';
 import portalProfileRoutes from '../routes/portal/profile.js';
 import pronunciationRoutes from '../routes/pronunciation.js';
 import classesRoutes from '../routes/classes.js';
 import activitiesRoutes from '../routes/activities.js';
 import notificationsRoutes from '../routes/notifications.js';
+import hangmanRoutes from '../routes/hangman.js';
 import hubRoutes from '../routes/hub.js';
 import { recordActivitySubmissionSignals } from '../services/learningSignalsService.js';
 import aiAssistantService from '../services/aiAssistantService.js';
@@ -34,6 +36,7 @@ app.use('/api/portal/pronunciation', pronunciationRoutes);
 app.use('/api/classes', classesRoutes);
 app.use('/api/activities', activitiesRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/hangman', hangmanRoutes);
 app.use('/api', hubRoutes);
 
 const createTeacherToken = (teacherId) => global.generateAuthToken(jwt, teacherId);
@@ -1016,5 +1019,98 @@ describe('AI Hub and learning signals integration', () => {
         process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT = previousResetFlag;
       }
     }
+  });
+
+  it('should clear demo notifications and hangman artifacts on explicit reset', async () => {
+    const previousResetFlag = process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT;
+
+    try {
+      delete process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT;
+      await ensureDevelopmentDemoData();
+
+      const teacher = await User.findOne({ email: 'demo@nexus.com' });
+      const student = await Student.findOne({
+        teacher: teacher._id,
+        email: 'aluno.demo@nexus.com'
+      });
+
+      await Notification.create({
+        teacher: teacher._id,
+        recipientType: 'student',
+        recipientId: student._id,
+        recipientName: student.name,
+        channel: 'in_app',
+        subject: 'Convite antigo',
+        body: 'Estado residual que deve sumir no reset.',
+        status: 'delivered',
+        sentAt: new Date(),
+        deliveredAt: new Date(),
+        providerResponse: {
+          type: 'hangman_invite',
+          route: '/portal/hangman'
+        }
+      });
+
+      await HangmanGame.create({
+        teacher: teacher._id,
+        word: 'CASA',
+        hint: 'Lugar para morar',
+        category: 'Geral',
+        status: 'waiting',
+        players: [
+          {
+            studentId: student._id,
+            name: student.name
+          }
+        ]
+      });
+
+      process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT = 'true';
+      const result = await ensureDevelopmentDemoData();
+
+      expect(result.resetApplied).toBe(true);
+      expect(await Notification.countDocuments({ teacher: teacher._id })).toBe(0);
+      expect(await HangmanGame.countDocuments({ teacher: teacher._id })).toBe(0);
+    } finally {
+      if (previousResetFlag === undefined) {
+        delete process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT;
+      } else {
+        process.env.RESET_NEXUS_DEMO_DATA_ON_BOOT = previousResetFlag;
+      }
+    }
+  });
+
+  it('should keep hangman REST detail restricted to the owning teacher', async () => {
+    const teacher = await createTeacher();
+    const student = await createStudent(teacher._id);
+    const teacherToken = createTeacherToken(teacher._id);
+    const studentToken = createPortalToken(student._id, teacher._id);
+
+    const game = await HangmanGame.create({
+      teacher: teacher._id,
+      word: 'CASA',
+      hint: 'Lugar para morar',
+      category: 'Geral',
+      status: 'waiting',
+      players: [
+        {
+          studentId: student._id,
+          name: student.name
+        }
+      ]
+    });
+
+    const teacherResponse = await request(app)
+      .get(`/api/hangman/games/${game._id}`)
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    expect(teacherResponse.status).toBe(200);
+    expect(teacherResponse.body.data.word).toBe('CASA');
+
+    const studentResponse = await request(app)
+      .get(`/api/hangman/games/${game._id}`)
+      .set('Authorization', `Bearer ${studentToken}`);
+
+    expect(studentResponse.status).toBe(403);
   });
 });

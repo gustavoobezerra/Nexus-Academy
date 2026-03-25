@@ -786,6 +786,8 @@ function AppWithRouter() {
                   payments={teacherWorkspace.data.payments}
                   activities={teacherWorkspace.data.activities}
                   learningSnapshots={teacherWorkspace.data.learningSnapshots}
+                  counts={teacherWorkspace.data.counts}
+                  windows={teacherWorkspace.data.windows}
                 />
               )}
               {abaAtiva === 'smart-schedule' && renderAiWorkspace(
@@ -793,6 +795,8 @@ function AppWithRouter() {
                   students={teacherWorkspace.data.students}
                   classes={teacherWorkspace.data.classes}
                   onRefresh={teacherWorkspace.refresh}
+                  counts={teacherWorkspace.data.counts}
+                  windows={teacherWorkspace.data.windows}
                 />
               )}
               {abaAtiva === 'lesson-prep' && renderAiWorkspace(
