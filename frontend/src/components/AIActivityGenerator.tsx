@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wand2, CheckCircle, Send, Eye, Trash2, Sparkles, FileText, Brain, Users, User, Globe } from 'lucide-react';
+import { Wand2, CheckCircle, Send, Eye, Trash2, Sparkles, FileText, Brain, Users, User, Globe, BookOpen, PenLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Activity, Question, Aula, Aluno } from '../types';
 import { aiAPI } from '../lib/api';
@@ -204,15 +204,15 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'multiple_choice':
-        return '📝';
+        return 'ABC';
       case 'essay':
-        return '✍️';
+        return 'TXT';
       case 'true_false':
-        return '✓✗';
+        return 'OKErro';
       case 'fill_blank':
         return '___';
       default:
-        return '❓';
+        return '?';
     }
   };
 
@@ -280,7 +280,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
                     : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
                 }`}
               >
-                <div className="text-4xl mb-3">📚</div>
+                <BookOpen className="mx-auto mb-3 text-indigo-300" size={38} />
                 <h4 className="font-bold text-lg mb-2">A partir de uma Aula</h4>
                 <p className="text-sm text-gray-400 dark:text-gray-300">Escolha uma aula concluída e a IA analisa o relatório completo</p>
               </button>
@@ -293,7 +293,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
                     : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
                 }`}
               >
-                <div className="text-4xl mb-3">✍️</div>
+                <PenLine className="mx-auto mb-3 text-indigo-300" size={38} />
                 <h4 className="font-bold text-lg mb-2">Descrição Livre</h4>
                 <p className="text-sm text-gray-400 dark:text-gray-300">Escreva o que foi abordado e a IA cria as questões</p>
               </button>
@@ -318,7 +318,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
                   ))}
                 </select>
                 {completedClasses.length === 0 && (
-                  <p className="mt-2 text-sm text-yellow-400">⚠️ Nenhuma aula concluída. Use o modo "Descrição Livre".</p>
+                  <p className="mt-2 text-sm text-yellow-400">Atencao Nenhuma aula concluída. Use o modo "Descrição Livre".</p>
                 )}
               </div>
             ) : (
@@ -358,13 +358,13 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
             </button>
 
             <div className="mt-6 bg-indigo-900/20 border border-indigo-700 rounded-lg p-4">
-              <p className="font-semibold text-indigo-300 mb-2">🤖 Como Funciona:</p>
+              <p className="font-semibold text-indigo-300 mb-2">IA Como Funciona:</p>
               <ul className="space-y-2 text-sm text-gray-300 dark:text-gray-200">
-                <li>✓ IA analisa o conteúdo (transcrição ou descrição)</li>
-                <li>✓ Identifica os principais conceitos e tópicos</li>
-                <li>✓ Gera 5-7 questões variadas (múltipla escolha, dissertativas, V/F)</li>
-                <li>✓ Cria gabarito automático com explicações detalhadas</li>
-                <li>✓ Você revisa, edita e escolhe para quem enviar</li>
+                <li>OK IA analisa o conteúdo (transcrição ou descrição)</li>
+                <li>OK Identifica os principais conceitos e tópicos</li>
+                <li>OK Gera 5-7 questões variadas (múltipla escolha, dissertativas, V/F)</li>
+                <li>OK Cria gabarito automático com explicações detalhadas</li>
+                <li>OK Você revisa, edita e escolhe para quem enviar</li>
               </ul>
             </div>
           </div>
@@ -389,13 +389,13 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
 
             <div className="flex items-center gap-4 text-sm flex-wrap">
               <span className="px-3 py-1 bg-indigo-900/50 border border-indigo-700 rounded-full">
-                📝 {generatedActivity.questions.length} questões
+                {generatedActivity.questions.length} questões
               </span>
               <span className="px-3 py-1 bg-green-900/50 border border-green-700 rounded-full">
-                🤖 Gerado por IA
+                Gerado por IA
               </span>
               <span className="px-3 py-1 bg-yellow-900/50 border border-yellow-700 rounded-full">
-                ⏱️ Aguardando envio
+                Aguardando envio
               </span>
             </div>
           </div>
@@ -489,7 +489,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
             {sendTo === 'all' && (
               <div className="bg-cyan-900/20 border border-cyan-700 rounded-lg p-4">
                 <p className="text-cyan-300 font-medium">
-                  📢 Esta atividade será enviada para TODOS os {students.length} alunos cadastrados
+                   Esta atividade será enviada para TODOS os {students.length} alunos cadastrados
                 </p>
               </div>
             )}
@@ -542,7 +542,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
 
                       {question.type === 'true_false' && (
                         <div className="mt-4 p-3 bg-green-900/30 border border-green-700 rounded-lg">
-                          <p className="font-semibold">✅ Resposta correta: {question.correctAnswer}</p>
+                          <p className="font-semibold">Resposta correta: {question.correctAnswer}</p>
                         </div>
                       )}
 
@@ -613,7 +613,7 @@ export const AIActivityGenerator: React.FC<AIActivityGeneratorProps> = ({
                     <p className="text-gray-400 dark:text-gray-300 mt-1">{activity.description}</p>
                     <div className="flex items-center gap-3 mt-3 text-sm">
                       <span className="px-3 py-1 bg-green-900/50 border border-green-700 rounded-full">
-                        ✅ Publicada
+                        Publicada
                       </span>
                       <span className="text-gray-400 dark:text-gray-300">
                         {activity.questions.length} questões • {activity.totalPoints} pontos

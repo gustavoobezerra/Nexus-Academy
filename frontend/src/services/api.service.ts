@@ -229,7 +229,7 @@ api.interceptors.response.use(
     // Log de sucesso apenas em desenvolvimento (sem dados sensíveis)
     if (import.meta.env.DEV) {
       const safeUrl = response.config.url?.replace(/token=([^&]+)/, 'token=***');
-      console.log(`[API] ✓ ${response.config.method?.toUpperCase()} ${safeUrl}`);
+      console.log(`[API] OK ${response.config.method?.toUpperCase()} ${safeUrl}`);
     }
     return response;
   },

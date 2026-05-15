@@ -142,7 +142,7 @@ export const HourBankManagement: React.FC<HourBankManagementProps> = ({ students
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-6">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-purple-400 mb-2">⏰ Banco de Horas</h1>
+        <h1 className="text-4xl font-bold text-purple-400 mb-2">Banco de Horas</h1>
         <p className="text-gray-400">Gestão inteligente de horas contratadas e consumidas por aluno</p>
       </div>
 
@@ -317,7 +317,7 @@ export const HourBankManagement: React.FC<HourBankManagementProps> = ({ students
 
               {selectedHourBank.hoursRemaining < 2 && (
                 <div className="mt-6 bg-orange-900/30 border border-orange-700 rounded-lg p-4">
-                  <p className="text-orange-300 font-semibold">⚠️ Atenção!</p>
+                  <p className="text-orange-300 font-semibold">Atencao Atenção!</p>
                   <p className="text-gray-300 text-sm mt-1">
                     O aluno tem apenas {selectedHourBank.hoursRemaining}h restantes. Considere adicionar mais horas para continuar com as aulas.
                   </p>
@@ -357,8 +357,8 @@ export const HourBankManagement: React.FC<HourBankManagementProps> = ({ students
                     onChange={(e) => setNewHours({ ...newHours, type: e.target.value as 'purchase' | 'bonus' })}
                     className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option value="purchase">💳 Compra (pagamento do aluno)</option>
-                    <option value="bonus">🎁 Bônus (cortesia)</option>
+                    <option value="purchase">Cartao Compra (pagamento do aluno)</option>
+                    <option value="bonus">Bonus Bônus (cortesia)</option>
                   </select>
                 </div>
 

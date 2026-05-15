@@ -38,17 +38,17 @@ const AdvancedFeatures: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-6">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-indigo-400 mb-2">⚡ Recursos Avançados</h1>
+        <h1 className="text-4xl font-bold text-indigo-400 mb-2"> Recursos Avançados</h1>
         <p className="text-gray-400 dark:text-gray-400">IA, Análise de Similitude, Contratos, Pagamentos e Marketplace</p>
       </div>
 
       <div className="flex gap-2 mb-8 flex-wrap text-sm">
         {[
-          { id: 'ai', label: '🤖 IA Smart', icon: Zap },
-          { id: 'similarity', label: '👥 Similitude', icon: Users },
-          { id: 'contract', label: '📄 Contrato', icon: FileText },
-          { id: 'payment', label: '💳 Stripe', icon: CreditCard },
-          { id: 'marketplace', label: '🛍️ Marketplace', icon: ShoppingCart }
+          { id: 'ai', label: 'IA IA Smart', icon: Zap },
+          { id: 'similarity', label: ' Similitude', icon: Users },
+          { id: 'contract', label: ' Contrato', icon: FileText },
+          { id: 'payment', label: 'Cartao Stripe', icon: CreditCard },
+          { id: 'marketplace', label: 'Marketplace Marketplace', icon: ShoppingCart }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -65,7 +65,7 @@ const AdvancedFeatures: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        {/* 🤖 IA SMART */}
+        {/* IA IA SMART */}
         {activeTab === 'ai' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Sugestões Inteligentes de IA</h2>
@@ -93,14 +93,14 @@ const AdvancedFeatures: React.FC = () => {
 
             <div className="mt-6 space-y-3">
               <h3 className="font-semibold text-white">Exemplos de Sugestões</h3>
-              <div className="bg-slate-700/50 p-3 rounded text-sm text-gray-300 dark:text-gray-200">✓ Identifica gaps de aprendizado</div>
-              <div className="bg-slate-700/50 p-3 rounded text-sm text-gray-300 dark:text-gray-200">✓ Sugere exercícios adaptados ao nível</div>
-              <div className="bg-slate-700/50 p-3 rounded text-sm text-gray-300 dark:text-gray-200">✓ Recomenda material complementar</div>
+              <div className="bg-slate-700/50 p-3 rounded text-sm text-gray-300 dark:text-gray-200">OK Identifica gaps de aprendizado</div>
+              <div className="bg-slate-700/50 p-3 rounded text-sm text-gray-300 dark:text-gray-200">OK Sugere exercícios adaptados ao nível</div>
+              <div className="bg-slate-700/50 p-3 rounded text-sm text-gray-300 dark:text-gray-200">OK Recomenda material complementar</div>
             </div>
           </div>
         )}
 
-        {/* 👥 SIMILITUDE */}
+        {/*  SIMILITUDE */}
         {activeTab === 'similarity' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Análise de Similitude</h2>
@@ -108,13 +108,13 @@ const AdvancedFeatures: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
-                <p className="font-semibold text-emerald-300 mb-2">✓ Grupo 1: Acelerados</p>
+                <p className="font-semibold text-emerald-300 mb-2">OK Grupo 1: Acelerados</p>
                 <p className="text-sm text-gray-300 dark:text-gray-200">Maria, Pedro, João • Progridem 30% mais rápido</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-2">→ Sugestão: Aula acelerada 1x/semana</p>
               </div>
 
               <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4">
-                <p className="font-semibold text-amber-300 mb-2">⚠️ Grupo 2: Reforço</p>
+                <p className="font-semibold text-amber-300 mb-2">Atencao Grupo 2: Reforço</p>
                 <p className="text-sm text-gray-300 dark:text-gray-200">Ana, Bruno, Carla • Precisam apoio</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-2">→ Sugestão: Sessão de reforço em grupo</p>
               </div>
@@ -134,7 +134,7 @@ const AdvancedFeatures: React.FC = () => {
           </div>
         )}
 
-        {/* 📄 CONTRATO DIGITAL */}
+        {/*  CONTRATO DIGITAL */}
         {activeTab === 'contract' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Contrato Digital com E-Signature</h2>
@@ -163,7 +163,7 @@ const AdvancedFeatures: React.FC = () => {
             </div>
 
             <div className="bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
-              <p className="font-semibold text-emerald-300 mb-3">✓ Contrato Automático</p>
+              <p className="font-semibold text-emerald-300 mb-3">OK Contrato Automático</p>
               <ul className="space-y-2 text-sm text-gray-300 dark:text-gray-200">
                 <li>• Termos de serviço pré-configurado</li>
                 <li>• Assinatura eletrônica (e-sig integrada)</li>
@@ -174,20 +174,20 @@ const AdvancedFeatures: React.FC = () => {
           </div>
         )}
 
-        {/* 💳 STRIPE/PAYPAL */}
+        {/* Cartao STRIPE/PAYPAL */}
         {activeTab === 'payment' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Integração Stripe & PayPal</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-6">
-                <h3 className="font-semibold text-white mb-4">💳 Stripe</h3>
+                <h3 className="font-semibold text-white mb-4">Cartao Stripe</h3>
                 <p className="text-gray-300 dark:text-gray-200 text-sm mb-4">Cobrança recorrente mensal</p>
                 <div className="space-y-2 text-xs text-gray-400 dark:text-gray-300">
-                  <p>✓ Webhook automático para confirmação</p>
-                  <p>✓ Taxa: 2.9% + R$ 0.30</p>
-                  <p>✓ Suporta débito/crédito/Pix</p>
-                  <p>✓ Dashboard de transações</p>
+                  <p>OK Webhook automático para confirmação</p>
+                  <p>OK Taxa: 2.9% + R$ 0.30</p>
+                  <p>OK Suporta débito/crédito/Pix</p>
+                  <p>OK Dashboard de transações</p>
                 </div>
               </div>
 
@@ -195,16 +195,16 @@ const AdvancedFeatures: React.FC = () => {
                 <h3 className="font-semibold text-white mb-4">🅿️ PayPal</h3>
                 <p className="text-gray-300 dark:text-gray-200 text-sm mb-4">Alternativa de pagamento</p>
                 <div className="space-y-2 text-xs text-gray-400 dark:text-gray-300">
-                  <p>✓ Integração directa com API</p>
-                  <p>✓ Taxa: 3.49% + R$ 0.49</p>
-                  <p>✓ Saque automático</p>
-                  <p>✓ Suporte 24/7</p>
+                  <p>OK Integração directa com API</p>
+                  <p>OK Taxa: 3.49% + R$ 0.49</p>
+                  <p>OK Saque automático</p>
+                  <p>OK Suporte 24/7</p>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 bg-amber-900/20 border border-amber-700 rounded-lg p-4">
-              <p className="font-semibold text-amber-300 mb-2">⚠️ Status: Requer Configuração</p>
+              <p className="font-semibold text-amber-300 mb-2">Atencao Status: Requer Configuração</p>
               <p className="text-sm text-gray-300 dark:text-gray-200">1. Adicione API keys nas variáveis de ambiente</p>
               <p className="text-sm text-gray-300 dark:text-gray-200">2. Ative webhook de confirmação de pagamento</p>
               <p className="text-sm text-gray-300 dark:text-gray-200">3. Configure e-mail de recebimento</p>
@@ -212,10 +212,10 @@ const AdvancedFeatures: React.FC = () => {
           </div>
         )}
 
-        {/* 🛍️ MARKETPLACE */}
+        {/* Marketplace MARKETPLACE */}
         {activeTab === 'marketplace' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6">🛍️ Marketplace de Aulas Extras (Sistema de Pontos)</h2>
+            <h2 className="text-2xl font-bold mb-6">Marketplace Marketplace de Aulas Extras (Sistema de Pontos)</h2>
 
             <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4 mb-6">
               <p className="font-semibold text-amber-300 mb-2">Sistema de Pontuação</p>
@@ -287,14 +287,14 @@ const AdvancedFeatures: React.FC = () => {
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">Em resgates este mês</p>
               </div>
               <div className="bg-gradient-to-br from-cyan-900/50 to-blue-900/50 border border-cyan-700 p-4 rounded-lg">
-                <p className="text-xs text-gray-300 dark:text-gray-200 mb-2">👥 Alunos</p>
+                <p className="text-xs text-gray-300 dark:text-gray-200 mb-2"> Alunos</p>
                 <p className="text-3xl font-bold text-cyan-300">12</p>
                 <p className="text-xs text-gray-400 dark:text-gray-300 mt-1">Resgataram aulas</p>
               </div>
             </div>
 
             <div className="mt-6 bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
-              <p className="font-semibold text-emerald-300 mb-3">✓ Como Funciona o Sistema de Pontos:</p>
+              <p className="font-semibold text-emerald-300 mb-3">OK Como Funciona o Sistema de Pontos:</p>
               <div className="space-y-2 text-sm text-gray-300 dark:text-gray-200">
                 <p>1. <strong>Alunos ganham pontos</strong> completando aulas, exercícios e atingindo metas</p>
                 <p>2. <strong>Professor publica aulas extras</strong> no marketplace com preço em pontos</p>

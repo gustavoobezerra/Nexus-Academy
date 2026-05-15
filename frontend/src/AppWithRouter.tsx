@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Layout, Wallet, Users, LogOut, UserCircle,
@@ -16,20 +16,14 @@ import { QuickActions } from './components/QuickActions';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PaginaPontos } from './components/PaginaPontos';
 import { Dashboard } from './components/Dashboard';
-import StudentsPage from './components/Students';
 import { alertService } from './services/alertService';
-import ClassesPage from './components/Classes';
 import JitsiLiveClass from './components/JitsiLiveClass';
 import DailyLiveClass from './components/DailyLiveClass';
-import FinancialPage from './components/Financial';
-import TeacherAnalyticsDashboard from './components/TeacherAnalyticsDashboard';
 import AutomationCenter from './components/AutomationCenter';
-import AutomationManager from './components/AutomationManager';
-import ComprehensiveHub from './components/ComprehensiveHub';
-import AdvancedFeatures from './components/AdvancedFeatures';
 
 // Páginas de Login e Onboarding
 import { LoginPage } from './components/LoginPage';
+import { NexusGuide } from './components/NexusGuide';
 import { TeacherLogin } from './components/TeacherLogin';
 import { OnboardingWizardMultiTenant } from './components/OnboardingWizardMultiTenant';
 import { OnboardingSuccess } from './components/OnboardingSuccess';
@@ -50,16 +44,24 @@ import BrandLogo from './components/BrandLogo';
 import { HourBankManagement } from './components/HourBankManagement';
 import { ContractManager } from './components/ContractManager';
 import MessageTemplatesManager from './components/MessageTemplatesManager';
-import TeacherActivitiesWorkspace from './components/TeacherActivitiesWorkspace';
 import useTeacherWorkspaceData from './hooks/useTeacherWorkspaceData';
-import TeacherAIHub from './components/ai-hub/TeacherAIHub';
-import TeacherAssistantWorkspace from './components/ai-hub/TeacherAssistantWorkspace';
-import TeacherAIActivityWorkspace from './components/ai-hub/TeacherAIActivityWorkspace';
-import TeacherLessonPrepWorkspace from './components/ai-hub/TeacherLessonPrepWorkspace';
-import TeacherAIInsightsWorkspace from './components/ai-hub/TeacherAIInsightsWorkspace';
-import TeacherSmartSchedulingWorkspace from './components/ai-hub/TeacherSmartSchedulingWorkspace';
-import TeacherStudentGroupsWorkspace from './components/ai-hub/TeacherStudentGroupsWorkspace';
 import type { Aluno } from './types';
+
+const StudentsPage = lazy(() => import('./components/Students'));
+const ClassesPage = lazy(() => import('./components/Classes'));
+const FinancialPage = lazy(() => import('./components/Financial'));
+const TeacherAnalyticsDashboard = lazy(() => import('./components/TeacherAnalyticsDashboard'));
+const AutomationManager = lazy(() => import('./components/AutomationManager'));
+const ComprehensiveHub = lazy(() => import('./components/ComprehensiveHub'));
+const AdvancedFeatures = lazy(() => import('./components/AdvancedFeatures'));
+const TeacherActivitiesWorkspace = lazy(() => import('./components/TeacherActivitiesWorkspace'));
+const TeacherAIHub = lazy(() => import('./components/ai-hub/TeacherAIHub'));
+const TeacherAssistantWorkspace = lazy(() => import('./components/ai-hub/TeacherAssistantWorkspace'));
+const TeacherAIActivityWorkspace = lazy(() => import('./components/ai-hub/TeacherAIActivityWorkspace'));
+const TeacherLessonPrepWorkspace = lazy(() => import('./components/ai-hub/TeacherLessonPrepWorkspace'));
+const TeacherAIInsightsWorkspace = lazy(() => import('./components/ai-hub/TeacherAIInsightsWorkspace'));
+const TeacherSmartSchedulingWorkspace = lazy(() => import('./components/ai-hub/TeacherSmartSchedulingWorkspace'));
+const TeacherStudentGroupsWorkspace = lazy(() => import('./components/ai-hub/TeacherStudentGroupsWorkspace'));
 
 type TeacherShellUser = {
   avatar?: string | null;
@@ -233,6 +235,15 @@ const shellSectionMeta: Record<string, ShellSectionMeta> = {
   }
 };
 
+function SectionLoader() {
+  return (
+    <div className="nexus-panel rounded-[2rem] p-8">
+      <p className="nexus-kicker">Carregando modulo</p>
+      <p className="mt-3 text-lg text-[var(--text-muted)]">Preparando a area selecionada...</p>
+    </div>
+  );
+}
+
 /**
  * Orquestra as rotas públicas, o portal do aluno e o shell autenticado do
  * professor. O redesign desta rodada atua apenas na camada visual do shell,
@@ -262,6 +273,7 @@ function AppWithRouter() {
 
   // Verificar rotas
   const isLoginPage = location.pathname === '/' || location.pathname === '/login';
+  const isGuidePage = location.pathname === '/guia';
   const isTeacherLogin = location.pathname === '/professor/login';
   const isOnboarding = location.pathname === '/onboarding';
   const isOnboardingSuccess = location.pathname === '/onboarding/success';
@@ -273,7 +285,7 @@ function AppWithRouter() {
   const teacherToken = localStorage.getItem('token');
 
   // Verificar se é uma rota pública (login)
-  const isPublicRoute = isLoginPage || isTeacherLogin || location.pathname === '/portal/login' || isTeacherSlugPage || isTutorialPage;
+  const isPublicRoute = isLoginPage || isGuidePage || isTeacherLogin || location.pathname === '/portal/login' || isTeacherSlugPage || isTutorialPage;
   const shouldLoadTeacherWorkspace = Boolean(teacherToken) && !isStudentPortal && !isPublicRoute;
   const teacherWorkspace = useTeacherWorkspaceData(shouldLoadTeacherWorkspace);
 
@@ -370,6 +382,10 @@ function AppWithRouter() {
   // Renderizar página de login principal
   if (isLoginPage && !teacherToken) {
     return <LoginPage />;
+  }
+
+  if (isGuidePage) {
+    return <NexusGuide />;
   }
 
   // Renderizar login do professor
@@ -710,112 +726,114 @@ function AppWithRouter() {
 
           <main className="flex-1 overflow-auto px-3 pb-3 md:px-4 md:pb-4">
             <div className="min-h-full rounded-[2rem]">
-              {abaAtiva === 'dashboard' && <Dashboard onNavegar={handleNavegar} />}
-              {abaAtiva === 'aulas' && (
-                <ClassesPage
-                  onStartLive={(id, title) => {
-                    setLiveClassData({ id, title });
-                    setAbaAtiva('live-class');
-                  }}
-                />
-              )}
-              {abaAtiva === 'live-class' && liveClassData && (
-                preferDaily ? (
-                  <DailyLiveClass
-                    classId={liveClassData.id}
-                    className={liveClassData.title}
-                    teacherName={user?.name || 'Professor'}
-                    userType="teacher"
-                    onEnd={() => {
-                      setLiveClassData(null);
-                      setAbaAtiva('aulas');
+              <Suspense fallback={<SectionLoader />}>
+                {abaAtiva === 'dashboard' && <Dashboard onNavegar={handleNavegar} />}
+                {abaAtiva === 'aulas' && (
+                  <ClassesPage
+                    onStartLive={(id, title) => {
+                      setLiveClassData({ id, title });
+                      setAbaAtiva('live-class');
                     }}
                   />
-                ) : (
-                  <JitsiLiveClass
-                    classId={liveClassData.id}
-                    className={liveClassData.title}
-                    teacherName={user?.name || 'Professor'}
-                    userType="teacher"
-                    onEnd={() => {
-                      setLiveClassData(null);
-                      setAbaAtiva('aulas');
-                    }}
+                )}
+                {abaAtiva === 'live-class' && liveClassData && (
+                  preferDaily ? (
+                    <DailyLiveClass
+                      classId={liveClassData.id}
+                      className={liveClassData.title}
+                      teacherName={user?.name || 'Professor'}
+                      userType="teacher"
+                      onEnd={() => {
+                        setLiveClassData(null);
+                        setAbaAtiva('aulas');
+                      }}
+                    />
+                  ) : (
+                    <JitsiLiveClass
+                      classId={liveClassData.id}
+                      className={liveClassData.title}
+                      teacherName={user?.name || 'Professor'}
+                      userType="teacher"
+                      onEnd={() => {
+                        setLiveClassData(null);
+                        setAbaAtiva('aulas');
+                      }}
+                    />
+                  )
+                )}
+                {abaAtiva === 'students' && <StudentsPage />}
+                {abaAtiva === 'teacher-activities' && (
+                  <TeacherActivitiesWorkspace
+                    isDark={isDark}
+                    onRefreshWorkspace={teacherWorkspace.refresh}
                   />
-                )
-              )}
-              {abaAtiva === 'students' && <StudentsPage />}
-              {abaAtiva === 'teacher-activities' && (
-                <TeacherActivitiesWorkspace
-                  isDark={isDark}
-                  onRefreshWorkspace={teacherWorkspace.refresh}
-                />
-              )}
-              {abaAtiva === 'calendar' && <CalendarView />}
-              {abaAtiva === 'finance' && <FinancialPage />}
-              {abaAtiva === 'analytics' && <TeacherAnalyticsDashboard />}
-              {abaAtiva === 'automation' && <AutomationCenter />}
-              {abaAtiva === 'templates' && <MessageTemplatesManager />}
-              {abaAtiva === 'automation-manager' && <AutomationManager />}
-              {abaAtiva === 'ai-hub' && renderAiWorkspace(
-                <TeacherAIHub data={teacherWorkspace.data} onNavigate={handleNavegar} />
-              )}
-              {abaAtiva === 'hub' && <ComprehensiveHub />}
-              {abaAtiva === 'advanced' && <AdvancedFeatures />}
-              {abaAtiva === 'points' && <PaginaPontos />}
-              {abaAtiva === 'online' && <OnlineStudents />}
+                )}
+                {abaAtiva === 'calendar' && <CalendarView />}
+                {abaAtiva === 'finance' && <FinancialPage />}
+                {abaAtiva === 'analytics' && <TeacherAnalyticsDashboard />}
+                {abaAtiva === 'automation' && <AutomationCenter />}
+                {abaAtiva === 'templates' && <MessageTemplatesManager />}
+                {abaAtiva === 'automation-manager' && <AutomationManager />}
+                {abaAtiva === 'ai-hub' && renderAiWorkspace(
+                  <TeacherAIHub data={teacherWorkspace.data} onNavigate={handleNavegar} />
+                )}
+                {abaAtiva === 'hub' && <ComprehensiveHub />}
+                {abaAtiva === 'advanced' && <AdvancedFeatures />}
+                {abaAtiva === 'points' && <PaginaPontos />}
+                {abaAtiva === 'online' && <OnlineStudents />}
 
-              {/* Novos componentes de Automação IA */}
-              {abaAtiva === 'hour-bank' && <HourBankManagement />}
-              {abaAtiva === 'ai-assistant' && renderAiWorkspace(
-                <TeacherAssistantWorkspace data={teacherWorkspace.data} />
-              )}
-              {abaAtiva === 'ai-activities' && renderAiWorkspace(
-                <TeacherAIActivityWorkspace
-                  classes={teacherWorkspace.data.classes}
-                  students={teacherWorkspace.data.students}
-                  studentGroups={teacherWorkspace.data.studentGroups}
-                  activities={teacherWorkspace.data.activities}
-                  onRefresh={teacherWorkspace.refresh}
-                />
-              )}
-              {abaAtiva === 'ai-insights' && renderAiWorkspace(
-                <TeacherAIInsightsWorkspace
-                  students={teacherWorkspace.data.students}
-                  classes={teacherWorkspace.data.classes}
-                  payments={teacherWorkspace.data.payments}
-                  activities={teacherWorkspace.data.activities}
-                  learningSnapshots={teacherWorkspace.data.learningSnapshots}
-                  counts={teacherWorkspace.data.counts}
-                  windows={teacherWorkspace.data.windows}
-                />
-              )}
-              {abaAtiva === 'smart-schedule' && renderAiWorkspace(
-                <TeacherSmartSchedulingWorkspace
-                  students={teacherWorkspace.data.students}
-                  classes={teacherWorkspace.data.classes}
-                  onRefresh={teacherWorkspace.refresh}
-                  counts={teacherWorkspace.data.counts}
-                  windows={teacherWorkspace.data.windows}
-                />
-              )}
-              {abaAtiva === 'lesson-prep' && renderAiWorkspace(
-                <TeacherLessonPrepWorkspace
-                  classes={teacherWorkspace.data.classes}
-                  students={teacherWorkspace.data.students}
-                  lessonPreparations={teacherWorkspace.data.lessonPreparations}
-                  onRefresh={teacherWorkspace.refresh}
-                />
-              )}
-              {abaAtiva === 'contracts' && <ContractManager />}
-              {abaAtiva === 'student-groups' && renderAiWorkspace(
-                <TeacherStudentGroupsWorkspace
-                  students={teacherWorkspace.data.students}
-                  payments={teacherWorkspace.data.payments}
-                  studentGroups={teacherWorkspace.data.studentGroups}
-                  onRefresh={teacherWorkspace.refresh}
-                />
-              )}
+                {/* Novos componentes de Automação IA */}
+                {abaAtiva === 'hour-bank' && <HourBankManagement />}
+                {abaAtiva === 'ai-assistant' && renderAiWorkspace(
+                  <TeacherAssistantWorkspace data={teacherWorkspace.data} />
+                )}
+                {abaAtiva === 'ai-activities' && renderAiWorkspace(
+                  <TeacherAIActivityWorkspace
+                    classes={teacherWorkspace.data.classes}
+                    students={teacherWorkspace.data.students}
+                    studentGroups={teacherWorkspace.data.studentGroups}
+                    activities={teacherWorkspace.data.activities}
+                    onRefresh={teacherWorkspace.refresh}
+                  />
+                )}
+                {abaAtiva === 'ai-insights' && renderAiWorkspace(
+                  <TeacherAIInsightsWorkspace
+                    students={teacherWorkspace.data.students}
+                    classes={teacherWorkspace.data.classes}
+                    payments={teacherWorkspace.data.payments}
+                    activities={teacherWorkspace.data.activities}
+                    learningSnapshots={teacherWorkspace.data.learningSnapshots}
+                    counts={teacherWorkspace.data.counts}
+                    windows={teacherWorkspace.data.windows}
+                  />
+                )}
+                {abaAtiva === 'smart-schedule' && renderAiWorkspace(
+                  <TeacherSmartSchedulingWorkspace
+                    students={teacherWorkspace.data.students}
+                    classes={teacherWorkspace.data.classes}
+                    onRefresh={teacherWorkspace.refresh}
+                    counts={teacherWorkspace.data.counts}
+                    windows={teacherWorkspace.data.windows}
+                  />
+                )}
+                {abaAtiva === 'lesson-prep' && renderAiWorkspace(
+                  <TeacherLessonPrepWorkspace
+                    classes={teacherWorkspace.data.classes}
+                    students={teacherWorkspace.data.students}
+                    lessonPreparations={teacherWorkspace.data.lessonPreparations}
+                    onRefresh={teacherWorkspace.refresh}
+                  />
+                )}
+                {abaAtiva === 'contracts' && <ContractManager />}
+                {abaAtiva === 'student-groups' && renderAiWorkspace(
+                  <TeacherStudentGroupsWorkspace
+                    students={teacherWorkspace.data.students}
+                    payments={teacherWorkspace.data.payments}
+                    studentGroups={teacherWorkspace.data.studentGroups}
+                    onRefresh={teacherWorkspace.refresh}
+                  />
+                )}
+              </Suspense>
             </div>
           </main>
         </div>
@@ -846,4 +864,3 @@ function AppWithRouter() {
 }
 
 export default AppWithRouter;
-

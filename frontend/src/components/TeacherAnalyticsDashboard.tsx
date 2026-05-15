@@ -281,7 +281,7 @@ const TeacherAnalyticsDashboard: React.FC = () => {
 
           {analytics.retention.atRiskStudents.length > 0 && (
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-              <h3 className="text-xl font-bold text-white mb-4">⚠️ Alunos em Risco</h3>
+              <h3 className="text-xl font-bold text-white mb-4">Atencao Alunos em Risco</h3>
               <div className="space-y-4">
                 {analytics.retention.atRiskStudents.map((student) => (
                   <div key={student.studentId} className="bg-slate-700/50 border border-rose-700 rounded-lg p-4">

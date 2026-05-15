@@ -72,7 +72,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
     if (lowHoursStudents.length >= 2) {
       suggestions.push({
         id: 'ai_low_hours',
-        name: '⏰ Banco de Horas Baixo',
+        name: 'Banco de Horas Baixo',
         studentIds: lowHoursStudents,
         color: '#ef4444',
         description: 'Alunos com menos de 5 horas restantes. Ideal para enviar lembretes de renovação.',
@@ -123,7 +123,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
     if (paidStudents.length >= 3) {
       suggestions.push({
         id: 'ai_paid',
-        name: '💰 Pagamentos em Dia',
+        name: 'Pagamentos em Dia',
         studentIds: paidStudents,
         color: '#22c55e',
         description: 'Alunos com pagamentos regularizados. Ótimo para enviar conteúdo premium.',
@@ -139,7 +139,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
     if (pendingStudents.length >= 2) {
       suggestions.push({
         id: 'ai_pending',
-        name: '⚠️ Pagamentos Pendentes',
+        name: 'Atencao Pagamentos Pendentes',
         studentIds: pendingStudents,
         color: '#eab308',
         description: 'Alunos com pagamentos atrasados. Envie lembretes personalizados.',
@@ -160,7 +160,7 @@ export const StudentGroupsManager: React.FC<StudentGroupsManagerProps> = ({
       if (studentIds.length >= 2) {
         suggestions.push({
           id: `ai_grade_${grade}`,
-          name: `📚 ${grade}`,
+          name: `${grade}`,
           studentIds,
           color: '#3b82f6',
           description: `Alunos do ${grade}. Conteúdo homogêneo facilita atividades em grupo.`,

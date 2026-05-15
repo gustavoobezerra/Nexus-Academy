@@ -258,13 +258,13 @@ export const SmartScheduling: React.FC<SmartSchedulingProps> = ({ students = [],
         </div>
 
         <div className="mt-6 bg-cyan-900/20 border border-cyan-700 rounded-lg p-4">
-          <p className="font-semibold text-cyan-300 mb-2">🤖 Como Funciona:</p>
+          <p className="font-semibold text-cyan-300 mb-2">IA Como Funciona:</p>
           <ul className="space-y-1 text-sm text-gray-300">
-            <li>✓ Analisa histórico de aulas do aluno</li>
-            <li>✓ Identifica dias e horários preferidos</li>
-            <li>✓ Verifica conflitos na agenda</li>
-            <li>✓ Sugere os 10 melhores horários com score de compatibilidade</li>
-            <li>✓ Agende com 1 clique!</li>
+            <li>OK Analisa histórico de aulas do aluno</li>
+            <li>OK Identifica dias e horários preferidos</li>
+            <li>OK Verifica conflitos na agenda</li>
+            <li>OK Sugere os 10 melhores horários com score de compatibilidade</li>
+            <li>OK Agende com 1 clique!</li>
           </ul>
         </div>
       </div>
@@ -293,9 +293,9 @@ export const SmartScheduling: React.FC<SmartSchedulingProps> = ({ students = [],
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      {index === 0 && <span className="text-2xl">🥇</span>}
-                      {index === 1 && <span className="text-2xl">🥈</span>}
-                      {index === 2 && <span className="text-2xl">🥉</span>}
+                      {index === 0 && <span className="text-2xl">1</span>}
+                      {index === 1 && <span className="text-2xl">2</span>}
+                      {index === 2 && <span className="text-2xl">3</span>}
                       <h4 className="text-lg font-bold">
                         {getDayName(suggestion.date)}, {new Date(suggestion.date).toLocaleDateString('pt-BR')}
                       </h4>
@@ -329,12 +329,12 @@ export const SmartScheduling: React.FC<SmartSchedulingProps> = ({ students = [],
                     )}
                     {suggestion.teacherAvailability && (
                       <span className="px-2 py-1 text-xs bg-green-900/50 border border-green-700 rounded text-green-300">
-                        ✓ Professor Disponível
+                        OK Professor Disponível
                       </span>
                     )}
                     {suggestion.conflicts.length === 0 && (
                       <span className="px-2 py-1 text-xs bg-blue-900/50 border border-blue-700 rounded text-blue-300">
-                        ✓ Sem Conflitos
+                        OK Sem Conflitos
                       </span>
                     )}
                   </div>

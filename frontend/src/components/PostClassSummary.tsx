@@ -291,7 +291,7 @@ export const PostClassSummary: React.FC<PostClassSummaryProps> = ({
           </button>
           {summary && (
             <button
-              onClick={() => toast.success('Exportando PDF...', { icon: '📄' })}
+              onClick={() => toast.success('Exportando PDF...', { icon: '' })}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-lg shadow-purple-600/20 active:scale-95"
             >
               <Download size={20} />

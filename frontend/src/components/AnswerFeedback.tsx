@@ -36,8 +36,8 @@ const AnswerFeedback = ({ answer, expectedAnswer, onFeedback }: AnswerFeedbackPr
       isCorrect: score >= 70,
       score: Math.round(score),
       message: score >= 70
-        ? '✓ Ótima resposta! Você demonstrou bom entendimento.'
-        : '⚠ Sua resposta precisa de melhorias. Veja as dicas abaixo.',
+        ? 'OK Ótima resposta! Você demonstrou bom entendimento.'
+        : 'Atencao Sua resposta precisa de melhorias. Veja as dicas abaixo.',
       tips: [
         'Leia a pergunta com atenção e identifique o que está sendo pedido',
         'Use termos técnicos corretos do conteúdo abordado',
@@ -122,7 +122,7 @@ const AnswerFeedback = ({ answer, expectedAnswer, onFeedback }: AnswerFeedbackPr
           <h4 className="font-semibold text-red-400 mb-2">Erros Comuns</h4>
           <ul className="space-y-1">
             {feedback.commonMistakes.map((mistake, i) => (
-              <li key={i} className="text-xs text-red-200">✗ {mistake}</li>
+              <li key={i} className="text-xs text-red-200">Erro {mistake}</li>
             ))}
           </ul>
         </div>
@@ -131,7 +131,7 @@ const AnswerFeedback = ({ answer, expectedAnswer, onFeedback }: AnswerFeedbackPr
           <h4 className="font-semibold text-emerald-400 mb-2">Próximos Passos</h4>
           <ul className="space-y-1">
             {feedback.nextSteps.map((step, i) => (
-              <li key={i} className="text-xs text-emerald-200">✓ {step}</li>
+              <li key={i} className="text-xs text-emerald-200">OK {step}</li>
             ))}
           </ul>
         </div>

@@ -95,7 +95,7 @@ export const OnboardingSuccess: React.FC = () => {
             <CheckCircle size={56} className="text-white" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            🎉 Bem-vindo ao Nexus Academy! 🎉
+            Bem-vindo ao Nexus Academy
           </h1>
           <p className="text-xl text-indigo-100">
             Sua conta está 100% configurada e pronta para usar!

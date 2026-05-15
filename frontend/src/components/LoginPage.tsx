@@ -1,239 +1,163 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  ArrowRight,
+  BarChart3,
   BookOpen,
-  ChevronRight,
+  CalendarDays,
   GraduationCap,
-  Shield,
-  Sparkles,
-  Users
+  ShieldCheck,
+  Users,
+  Wallet
 } from 'lucide-react';
-import { FadeContent, BlurText, StaggerContainer, StaggerItem } from './ui/Animations';
+import { FadeContent, StaggerContainer, StaggerItem } from './ui/Animations';
 import BrandLogo from './BrandLogo';
 
-type RoleOption = {
-  id: 'student' | 'teacher';
-  title: string;
-  description: string;
-  eyebrow: string;
-  icon: typeof GraduationCap;
-  accent: string;
-  features: string[];
-};
-
-const roleOptions: RoleOption[] = [
-  {
-    id: 'student',
-    title: 'Sou Aluno',
-    description: 'Entre no portal para acompanhar aulas, progresso, atividades e próximos passos da sua trilha.',
-    eyebrow: 'Portal individual',
-    icon: GraduationCap,
-    accent: 'rgba(79, 70, 229, 0.18)',
-    features: ['Aulas', 'Progresso', 'Metas']
-  },
+const roleOptions = [
   {
     id: 'teacher',
-    title: 'Sou Professor',
-    description: 'Acesse o núcleo operacional para gerir turmas, agenda, finanças e automações com clareza.',
-    eyebrow: 'Painel de gestão',
+    title: 'Painel do professor',
+    description: 'Gestao de alunos, agenda, financeiro, aulas, mensagens e AI Hub em uma area operacional.',
+    path: '/professor/login',
     icon: Users,
-    accent: 'rgba(6, 182, 212, 0.18)',
-    features: ['Agenda', 'Alunos', 'Analytics']
+    action: 'Entrar como professor'
+  },
+  {
+    id: 'student',
+    title: 'Portal do aluno',
+    description: 'Acesso para aulas, atividades, metas, comunicacao e acompanhamento da propria evolucao.',
+    path: '/portal/login',
+    icon: GraduationCap,
+    action: 'Entrar como aluno'
   }
 ];
 
-const platformSignals = [
-  {
-    value: '01',
-    label: 'Operação clara',
-    description: 'Rotina, calendário e acompanhamento reunidos em uma única superfície.'
-  },
-  {
-    value: '02',
-    label: 'Pedagogia assistida',
-    description: 'IA como apoio de preparação, revisão e análise, sem poluir a experiência.'
-  },
-  {
-    value: '03',
-    label: 'Escala com contexto',
-    description: 'Professores e alunos entram em fluxos diferentes, mas com a mesma identidade.'
-  }
+const capabilities = [
+  { label: 'Agenda', icon: CalendarDays },
+  { label: 'Alunos', icon: Users },
+  { label: 'Financeiro', icon: Wallet },
+  { label: 'Analytics', icon: BarChart3 },
+  { label: 'Atividades', icon: BookOpen },
+  { label: 'Seguranca', icon: ShieldCheck }
 ];
 
-/**
- * Porta de entrada principal do produto. A composição foi simplificada para
- * destacar marca, proposta de valor e escolha de perfil sem depender de cards
- * genéricos ou efeitos visuais excessivos.
- */
+const productLines = [
+  'Uma entrada para vender a plataforma e outra para operar o dia a dia.',
+  'Ferramentas densas, organizadas em rotas claras e com menos distracao visual.',
+  'Base pronta para escolas, professores independentes e operacoes recorrentes.'
+];
+
 export const LoginPage = () => {
-  const [hoveredRole, setHoveredRole] = useState<RoleOption['id'] | null>(null);
   const navigate = useNavigate();
 
-  const handleRoleSelect = (role: RoleOption['id']) => {
-    if (role === 'student') {
-      navigate('/portal/login');
-      return;
-    }
-
-    navigate('/professor/login');
-  };
-
   return (
-    <div className="nexus-shell relative min-h-screen overflow-x-hidden">
-      <div className="nexus-grid-bg absolute inset-0 opacity-70" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,70,229,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.08),transparent_28%)]" />
-
-      <div className="relative z-10 min-h-screen px-4 py-6 md:px-8 md:py-8 lg:px-10">
-        <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
+    <div className="nexus-public-page min-h-screen text-[var(--text-strong)]">
+      <header className="border-b border-[var(--border-soft)] bg-[var(--surface-base)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 lg:px-8">
           <BrandLogo variant="horizontal" theme="auto" size="md" />
-          <span className="hidden md:inline-flex nexus-chip">
-            <Sparkles className="h-4 w-4 text-[var(--brand-indigo)]" />
-            Plataforma editorial para ensino e gestão
-          </span>
-        </header>
 
-        <main className="mx-auto mt-6 grid w-full max-w-6xl gap-6 lg:min-h-[calc(100vh-120px)] lg:grid-cols-[1.15fr_0.85fr]">
-          <FadeContent delay={0} duration={0.55} className="h-full">
-            <section className="nexus-panel-strong nexus-rule-card flex h-full flex-col justify-between rounded-[2rem] p-8 md:p-10 lg:p-12">
-              <div className="space-y-8">
-                <div className="space-y-5">
-                  <p className="nexus-kicker">Nexus Academy</p>
-                  <h1 className="max-w-3xl text-[clamp(2.8rem,6vw,5.5rem)] leading-[0.92]">
-                    Ensino com ritmo, gestão com assinatura.
-                  </h1>
-                  <p className="max-w-2xl text-base leading-7 text-[var(--text-muted)] md:text-lg">
-                    Uma plataforma para escolas, professores e alunos que precisam
-                    de rotina clara, acompanhamento consistente e uma interface com
-                    identidade própria.
-                  </p>
-                </div>
+          <nav className="hidden items-center gap-6 text-sm font-bold text-[var(--text-muted)] md:flex">
+            <button type="button" onClick={() => navigate('/guia')} className="transition-colors hover:text-[var(--text-strong)]">
+              Guia
+            </button>
+            <button type="button" onClick={() => navigate('/portal/login')} className="transition-colors hover:text-[var(--text-strong)]">
+              Aluno
+            </button>
+            <button type="button" onClick={() => navigate('/professor/login')} className="transition-colors hover:text-[var(--text-strong)]">
+              Professor
+            </button>
+          </nav>
 
-                <div className="grid gap-3 md:grid-cols-3">
-                  {platformSignals.map((signal) => (
-                    <div
-                      key={signal.value}
-                      className="rounded-[1.6rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-4"
-                    >
-                      <p className="text-sm font-extrabold uppercase tracking-[0.24em] text-[var(--brand-indigo)]">
-                        {signal.value}
-                      </p>
-                      <h2 className="mt-4 text-2xl">{signal.label}</h2>
-                      <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                        {signal.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <button type="button" onClick={() => navigate('/guia')} className="nexus-button-secondary">
+            Ver guia
+          </button>
+        </div>
+      </header>
 
-              <div className="mt-10 space-y-5 border-t border-[var(--border-soft)] pt-6">
-                <div className="flex flex-wrap gap-2">
-                  <span className="nexus-chip">
-                    <BookOpen className="h-4 w-4 text-[var(--brand-indigo)]" />
-                    Aulas ao vivo
-                  </span>
-                  <span className="nexus-chip">
-                    <Shield className="h-4 w-4 text-[var(--brand-cyan)]" />
-                    Fluxos seguros
-                  </span>
-                  <span className="nexus-chip">
-                    <Sparkles className="h-4 w-4 text-[var(--brand-indigo)]" />
-                    Automação com IA
-                  </span>
-                </div>
-
-                <BlurText
-                  text="Menos ruído visual, mais foco na operação pedagógica e na entrada certa para cada perfil."
-                  className="block max-w-2xl text-sm leading-6 text-[var(--text-muted)] md:text-base"
-                  delay={0.2}
-                />
-              </div>
-            </section>
-          </FadeContent>
-
-          <StaggerContainer className="h-full" delay={0.15} staggerDelay={0.08}>
-            <section className="nexus-panel flex h-full flex-col rounded-[2rem] p-6 md:p-8 lg:p-10">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="nexus-kicker">Escolha seu acesso</p>
-                  <h2 className="mt-3 text-4xl leading-none">Entrada principal</h2>
-                </div>
-                <p className="text-sm font-semibold text-[var(--text-soft)]">02 perfis</p>
-              </div>
-
-              <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
-                Cada jornada começa em uma superfície própria, mas ambas mantêm o
-                mesmo sistema visual e a mesma lógica de navegação.
+      <main>
+        <section className="relative overflow-hidden">
+          <div className="nexus-flow-field" aria-hidden="true" />
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-24">
+            <FadeContent className="relative z-10" distance={14} blur>
+              <p className="nexus-kicker">Nexus Academy</p>
+              <h1 className="mt-6 max-w-4xl text-[clamp(3.2rem,7vw,7rem)] leading-[0.9]">
+                Plataforma de ensino para operar, acompanhar e crescer.
+              </h1>
+              <p className="mt-8 max-w-2xl text-lg leading-8 text-[var(--text-muted)]">
+                Organize aulas, alunos, financeiro, atividades e inteligencia pedagogica em uma experiencia
+                minimalista, preparada para venda e uso recorrente.
               </p>
 
-              <div className="mt-8 space-y-4">
-                {roleOptions.map((role) => {
-                  const Icon = role.icon;
-                  const isHovered = hoveredRole === role.id;
-
-                  return (
-                    <StaggerItem key={role.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleRoleSelect(role.id)}
-                        onMouseEnter={() => setHoveredRole(role.id)}
-                        onMouseLeave={() => setHoveredRole(null)}
-                        className="group flex w-full flex-col gap-5 rounded-[1.8rem] border bg-[var(--surface-strong)] p-6 text-left transition-all duration-300 hover:-translate-y-[2px]"
-                        style={{
-                          borderColor: isHovered ? role.accent : 'var(--border-soft)',
-                          boxShadow: isHovered ? 'var(--shadow-lifted)' : 'var(--shadow-panel)'
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div
-                            className="flex h-14 w-14 items-center justify-center rounded-[1.2rem]"
-                            style={{ backgroundColor: role.accent }}
-                          >
-                            <Icon className="h-7 w-7 text-[var(--text-strong)]" />
-                          </div>
-                          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-soft)]">
-                            <span>{role.eyebrow}</span>
-                            <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-3xl leading-none">{role.title}</h3>
-                          <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-                            {role.description}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {role.features.map((feature) => (
-                            <span key={feature} className="nexus-chip">
-                              {feature}
-                            </span>
-                          ))}
-                        </div>
-                      </button>
-                    </StaggerItem>
-                  );
-                })}
+              <div className="mt-10 flex flex-wrap gap-3">
+                <button type="button" onClick={() => navigate('/professor/login')} className="nexus-button-primary">
+                  Comecar pelo painel
+                  <ArrowRight size={16} />
+                </button>
+                <button type="button" onClick={() => navigate('/guia')} className="nexus-button-secondary">
+                  Conhecer o produto
+                </button>
               </div>
 
-              <div className="mt-auto rounded-[1.8rem] border border-[var(--border-soft)] bg-[var(--surface-soft)] p-5">
-                <p className="nexus-kicker">Leitura rápida</p>
-                <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-                  Alunos entram para acompanhar a própria trilha. Professores
-                  entram para operar agenda, base de alunos, finanças e recursos
-                  inteligentes em um único painel.
-                </p>
+              <div className="mt-12 grid gap-px overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--border-soft)] sm:grid-cols-3">
+                {productLines.map((line, index) => (
+                  <div key={line} className="bg-[var(--surface-strong)] p-5">
+                    <span className="text-sm font-extrabold text-[var(--brand-indigo)]">0{index + 1}</span>
+                    <p className="mt-4 text-sm font-bold leading-6 text-[var(--text-muted)]">{line}</p>
+                  </div>
+                ))}
               </div>
-            </section>
-          </StaggerContainer>
-        </main>
+            </FadeContent>
 
-        <footer className="mx-auto mt-6 flex w-full max-w-6xl flex-col gap-2 pb-4 text-sm text-[var(--text-soft)] md:flex-row md:items-center md:justify-between">
-          <span>© 2026 Nexus Academy</span>
-          <span>Identidade editorial, paleta preservada e fluxos separados por contexto.</span>
-        </footer>
-      </div>
+            <StaggerContainer className="relative z-10 grid content-center gap-4" delay={0.1} staggerDelay={0.08}>
+              {roleOptions.map((role) => {
+                const Icon = role.icon;
+
+                return (
+                  <StaggerItem key={role.id}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(role.path)}
+                      className="group w-full rounded-lg border border-[var(--border-soft)] bg-[var(--surface-strong)] p-6 text-left shadow-[var(--shadow-panel)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-lifted)]"
+                    >
+                      <div className="flex items-start justify-between gap-6">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--surface-soft)]">
+                          <Icon size={22} className="text-[var(--brand-indigo)]" />
+                        </div>
+                        <ArrowRight size={18} className="mt-2 text-[var(--text-soft)] transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
+                      <h2 className="mt-8 text-3xl leading-none">{role.title}</h2>
+                      <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">{role.description}</p>
+                      <span className="mt-7 inline-flex text-sm font-extrabold text-[var(--brand-indigo)]">
+                        {role.action}
+                      </span>
+                    </button>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          </div>
+        </section>
+
+        <section className="border-y border-[var(--border-soft)] bg-[var(--surface-strong)]">
+          <div className="mx-auto grid max-w-7xl gap-px bg-[var(--border-soft)] md:grid-cols-6">
+            {capabilities.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="flex items-center gap-3 bg-[var(--surface-strong)] px-5 py-5">
+                  <Icon size={18} className="text-[var(--brand-indigo)]" />
+                  <span className="text-sm font-extrabold">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+
+      <footer className="px-5 py-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 text-sm text-[var(--text-muted)] md:flex-row md:items-center md:justify-between">
+          <span>Nexus Academy © 2026</span>
+          <span>Ensino, gestao e acompanhamento em uma unica plataforma.</span>
+        </div>
+      </footer>
     </div>
   );
 };

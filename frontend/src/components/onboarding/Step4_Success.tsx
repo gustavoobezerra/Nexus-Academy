@@ -48,7 +48,7 @@ export const Step4_Success = ({ slug, onFinish }: Step4Props) => {
 
       <div>
         <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-          Tudo Pronto! 🎉
+          Tudo Pronto
         </h3>
         <p className="text-lg text-slate-600 dark:text-slate-400">
           Sua conta foi configurada com sucesso!

@@ -206,7 +206,7 @@ export const StudentChat = ({ student, teacher, isDark }: StudentChatProps) => {
               {teacher.name || 'Professor'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              {socket?.connected ? '🟢 Online' : '⚪ Offline'}
+              {socket?.connected ? 'Online Online' : 'Offline Offline'}
             </p>
           </div>
         </div>
@@ -268,7 +268,7 @@ export const StudentChat = ({ student, teacher, isDark }: StudentChatProps) => {
                   <span className="text-xs opacity-70">{formatTime(message.timestamp)}</span>
                   {message.sender === 'student' && (
                     <span className="text-xs opacity-70">
-                      {message.read ? '✓✓' : '✓'}
+                      {message.read ? 'Lida' : 'OK'}
                     </span>
                   )}
                 </div>

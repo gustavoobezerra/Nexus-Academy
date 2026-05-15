@@ -198,7 +198,7 @@ const ComprehensiveHub: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        {/* 📊 NOTAS */}
+        {/*  NOTAS */}
         {activeTab === 'grades' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Histórico de Notas</h2>
@@ -225,7 +225,7 @@ const ComprehensiveHub: React.FC = () => {
           </div>
         )}
 
-        {/* 📚 MATERIAIS */}
+        {/* Materiais */}
         {activeTab === 'materials' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-6">
@@ -261,7 +261,7 @@ const ComprehensiveHub: React.FC = () => {
           </div>
         )}
 
-        {/* 🎨 TEMPLATES */}
+        {/*  TEMPLATES */}
         {activeTab === 'templates' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Templates ativos do professor</h2>
@@ -332,7 +332,7 @@ const ComprehensiveHub: React.FC = () => {
           </div>
         )}
 
-        {/* 🔗 REFERÊNCIA */}
+        {/* Link REFERÊNCIA */}
         {activeTab === 'referral' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Sistema de Referência</h2>
@@ -365,7 +365,7 @@ const ComprehensiveHub: React.FC = () => {
           </div>
         )}
 
-        {/* 💰 PREÇOS */}
+        {/* Precos */}
         {activeTab === 'pricing' && (
           renderRoadmapState({
             icon: TrendingUp,
@@ -381,7 +381,7 @@ const ComprehensiveHub: React.FC = () => {
           })
         )}
 
-        {/* 🎓 CURSOS */}
+        {/*  CURSOS */}
         {activeTab === 'courses' && (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-6">Plano de Cursos</h2>
@@ -401,7 +401,7 @@ const ComprehensiveHub: React.FC = () => {
           </div>
         )}
 
-        {/* ⏰ LEMBRETES */}
+        {/* Lembretes */}
         {activeTab === 'reminders' && (
           renderRoadmapState({
             icon: Clock,
@@ -417,7 +417,7 @@ const ComprehensiveHub: React.FC = () => {
           })
         )}
 
-        {/* 📅 AGENDAMENTO */}
+        {/* Agendamento */}
         {activeTab === 'schedule' && (
           renderRoadmapState({
             icon: Shield,

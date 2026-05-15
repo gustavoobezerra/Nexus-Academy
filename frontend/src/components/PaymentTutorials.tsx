@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 const tutorials = {
   mercadopago: {
     name: 'Mercado Pago',
-    logo: '💳',
+    logo: 'Cartao',
     steps: [
       {
         title: '1. Criar Conta no Mercado Pago',
@@ -94,7 +94,7 @@ const tutorials = {
   },
   asaas: {
     name: 'Asaas',
-    logo: '💚',
+    logo: '',
     steps: [
       {
         title: '1. Criar Conta no Asaas',
@@ -142,7 +142,7 @@ const tutorials = {
                   <p className="font-semibold text-green-800 dark:text-green-300">Taxas e Prazos (MELHOR OPÇÃO!)</p>
                   <p className="text-sm text-green-700 dark:text-green-400">• Taxa: 1,49% PIX | 3,49% Cartão</p>
                   <p className="text-sm text-green-700 dark:text-green-400">• Prazo: Receba em 1 dia útil</p>
-                  <p className="text-sm text-green-700 dark:text-green-400 mt-2">✅ Mais barato e mais rápido!</p>
+                  <p className="text-sm text-green-700 dark:text-green-400 mt-2">Mais barato e mais rápido.</p>
                 </div>
               </div>
             </div>
@@ -153,7 +153,7 @@ const tutorials = {
   },
   pagseguro: {
     name: 'PagSeguro',
-    logo: '🟡',
+    logo: 'PG',
     steps: [
       {
         title: '1. Criar Conta PagSeguro',
@@ -201,7 +201,7 @@ const tutorials = {
                   <p className="font-semibold text-yellow-800 dark:text-yellow-300">Atenção ao Prazo</p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-400">• Taxa: 3,49% PIX | 4,99% Cartão</p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-400">• Prazo: 30 dias corridos para receber</p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-2">⚠️ Prazo mais longo que as outras opções</p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-2">Atencao Prazo mais longo que as outras opções</p>
                 </div>
               </div>
             </div>
@@ -212,7 +212,7 @@ const tutorials = {
   },
   efi: {
     name: 'Efi Pay (antiga Gerencianet)',
-    logo: '🟢',
+    logo: 'Online',
     steps: [
       {
         title: '1. Criar Conta Efi',

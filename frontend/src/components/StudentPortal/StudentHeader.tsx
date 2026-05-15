@@ -29,7 +29,7 @@ export const StudentHeader = ({
       {/* Saudação */}
       <div className="flex-1">
         <h1 className="text-2xl md:text-3xl font-bold mb-1">
-          {getGreeting()}, {firstName}! 👋
+          {getGreeting()}, {firstName}! 
         </h1>
         <p className="text-sm md:text-base opacity-90">
           Continue de onde parou e alcance suas metas

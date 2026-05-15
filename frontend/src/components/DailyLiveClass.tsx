@@ -160,14 +160,14 @@ export const DailyLiveClass = ({
 
         callFrame.on('participant-joined', (event) => {
           if (event?.participant?.user_name) {
-            toast(`${event.participant.user_name} entrou na aula`, { icon: '👋' });
+            toast(`${event.participant.user_name} entrou na aula`, { icon: '' });
           }
           updateParticipantCount(callFrame);
         });
 
         callFrame.on('participant-left', (event) => {
           if (event?.participant?.user_name) {
-            toast(`${event.participant.user_name} saiu da aula`, { icon: '👋' });
+            toast(`${event.participant.user_name} saiu da aula`, { icon: '' });
           }
           updateParticipantCount(callFrame);
         });

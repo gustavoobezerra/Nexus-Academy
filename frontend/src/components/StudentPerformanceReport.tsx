@@ -127,7 +127,7 @@ const StudentPerformanceReport = ({ data }: StudentPerformanceReportProps) => {
             {data.strengths.length > 0 ? (
               data.strengths.map((strength, i) => (
                 <li key={i} className="text-sm text-emerald-200 flex items-start gap-2">
-                  <span className="text-emerald-400 mt-0.5">✓</span>
+                  <span className="text-emerald-400 mt-0.5">OK</span>
                   {strength}
                 </li>
               ))
@@ -143,7 +143,7 @@ const StudentPerformanceReport = ({ data }: StudentPerformanceReportProps) => {
             {data.weaknesses.length > 0 ? (
               data.weaknesses.map((weakness, i) => (
                 <li key={i} className="text-sm text-amber-200 flex items-start gap-2">
-                  <span className="text-amber-400 mt-0.5">⚠</span>
+                  <span className="text-amber-400 mt-0.5">Atencao</span>
                   {weakness}
                 </li>
               ))

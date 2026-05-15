@@ -349,7 +349,7 @@ export const StudentDashboard = () => {
                           activeTab === 'chat' ? 'Chat com Professor' : 'Portal do Aluno'}
               </h2>
               <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Olá, {student.name}! 👋
+                Olá, {student.name}! 
               </p>
             </div>
             <div className="flex items-center gap-3">

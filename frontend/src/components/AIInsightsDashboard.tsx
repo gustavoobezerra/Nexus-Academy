@@ -353,10 +353,10 @@ export const AIInsightsDashboard: React.FC<AIInsightsDashboardProps> = ({ studen
                   <span className={`px-3 py-1 text-sm font-semibold rounded-full border ${
                     getRiskColor(analysis.data.evasionRisk?.level || 'low')
                   }`}>
-                    {analysis.data.evasionRisk?.level === 'critical' ? '🔴 Crítico' :
-                     analysis.data.evasionRisk?.level === 'high' ? '🟠 Alto' :
-                     analysis.data.evasionRisk?.level === 'medium' ? '🟡 Médio' :
-                     '🟢 Baixo'} Risco
+                    {analysis.data.evasionRisk?.level === 'critical' ? 'Crítico' :
+                     analysis.data.evasionRisk?.level === 'high' ? 'Alto' :
+                     analysis.data.evasionRisk?.level === 'medium' ? 'Médio' :
+                     'Baixo'} Risco
                   </span>
                   <span className="text-sm text-gray-400">
                     {analysis.confidence}% confiança
