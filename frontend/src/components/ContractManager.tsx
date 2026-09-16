@@ -336,13 +336,13 @@ ${student.parentName}                   Professor(a) Responsável
         </div>
 
         <div className="mt-6 bg-teal-900/20 border border-teal-700 rounded-lg p-4">
-          <p className="font-semibold text-teal-300 mb-2">📋 Como Funciona:</p>
+          <p className="font-semibold text-teal-300 mb-2"> Como Funciona:</p>
           <ul className="space-y-1 text-sm text-gray-300">
-            <li>✓ Template pré-definido com cláusulas padrão</li>
-            <li>✓ Dados do aluno e responsável preenchidos automaticamente</li>
-            <li>✓ Você pode adicionar termos personalizados</li>
-            <li>✓ Envio automático por email com link de assinatura eletrônica</li>
-            <li>✓ Rastreamento de status em tempo real</li>
+            <li>OK Template pré-definido com cláusulas padrão</li>
+            <li>OK Dados do aluno e responsável preenchidos automaticamente</li>
+            <li>OK Você pode adicionar termos personalizados</li>
+            <li>OK Envio automático por email com link de assinatura eletrônica</li>
+            <li>OK Rastreamento de status em tempo real</li>
           </ul>
         </div>
       </div>
@@ -367,9 +367,9 @@ ${student.parentName}                   Professor(a) Responsável
                       Responsável: {contract.contractData.parentName} • {contract.contractData.parentEmail}
                     </p>
                     <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
-                      <span>💰 R$ {contract.contractData.monthlyFee.toFixed(2)}/mês</span>
+                      <span>R$ {contract.contractData.monthlyFee.toFixed(2)}/mês</span>
                       <span>•</span>
-                      <span>⏱️ {contract.contractData.hoursPerMonth}h/mês</span>
+                      <span>{contract.contractData.hoursPerMonth}h/mês</span>
                       <span>•</span>
                       <span>Início: {new Date(contract.contractData.startDate).toLocaleDateString('pt-BR')}</span>
                     </div>
@@ -413,7 +413,7 @@ ${student.parentName}                   Professor(a) Responsável
                       onClick={() => toast.success('Link copiado: ' + contract.signatureLink)}
                       className="flex-1 px-4 py-2 bg-blue-900/50 hover:bg-blue-800 border border-blue-700 rounded-lg font-medium transition"
                     >
-                      🔗 Copiar Link
+                      Link Copiar Link
                     </button>
                   )}
 

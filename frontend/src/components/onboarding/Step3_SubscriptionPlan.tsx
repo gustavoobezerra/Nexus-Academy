@@ -183,7 +183,7 @@ export const Step3_SubscriptionPlan = ({ onNext }: Step3Props) => {
           disabled={loading || !selectedPlan}
           className="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95"
         >
-          {loading ? 'Processando...' : 'Começar Trial de 30 Dias 🎉'}
+          {loading ? 'Processando...' : 'Começar Trial de 30 Dias'}
         </button>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
           Você será redirecionado para o Stripe para cadastrar seu cartão de forma segura.

@@ -172,10 +172,10 @@ export const OnboardingWizardNew = ({ onComplete }: OnboardingWizardNewProps) =>
         <div className="px-8 md:px-12 pb-8">
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <p className="text-xs text-slate-600 dark:text-slate-400 text-center">
-              {currentStep === 1 && '🔗 Crie seu link único para compartilhar com seus alunos'}
-              {currentStep === 2 && '💰 Configure como você vai receber pagamentos dos alunos'}
-              {currentStep === 3 && '🎁 Escolha seu plano e ganhe 30 dias grátis'}
-              {currentStep === 4 && '🎉 Tudo pronto! Bem-vindo ao Nexus Academy'}
+              {currentStep === 1 && 'Crie seu link único para compartilhar com seus alunos'}
+              {currentStep === 2 && 'Configure como você vai receber pagamentos dos alunos'}
+              {currentStep === 3 && 'Escolha seu plano e ganhe 30 dias grátis'}
+              {currentStep === 4 && 'Tudo pronto. Bem-vindo ao Nexus Academy'}
             </p>
           </div>
         </div>

@@ -131,14 +131,14 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
           </div>
 
           <div className="mt-6 bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
-            <p className="font-semibold text-emerald-300 mb-2">⚡ Economia de Tempo:</p>
+            <p className="font-semibold text-emerald-300 mb-2">Economia de Tempo:</p>
             <ul className="space-y-1 text-sm text-gray-300">
-              <li>✓ Plano completo gerado em ~2 minutos</li>
-              <li>✓ Estrutura de aula otimizada automaticamente</li>
-              <li>✓ Sugestões de materiais e atividades</li>
-              <li>✓ Diferenciação para diferentes estilos de aprendizagem</li>
-              <li>✓ Estratégias para dificuldades antecipadas</li>
-              <li className="font-bold text-emerald-400 mt-2">💰 Economize 30-40 minutos por aula!</li>
+              <li>OK Plano completo gerado em ~2 minutos</li>
+              <li>OK Estrutura de aula otimizada automaticamente</li>
+              <li>OK Sugestões de materiais e atividades</li>
+              <li>OK Diferenciação para diferentes estilos de aprendizagem</li>
+              <li>OK Estratégias para dificuldades antecipadas</li>
+              <li className="font-bold text-emerald-400 mt-2">Economize 30-40 minutos por aula.</li>
             </ul>
           </div>
         </div>
@@ -162,7 +162,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                     ? 'bg-green-900/50 border border-green-700 text-green-400'
                     : 'bg-yellow-900/50 border border-yellow-700 text-yellow-400'
                 }`}>
-                  {preparation.status === 'ready' ? '✓ Aprovado' : '⏱️ Aguardando Revisão'}
+                  {preparation.status === 'ready' ? 'Aprovado' : 'Aguardando Revisão'}
                 </span>
                 <span className="text-sm text-gray-400">
                   {preparation.aiMetadata?.confidence}% confiança
@@ -278,7 +278,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                 {/* Conteúdo Principal */}
                 <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-bold">📚 Conteúdo Principal</h4>
+                    <h4 className="text-lg font-bold">Conteúdo Principal</h4>
                     <span className="text-sm text-gray-400">{preparation.structure.mainContent.duration} min</span>
                   </div>
                   <p className="text-sm text-gray-400 mb-3">{preparation.structure.mainContent.description}</p>
@@ -305,7 +305,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                 {/* Prática */}
                 <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-bold">✍️ Prática Guiada</h4>
+                    <h4 className="text-lg font-bold">Prática Guiada</h4>
                     <span className="text-sm text-gray-400">{preparation.structure.practice.duration} min</span>
                   </div>
                   <div className="space-y-3">
@@ -313,7 +313,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                       <div key={idx} className={`border rounded-lg p-4 ${getDifficultyColor(exercise.difficulty)}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-semibold">
-                            Exercício {idx + 1}: {exercise.difficulty === 'easy' ? '🟢 Fácil' : exercise.difficulty === 'medium' ? '🟡 Médio' : '🔴 Difícil'}
+                            Exercício {idx + 1}: {exercise.difficulty === 'easy' ? 'Fácil' : exercise.difficulty === 'medium' ? 'Médio' : 'Difícil'}
                           </span>
                           <span className="text-xs">{exercise.estimatedTime.toFixed(0)} min</span>
                         </div>
@@ -326,7 +326,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                 {/* Revisão */}
                 <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-bold">🔄 Revisão e Fechamento</h4>
+                    <h4 className="text-lg font-bold"> Revisão e Fechamento</h4>
                     <span className="text-sm text-gray-400">{preparation.structure.review.duration} min</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,7 +346,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                       <ul className="space-y-2">
                         {preparation.structure.review.questionsToAsk.map((question, idx) => (
                           <li key={idx} className="bg-slate-700/50 rounded-lg p-2 text-sm flex items-start gap-2">
-                            <span>❓</span>
+                            <span></span>
                             <span>{question}</span>
                           </li>
                         ))}
@@ -362,7 +362,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
           {activeTab === 'materials' && (
             <div className="space-y-4">
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-4">📦 Materiais Sugeridos</h3>
+                <h3 className="text-lg font-bold mb-4"> Materiais Sugeridos</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {preparation.materials.map((material, idx) => (
                     <div key={idx} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
@@ -382,7 +382,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
               </div>
 
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-4">⚠️ Dificuldades Antecipadas</h3>
+                <h3 className="text-lg font-bold mb-4">Atencao Dificuldades Antecipadas</h3>
                 <div className="space-y-3">
                   {preparation.anticipatedDifficulties.map((diff, idx) => (
                     <div key={idx} className="bg-orange-900/20 border border-orange-700 rounded-lg p-4">
@@ -418,7 +418,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-red-300 mb-3">📉 Para Alunos com Dificuldade</h4>
+                  <h4 className="font-semibold text-red-300 mb-3"> Para Alunos com Dificuldade</h4>
                   <ul className="space-y-2">
                     {preparation.differentiation.forStruggling.map((strategy, idx) => (
                       <li key={idx} className="text-sm flex items-start gap-2">
@@ -442,7 +442,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                 </div>
 
                 <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-300 mb-3">👁️ Aprendizes Visuais</h4>
+                  <h4 className="font-semibold text-blue-300 mb-3">Visual Aprendizes Visuais</h4>
                   <ul className="space-y-2">
                     {preparation.differentiation.visualLearners.map((strategy, idx) => (
                       <li key={idx} className="text-sm flex items-start gap-2">
@@ -454,7 +454,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                 </div>
 
                 <div className="bg-purple-900/20 border border-purple-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-purple-300 mb-3">👂 Aprendizes Auditivos</h4>
+                  <h4 className="font-semibold text-purple-300 mb-3">Audio Aprendizes Auditivos</h4>
                   <ul className="space-y-2">
                     {preparation.differentiation.auditoryLearners.map((strategy, idx) => (
                       <li key={idx} className="text-sm flex items-start gap-2">
@@ -466,7 +466,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
                 </div>
 
                 <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 md:col-span-2">
-                  <h4 className="font-semibold text-yellow-300 mb-3">✋ Aprendizes Cinestésicos</h4>
+                  <h4 className="font-semibold text-yellow-300 mb-3">Pratico Aprendizes Cinestésicos</h4>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {preparation.differentiation.kinestheticLearners.map((strategy, idx) => (
                       <li key={idx} className="text-sm flex items-start gap-2">
@@ -489,7 +489,7 @@ export const LessonPrepAI: React.FC<LessonPrepAIProps> = ({ students = [], upcom
               }}
               className="flex-1 px-6 py-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition"
             >
-              ❌ Descartar e Gerar Novo
+              Cancelar Descartar e Gerar Novo
             </button>
 
             {preparation.status === 'draft' && (

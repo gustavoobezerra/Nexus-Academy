@@ -625,7 +625,7 @@ export const SmartOnboarding = () => {
                 onClick={() => removeGoal(index)}
                 className="text-slate-400 hover:text-red-400 transition-colors"
               >
-                ✕
+                Fechar
               </button>
             </div>
           ))}

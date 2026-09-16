@@ -7,15 +7,15 @@ test.describe('Entry Surfaces', () => {
     await page.goto(FRONTEND_URL);
 
     await expect(
-      page.getByRole('heading', { name: /ensino com ritmo, gestão com assinatura/i })
+      page.getByRole('heading', { name: /plataforma de ensino para operar/i })
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: /sou aluno/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /sou professor/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /entrar como aluno/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /entrar como professor/i })).toBeVisible();
   });
 
   test('should open the teacher login flow and allow switching to register mode', async ({ page }) => {
     await page.goto(FRONTEND_URL);
-    await page.getByRole('button', { name: /sou professor/i }).click();
+    await page.getByRole('button', { name: /entrar como professor/i }).click();
 
     await expect(page).toHaveURL(/\/professor\/login/);
     await expect(page.getByRole('heading', { name: /entrar/i })).toBeVisible();
@@ -30,8 +30,8 @@ test.describe('Entry Surfaces', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(FRONTEND_URL);
 
-    await expect(page.getByRole('button', { name: /sou aluno/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /sou professor/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /entrar como aluno/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /entrar como professor/i })).toBeVisible();
   });
 
   test('should allow scrolling on the teacher register flow in mobile', async ({ page }) => {

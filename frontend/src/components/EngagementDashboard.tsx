@@ -179,10 +179,10 @@ const EngagementDashboard = ({
         <div className="bg-indigo-900/20 border border-indigo-700 rounded-lg p-4">
           <h4 className="font-semibold text-indigo-400 mb-3">Próximas Ações</h4>
           <ul className="space-y-2 text-sm text-indigo-100">
-            <li>✓ Enviar resumo da aula aos alunos</li>
-            <li>✓ Preparar exercícios extras para tópicos difíceis</li>
-            <li>✓ Enviar feedback personalizado</li>
-            <li>✓ Agendar reforço individual se necessário</li>
+            <li>OK Enviar resumo da aula aos alunos</li>
+            <li>OK Preparar exercícios extras para tópicos difíceis</li>
+            <li>OK Enviar feedback personalizado</li>
+            <li>OK Agendar reforço individual se necessário</li>
           </ul>
         </div>
       </div>

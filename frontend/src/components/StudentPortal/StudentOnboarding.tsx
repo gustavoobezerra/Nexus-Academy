@@ -41,18 +41,18 @@ const LEVELS = [
 ];
 
 const SCHEDULES = [
-  { id: 'morning', label: 'Manhã', icon: '🌅', description: '6h às 12h' },
-  { id: 'afternoon', label: 'Tarde', icon: '☀️', description: '12h às 18h' },
-  { id: 'evening', label: 'Noite', icon: '🌙', description: '18h às 23h' },
-  { id: 'flexible', label: 'Flexível', icon: '⏰', description: 'Qualquer horário' }
+  { id: 'morning', label: 'Manhã', icon: 'AM', description: '6h às 12h' },
+  { id: 'afternoon', label: 'Tarde', icon: 'PM', description: '12h às 18h' },
+  { id: 'evening', label: 'Noite', icon: 'NT', description: '18h às 23h' },
+  { id: 'flexible', label: 'Flexível', icon: 'FX', description: 'Qualquer horário' }
 ];
 
 const LEARNING_STYLES = [
-  { id: 'visual', label: 'Visual', description: 'Aprendo melhor vendo vídeos, imagens e diagramas', icon: '👁️' },
-  { id: 'auditory', label: 'Auditivo', description: 'Aprendo melhor ouvindo áudios e conversando', icon: '👂' },
-  { id: 'reading', label: 'Leitura/Escrita', description: 'Prefiro ler e escrever para fixar', icon: '📖' },
-  { id: 'kinesthetic', label: 'Prático', description: 'Aprendo fazendo exercícios e praticando', icon: '✋' },
-  { id: 'mixed', label: 'Misto', description: 'Gosto de combinar diferentes métodos', icon: '🎯' }
+  { id: 'visual', label: 'Visual', description: 'Aprendo melhor vendo vídeos, imagens e diagramas', icon: 'VS' },
+  { id: 'auditory', label: 'Auditivo', description: 'Aprendo melhor ouvindo áudios e conversando', icon: 'AU' },
+  { id: 'reading', label: 'Leitura/Escrita', description: 'Prefiro ler e escrever para fixar', icon: 'LE' },
+  { id: 'kinesthetic', label: 'Prático', description: 'Aprendo fazendo exercícios e praticando', icon: 'PR' },
+  { id: 'mixed', label: 'Misto', description: 'Gosto de combinar diferentes métodos', icon: 'MX' }
 ];
 
 const CHALLENGES = [
@@ -169,7 +169,7 @@ export const StudentOnboarding = () => {
       navigate('/portal/dashboard');
     } catch (error: unknown) {
       const apiError = getApiError(error);
-      console.error('[Onboarding] ❌ Erro:', error);
+      console.error('[Onboarding] Cancelar Erro:', error);
       console.error('[Onboarding] Tipo de erro:', apiError.type);
       console.error('[Onboarding] Detalhes:', apiError.message);
 
@@ -480,7 +480,7 @@ export const StudentOnboarding = () => {
                       onClick={() => removeGoal(index)}
                       className="text-slate-400 hover:text-red-400 transition-colors"
                     >
-                      ✕
+                      Fechar
                     </button>
                   </div>
                 ))}

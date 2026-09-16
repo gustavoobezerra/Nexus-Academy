@@ -295,7 +295,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
                 <Wallet size={24} />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-lg dark:text-white mb-1">💰 Pagamento Manual</h4>
+                <h4 className="font-bold text-lg dark:text-white mb-1">Pagamento Manual</h4>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                   Você controla totalmente. Zero taxas. Alunos pagam direto para você.
                 </p>
@@ -317,7 +317,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
                 <Zap size={24} />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-lg dark:text-white mb-1">⚡ Pagamento Automático</h4>
+                <h4 className="font-bold text-lg dark:text-white mb-1"> Pagamento Automático</h4>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                   Confirmação instantânea. Zero trabalho manual. Dinheiro direto na conta.
                 </p>
@@ -492,8 +492,8 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
                 {selectedGateway === gateway.id && <CheckCircle2 className="text-purple-500" />}
               </div>
               <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                <p>💰 Taxa cobrada: {gateway.fee}</p>
-                <p>⏱️ {gateway.period}</p>
+                <p>Taxa cobrada: {gateway.fee}</p>
+                <p>{gateway.period}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-500">
                   (Tempo até o dinheiro cair na sua conta após o pagamento do aluno)
                 </p>
@@ -510,7 +510,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
                   className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
                 >
                   <ExternalLink size={14} />
-                  📚 Ver Tutorial Completo Passo-a-Passo (abre em nova aba)
+                  Ver Tutorial Completo Passo-a-Passo (abre em nova aba)
                 </button>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Abrirá em nova aba com instruções detalhadas de como configurar
@@ -588,7 +588,7 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
             <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Portal do aluno</li>
           </ul>
           <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-800">
-            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">🎁 PRIMEIRO MÊS GRÁTIS</p>
+            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Bonus PRIMEIRO MÊS GRÁTIS</p>
           </div>
         </div>
 
@@ -623,15 +623,15 @@ export const OnboardingWizardMultiTenant: React.FC<OnboardingWizardMultiTenantPr
             <li className="flex items-center gap-2"><Check size={16} className="text-green-500" /> Certificados personalizados</li>
           </ul>
           <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
-            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">🎁 PRIMEIRO MÊS GRÁTIS</p>
+            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Bonus PRIMEIRO MÊS GRÁTIS</p>
           </div>
         </div>
       </div>
 
       <div className="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-        <p>💳 Pagamento via Stripe (100% seguro)</p>
-        <p>⚠️ Você só será cobrado após 30 dias</p>
-        <p>❌ Cancele quando quiser sem multa</p>
+        <p>Cartao Pagamento via Stripe (100% seguro)</p>
+        <p>Atencao Você só será cobrado após 30 dias</p>
+        <p>Cancelar Cancele quando quiser sem multa</p>
       </div>
     </div>
   );

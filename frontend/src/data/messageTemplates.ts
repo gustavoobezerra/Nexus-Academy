@@ -18,9 +18,9 @@ export const defaultTemplates: MessageTemplate[] = [
 
 Lembrando que {{studentName}} tem aula amanhã:
 
-📚 *{{className}}*
-📅 {{classDate}}
-⏰ {{classTime}}
+Conteúdo: *{{className}}*
+Data: {{classDate}}
+Horário: {{classTime}}
 
 Qualquer dúvida, estou à disposição!`,
     variables: ['parentName', 'studentName', 'className', 'classDate', 'classTime']
@@ -32,8 +32,8 @@ Qualquer dúvida, estou à disposição!`,
     channel: 'whatsapp',
     body: `Olá! A aula de {{studentName}} começa em 1 hora.
 
-📚 {{className}}
-⏰ {{classTime}}
+Conteúdo: {{className}}
+Horário: {{classTime}}
 
 Até já!`,
     variables: ['studentName', 'className', 'classTime']
@@ -47,8 +47,8 @@ Até já!`,
 
 Passando para lembrar que o pagamento de {{studentName}} vence em {{daysUntilDue}} dias ({{dueDate}}).
 
-💰 Valor: R$ {{amount}}
-📅 Vencimento: {{dueDate}}
+Valor: R$ {{amount}}
+Vencimento: {{dueDate}}
 
 Chave PIX: {{pixKey}}
 
@@ -64,8 +64,8 @@ Qualquer dúvida, estou à disposição!`,
 
 Verificamos que o pagamento de {{studentName}} referente a {{month}} está em aberto.
 
-💰 Valor: R$ {{amount}}
-📅 Vencimento: {{dueDate}}
+Valor: R$ {{amount}}
+Vencimento: {{dueDate}}
 
 Por favor, regularize o pagamento para mantermos as aulas normalmente.
 
@@ -84,8 +84,8 @@ Se já efetuou o pagamento, por favor desconsidere esta mensagem.`,
 
 Segue o resumo da aula de {{studentName}} realizada hoje:
 
-📚 *Conteúdo:* {{className}}
-⏱️ *Duração:* {{duration}} minutos
+*Conteúdo:* {{className}}
+*Duração:* {{duration}} minutos
 
 *Resumo:*
 {{summary}}
@@ -108,7 +108,7 @@ Atenciosamente,
     name: 'Felicitacao de Aniversário',
     category: 'greeting',
     channel: 'whatsapp',
-    body: `🎂 Feliz Aniversário, {{studentName}}! 🎉
+    body: `Feliz Aniversário, {{studentName}}!
 
 Desejo um dia maravilhoso cheio de alegria e realizações!
 

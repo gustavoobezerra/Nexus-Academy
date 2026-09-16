@@ -81,7 +81,7 @@ export const JitsiLiveClass = ({
     externalApi.on('participantJoined', (participant?: JitsiParticipant) => {
       if (participant?.displayName) {
         toast(`${participant.displayName} entrou na aula`, {
-          icon: '👋',
+          icon: '',
         });
       }
     });
@@ -89,7 +89,7 @@ export const JitsiLiveClass = ({
     externalApi.on('participantLeft', (participant?: JitsiParticipant) => {
       if (participant?.displayName) {
         toast(`${participant.displayName} saiu da aula`, {
-          icon: '👋',
+          icon: '',
         });
       }
     });

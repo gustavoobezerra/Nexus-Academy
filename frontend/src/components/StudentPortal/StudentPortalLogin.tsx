@@ -327,7 +327,7 @@ export const StudentPortalLogin = () => {
         </div>
 
         <div className="relative z-10 pb-6 text-center text-slate-600 text-sm">
-          Nexus Academy © 2025
+          Nexus Academy © 2026
         </div>
       </div>
     );
@@ -687,7 +687,7 @@ export const StudentPortalLogin = () => {
 
       <FadeContent delay={0.8} duration={0.4}>
         <p className="relative z-10 pb-6 text-center text-slate-600 text-sm">
-          Nexus Academy © 2025
+          Nexus Academy © 2026
         </p>
       </FadeContent>
     </div>
