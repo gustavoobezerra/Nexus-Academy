@@ -19,6 +19,7 @@ import { Dashboard } from './components/Dashboard';
 import { alertService } from './services/alertService';
 import JitsiLiveClass from './components/JitsiLiveClass';
 import DailyLiveClass from './components/DailyLiveClass';
+import { dailyAPI } from './lib/api';
 import AutomationCenter from './components/AutomationCenter';
 
 // Páginas de Login e Onboarding
@@ -261,7 +262,24 @@ function AppWithRouter() {
   const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [liveClassData, setLiveClassData] = useState<{ id: string; title: string } | null>(null);
-  const [preferDaily] = useState(false); // Jitsi como padrão enquanto o Daily permanece instável no ambiente atual
+  // Daily.co não exige login dos participantes (ao contrário do meet.jit.si público, que passou
+  // a exigir autenticação do host desde 2023). Usamos Daily automaticamente quando o backend
+  // tiver DAILY_API_KEY configurada; caso contrário caímos no Jitsi público como alternativa.
+  const [preferDaily, setPreferDaily] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    dailyAPI.status()
+      .then((response) => {
+        if (!cancelled && response?.configured) {
+          setPreferDaily(true);
+        }
+      })
+      .catch(() => {
+        // Mantém o Jitsi como alternativa caso o status não possa ser verificado
+      });
+    return () => { cancelled = true; };
+  }, []);
   const [mostrarConfiguracoes, setMostrarConfiguracoes] = useState(false);
   const [mostrarHangman, setMostrarHangman] = useState(false);
   const teacherUser = user as (typeof user & TeacherShellUser) | null;
