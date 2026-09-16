@@ -6,10 +6,12 @@ import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
+const IS_PROD = process.env.NODE_ENV === 'production';
+
 // Rate limiting para registro
 const registerLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 tentativas por IP
+  windowMs: 15 * 60 * 1000,
+  max: IS_PROD ? 5 : 200, // em dev/test, limite alto para não bloquear suítes de testes
   message: {
     success: false,
     message: 'Muitas tentativas de registro. Tente novamente em 15 minutos.'
@@ -20,15 +22,15 @@ const registerLimiter = rateLimit({
 
 // Rate limiting para login (mais restritivo)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 tentativas por IP
+  windowMs: 15 * 60 * 1000,
+  max: IS_PROD ? 5 : 200,
   message: {
     success: false,
     message: 'Muitas tentativas de login. Tente novamente em 15 minutos.'
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Não contar requisições bem-sucedidas
+  skipSuccessfulRequests: true,
 });
 
 router.post('/register', registerLimiter, register);

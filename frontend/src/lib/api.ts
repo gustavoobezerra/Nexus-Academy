@@ -164,6 +164,7 @@ export const liveClassAPI = {
 };
 
 export const dailyAPI = {
+  status: () => apiService.get<{ success: boolean; configured: boolean }>('/daily/status'),
   createRoom: (data: { classId: string; className: string; expiryMinutes?: number }) => apiService.post<{ success: boolean; message?: string; room: { url: string; name: string } }>('/daily/create-room', data),
   createToken: (data: { roomName: string; classId: string; isOwner: boolean; userName: string }) => apiService.post<{ success: boolean; message?: string; token: string }>('/daily/create-token', data),
 };

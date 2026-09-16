@@ -143,6 +143,18 @@ export const JitsiLiveClass = ({
         </div>
       </div>
 
+      {/* Aviso sobre o provedor público do Jitsi */}
+      {userType === 'teacher' && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 text-xs text-amber-200">
+          <strong className="font-semibold">Aviso:</strong> esta sala usa o servidor público{' '}
+          <span className="font-mono">meet.jit.si</span>, que desde 2023 exige login (Google/GitHub/Microsoft)
+          de quem inicia a reunião como organizador. Se a tela pedir para você entrar com uma conta, é uma
+          política do provedor — não um erro da plataforma. Para eliminar essa exigência, configure a variável{' '}
+          <span className="font-mono">DAILY_API_KEY</span> no backend (conta gratuita em daily.co): a Nexus
+          Academy passa a usar o Daily.co automaticamente, sem pedir login a professores ou alunos.
+        </div>
+      )}
+
       {/* Loading state */}
       {isLoading && (
         <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center">

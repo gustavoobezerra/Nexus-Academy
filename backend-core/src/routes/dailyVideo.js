@@ -161,6 +161,23 @@ async function getOrCreateRoom(roomName, expiry) {
 
 /**
  * @swagger
+ * /api/daily/status:
+ *   get:
+ *     summary: Indica se o provedor de videochamada Daily.co está configurado
+ *     tags: [Video]
+ *     responses:
+ *       200:
+ *         description: Status do provedor Daily.co
+ */
+router.get('/status', (_req, res) => {
+  res.json({
+    success: true,
+    configured: Boolean(DAILY_API_KEY)
+  });
+});
+
+/**
+ * @swagger
  * /api/daily/create-room:
  *   post:
  *     summary: Cria uma sala de videoconferência no Daily.co
@@ -315,10 +332,6 @@ router.post('/create-token', async (req, res) => {
         start_video_off: false,
         start_audio_off: false,
         // Permissões de proprietário (professor)
-        ...(ownerToken && {
-          enable_recording: true,
-          enable_transcription: true
-        })
       }
     };
 
