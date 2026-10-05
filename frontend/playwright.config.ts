@@ -57,14 +57,14 @@ export default defineConfig({
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
-      cwd: './frontend'
+      cwd: '.'
     },
     {
       command: 'npm start',
       url: 'http://localhost:5000/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
-      cwd: './backend-core',
+      cwd: '../backend-core',
       env: {
         NODE_ENV: 'test',
         MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/nexus-academy-test'
